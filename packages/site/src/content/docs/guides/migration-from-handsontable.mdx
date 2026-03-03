@@ -1,10 +1,14 @@
-# HandsOnTable → witqq spreadsheet Migration Guide
+---
+title: "Migration from Handsontable"
+description: "Step-by-step guide for migrating from Handsontable to @witqq/spreadsheet."
+---
 
-This guide maps HandsOnTable (HoT) concepts to their witqq spreadsheet equivalents.
+This guide maps Handsontable (HoT) concepts to their @witqq/spreadsheet equivalents.
 
 ## Constructor / Initialization
 
-### HandsOnTable
+### Handsontable
+
 ```js
 const hot = new Handsontable(container, {
   data: [['A1', 'B1'], ['A2', 'B2']],
@@ -17,7 +21,8 @@ const hot = new Handsontable(container, {
 });
 ```
 
-### witqq spreadsheet
+### @witqq/spreadsheet
+
 ```ts
 import { WitEngine } from '@witqq/spreadsheet';
 
@@ -41,11 +46,9 @@ engine.mount(document.getElementById('grid')!);
 - `readOnly: false` → `editable: true`
 - `mount()` must be called after construction
 
----
-
 ## Data Access
 
-| HandsOnTable | witqq spreadsheet | Notes |
+| Handsontable | @witqq/spreadsheet | Notes |
 |---|---|---|
 | `hot.getData()` | `engine.getCellStore()` | CellStore is sparse Map, not 2D array |
 | `hot.getDataAtCell(row, col)` | `engine.getCell(row, col)` | Returns `CellData \| undefined` |
@@ -54,7 +57,8 @@ engine.mount(document.getElementById('grid')!);
 | `hot.countRows()` | `engine.getRowCount()` | |
 | `hot.alter('insert_row_below')` | `engine.setRowCount(n + 1)` | Row operations via count change |
 
-### CellStore direct access
+### CellStore Direct Access
+
 ```ts
 const store = engine.getCellStore();
 store.get(row, col);        // CellData | undefined
@@ -62,11 +66,9 @@ store.setValue(row, col, v); // set raw value
 store.set(row, col, data);   // set full CellData (with displayValue, style, etc.)
 ```
 
----
-
 ## Events / Hooks
 
-| HandsOnTable Hook | witqq spreadsheet Event | Payload |
+| Handsontable Hook | @witqq/spreadsheet Event | Payload |
 |---|---|---|
 | `afterChange` | `cellChange` | `CellChangeEvent` |
 | `afterSelection` | `selectionChange` | `SelectionChangeEvent` |
@@ -79,21 +81,20 @@ store.set(row, col, data);   // set full CellData (with displayValue, style, etc
 | `afterUndo` / `afterRedo` | `commandUndo` / `commandRedo` | `CommandEvent` |
 
 ### Subscribing
+
 ```ts
-// HandsOnTable
+// Handsontable
 hot.addHook('afterChange', (changes) => { ... });
 
-// witqq spreadsheet
+// @witqq/spreadsheet
 engine.on('cellChange', (event) => {
   console.log(event.row, event.col, event.oldValue, event.newValue);
 });
 ```
 
----
-
 ## Column Configuration
 
-| HandsOnTable | witqq spreadsheet `ColumnDef` | Notes |
+| Handsontable | @witqq/spreadsheet `ColumnDef` | Notes |
 |---|---|---|
 | `data: 'field'` | `key: 'field'` | Data binding key |
 | `title: 'Header'` | `title: 'Header'` | Same |
@@ -106,15 +107,13 @@ engine.on('cellChange', (event) => {
 | `renderer` | Custom `CellTypeRenderer` | Via CellTypeRegistry |
 | `allowEmpty: false` | Validation rule | Via ValidationEngine |
 
----
-
 ## Sorting
 
 ```ts
-// HandsOnTable
+// Handsontable
 hot.getPlugin('columnSorting').sort({ column: 0, sortOrder: 'asc' });
 
-// witqq spreadsheet
+// @witqq/spreadsheet
 engine.sortBy(0, 'asc');           // single column
 engine.sortBy([                    // multi-column
   { col: 0, direction: 'asc' },
@@ -126,16 +125,14 @@ engine.getSortColumns();           // current sort state
 
 Enable sorting per column: `{ key: 'name', sortable: true }` in ColumnDef, or globally via `sortable: true` in config.
 
----
-
 ## Filtering
 
 ```ts
-// HandsOnTable
+// Handsontable
 hot.getPlugin('filters').addCondition(0, 'contains', ['text']);
 hot.getPlugin('filters').filter();
 
-// witqq spreadsheet
+// @witqq/spreadsheet
 engine.setColumnFilter(0, { operator: 'contains', value: 'text' });
 engine.removeColumnFilter(0);
 engine.clearFilters();
@@ -144,42 +141,38 @@ engine.getFilteredRowCount();      // visible rows after filter
 
 Supported operators: `equals`, `notEquals`, `contains`, `notContains`, `startsWith`, `endsWith`, `greaterThan`, `lessThan`, `greaterThanOrEqual`, `lessThanOrEqual`, `between`, `notBetween`, `isEmpty`, `isNotEmpty`.
 
----
-
 ## Frozen Panes
 
 ```ts
-// HandsOnTable
+// Handsontable
 new Handsontable(el, { fixedRowsTop: 2, fixedColumnsLeft: 1 });
 
-// witqq spreadsheet
+// @witqq/spreadsheet
 new WitEngine({ frozenRows: 2, frozenColumns: 1, columns: [...] });
 ```
-
----
 
 ## Merged Cells
 
 ```ts
-// HandsOnTable
+// Handsontable
 new Handsontable(el, { mergeCells: [{ row: 0, col: 0, rowspan: 2, colspan: 3 }] });
 
-// witqq spreadsheet
+// @witqq/spreadsheet
 engine.mergeCells({ startRow: 0, startCol: 0, endRow: 1, endCol: 2 });
 engine.unmergeCells({ startRow: 0, startCol: 0, endRow: 1, endCol: 2 });
 engine.getMergedRegion(0, 0);      // MergedRegion | undefined
 ```
 
----
-
 ## Plugins
 
-### HandsOnTable
+### Handsontable
+
 ```js
 Handsontable.plugins.registerPlugin('MyPlugin', MyPlugin);
 ```
 
-### witqq spreadsheet
+### @witqq/spreadsheet
+
 ```ts
 import type { WitPlugin, PluginAPI } from '@witqq/spreadsheet';
 
@@ -206,44 +199,38 @@ engine.getPlugin('my-plugin');
 - `PluginAPI` provides isolated state via `getPluginState` / `setPluginState`
 - Plugin dependencies declared via `dependencies: ['other-plugin']`
 
----
-
 ## Undo / Redo
 
 ```ts
-// HandsOnTable
+// Handsontable
 hot.undo();
 hot.redo();
 
-// witqq spreadsheet
+// @witqq/spreadsheet
 engine.getCommandManager().undo();
 engine.getCommandManager().redo();
 ```
 
----
-
 ## Clipboard
 
 ```ts
-// HandsOnTable — managed via hooks
+// Handsontable — managed via hooks
 hot.addHook('beforeCopy', (data) => { ... });
 
-// witqq spreadsheet — ClipboardManager handles Ctrl+C/X/V automatically
+// @witqq/spreadsheet — ClipboardManager handles Ctrl+C/X/V automatically
 engine.on('clipboardCopy', (e) => console.log(e.rowCount, e.colCount));
 engine.on('clipboardPaste', (e) => console.log(e.rowCount, e.colCount));
 ```
 
 Clipboard supports TSV and HTML table formats for Excel/Sheets interop.
 
----
-
 ## Validation
 
 ```ts
-// HandsOnTable
+// Handsontable
 columns: [{ validator: (value, callback) => callback(value > 0) }]
 
-// witqq spreadsheet
+// @witqq/spreadsheet
 engine.setColumnValidation(0, [
   { type: 'required', message: 'Value is required' },
   { type: 'min', min: 0, message: 'Must be positive' },
@@ -255,13 +242,11 @@ engine.setCellValidation(0, 0, [
 
 Built-in rules: `required`, `min`, `max`, `range`, `minLength`, `maxLength`, `pattern` (regex), `custom` (function).
 
----
-
 ## Theming
 
 ```ts
-// HandsOnTable — CSS classes
-// witqq spreadsheet — theme object
+// Handsontable — CSS classes
+// @witqq/spreadsheet — theme object
 import { lightTheme, darkTheme } from '@witqq/spreadsheet';
 
 const engine = new WitEngine({ theme: darkTheme, columns: [...] });
@@ -269,6 +254,7 @@ engine.setTheme(lightTheme);  // switch at runtime
 ```
 
 Create custom themes by spreading a built-in theme:
+
 ```ts
 const myTheme: WitTheme = {
   ...lightTheme,
@@ -277,16 +263,14 @@ const myTheme: WitTheme = {
 };
 ```
 
----
-
 ## React Integration
 
 ```tsx
-// HandsOnTable
+// Handsontable
 import { HotTable } from '@handsontable/react';
 <HotTable data={data} columns={columns} />
 
-// witqq spreadsheet
+// @witqq/spreadsheet
 import { WitTable, WitTableRef } from '@witqq/spreadsheet-react';
 const ref = useRef<WitTableRef>(null);
 <WitTable
@@ -302,22 +286,18 @@ ref.current?.selectCell(0, 0);
 ref.current?.print();
 ```
 
----
-
 ## Performance Comparison
 
-| Feature | HandsOnTable | witqq spreadsheet |
+| Feature | Handsontable | @witqq/spreadsheet |
 |---|---|---|
 | Rendering | DOM-based (TD elements) | Canvas 2D |
 | Max rows (smooth) | ~10K | 100K+ |
 | Initialization 1M rows | N/A | ~800ms |
 | Memory per cell | ~2KB (DOM node) | ~64 bytes (sparse Map) |
-| Bundle size | ~800KB min | <300KB gzipped |
+| Bundle size | ~800KB min | &lt;300KB gzipped |
 | Dependencies | 0 (but large core) | 0 (core) |
-
----
 
 ## License
 
-- HandsOnTable: Proprietary (paid) for commercial use
-- witqq spreadsheet: BSL 1.1 (converts to Apache 2.0 on 2030-03-01)
+- Handsontable: Proprietary (paid) for commercial use
+- @witqq/spreadsheet: BSL 1.1 (converts to Apache 2.0 on 2030-03-01)

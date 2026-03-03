@@ -49,7 +49,7 @@ export class MyComponent {
 
 ## Documentation
 
-Full documentation: https://spreadsheet.witqq.ru/frameworks/angular
+Full documentation: https://spreadsheet.witqq.dev/frameworks/angular
 
 ## License
 

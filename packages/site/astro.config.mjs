@@ -6,7 +6,7 @@ import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
-  site: 'https://spreadsheet.witqq.ru',
+  site: 'https://spreadsheet.witqq.dev',
   integrations: [
     starlight({
       title: '@witqq/spreadsheet',
@@ -63,6 +63,7 @@ export default defineConfig({
             { label: 'Pivot Tables', slug: 'guides/pivot' },
             { label: 'Row Grouping', slug: 'guides/row-grouping' },
             { label: 'DataView', slug: 'guides/dataview' },
+            { label: 'Migration from Handsontable', slug: 'guides/migration-from-handsontable' },
           ],
         },
         {

@@ -26,9 +26,11 @@ COPY packages/server/ packages/server/
 COPY packages/demo/ packages/demo/
 COPY packages/site/ packages/site/
 COPY tsconfig*.json ./
+ARG BUILD_TIME=unknown
 RUN npm run build && npm run build -w packages/demo && npm run build -w packages/site
 
 FROM nginx:alpine
+ARG BUILD_TIME=unknown
 COPY config/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/packages/site/dist /usr/share/nginx/html
 COPY --from=build /app/packages/demo/dist /usr/share/nginx/html/demo

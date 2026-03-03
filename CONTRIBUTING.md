@@ -1,6 +1,6 @@
 # Contributing to witqq spreadsheet
 
-Thank you for your interest in contributing! For full documentation, interactive demos, and API reference, visit the [project website](https://witqq.ru).
+Thank you for your interest in contributing! For full documentation, interactive demos, and API reference, visit the [project website](https://witqq.dev).
 
 ## Getting Started
 

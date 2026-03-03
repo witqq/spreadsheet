@@ -39,7 +39,7 @@ Or use from CDN:
 
 ## Documentation
 
-Full documentation: https://spreadsheet.witqq.ru/frameworks/widget
+Full documentation: https://spreadsheet.witqq.dev/frameworks/widget
 
 ## License
 

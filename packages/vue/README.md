@@ -43,7 +43,7 @@ const rows = [
 
 ## Documentation
 
-Full documentation: https://spreadsheet.witqq.ru/frameworks/vue
+Full documentation: https://spreadsheet.witqq.dev/frameworks/vue
 
 ## License
 

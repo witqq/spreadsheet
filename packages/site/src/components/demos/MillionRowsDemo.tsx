@@ -141,9 +141,10 @@ export function MillionRowsDemo({ height = 500 }: MillionRowsDemoProps) {
     );
   }
 
+  const fmt = new Intl.NumberFormat('en-US');
   const desc = loadTime !== null
-    ? `Loaded in ${loadTime}ms · ${TARGET_ROWS.toLocaleString()} rows · ${fps !== null ? fps + ' FPS' : 'Measuring...'}`
-    : `Loading ${loadedRows.toLocaleString()} / ${TARGET_ROWS.toLocaleString()} (${progress}%) · ${fps !== null ? fps + ' FPS' : ''}`;
+    ? `Loaded in ${loadTime}ms · ${fmt.format(TARGET_ROWS)} rows · ${fps !== null ? fps + ' FPS' : 'Measuring...'}`
+    : `Loading ${fmt.format(loadedRows)} / ${fmt.format(TARGET_ROWS)} (${progress}%) · ${fps !== null ? fps + ' FPS' : ''}`;
 
   return (
     <DemoWrapper

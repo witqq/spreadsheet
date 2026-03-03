@@ -78,13 +78,13 @@ Official plugins: [@witqq/spreadsheet-plugins](https://www.npmjs.com/package/@wi
 
 ## Documentation
 
-Full documentation and live demos: [spreadsheet.witqq.ru](https://spreadsheet.witqq.ru)
+Full documentation and live demos: [spreadsheet.witqq.dev](https://spreadsheet.witqq.dev)
 
 ## License
 
 Licensed under the [Business Source License 1.1](https://github.com/witqq/spreadsheet/blob/master/LICENSE).
 
 **Free** for non-commercial use (personal, educational, academic, non-commercial open source).
-**Commercial use** requires a paid license — see [spreadsheet.witqq.ru/pricing](https://spreadsheet.witqq.ru/pricing).
+**Commercial use** requires a paid license — see [spreadsheet.witqq.dev/pricing](https://spreadsheet.witqq.dev/pricing).
 
 Change Date: 2030-03-01 → Apache License 2.0.
