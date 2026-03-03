@@ -16,7 +16,7 @@
     "dev": "DOCKER_BUILDKIT=1 docker compose up --build -d && echo 'http://localhost:3150'",
     "dev:stop": "docker compose down",
     "dev:logs": "docker compose logs -f witqq spreadsheet",
-    "dev:remote": "infra-tools auto --server witqq && infra-tools ssh exec 'docker rm -f witqq-spreadsheet 2>/dev/null; cd /opt/witqq-spreadsheet && docker compose -f docker-compose.remote.yml up -d --build' --server witqq",
+    "dev:remote": "infra-tools auto --server witqq",
     "build": "npm run build -w packages/core && npm run build -w packages/react && npm run build -w packages/plugins",
     "test": "vitest run",
     "test:e2e": "playwright test",

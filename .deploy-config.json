@@ -1,0 +1,14 @@
+{
+  "serviceName": "witqq-spreadsheet",
+  "dockerComposePath": "docker-compose.remote.yml",
+  "dockerfile": "config/Dockerfile",
+  "remoteDir": "/opt/witqq-spreadsheet",
+  "imageName": "witqq-spreadsheet",
+  "projectDir": "/Users/mike/WebstormProjects/wit-table",
+  "deploymentType": "build",
+  "healthCheck": {
+    "containerName": "witqq-spreadsheet",
+    "timeout": 120,
+    "interval": 3
+  }
+}
