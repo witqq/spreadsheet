@@ -1,0 +1,6 @@
+src/
+tests/
+tsconfig.json
+vite.config.ts
+*.tsbuildinfo
+.turbo/

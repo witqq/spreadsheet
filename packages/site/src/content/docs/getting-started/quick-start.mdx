@@ -1,0 +1,115 @@
+---
+title: Quick Start
+description: "Build your first @witqq/spreadsheet in 5 minutes"
+---
+
+import { BasicTableDemo } from '../../../components/demos/BasicTableDemo';
+import basicTableSource from '../../../components/demos/BasicTableDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+# Quick Start
+
+This guide shows how to create a basic editable spreadsheet with React in under 5 minutes.
+
+<BasicTableDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={basicTableSource} lang="tsx" title="BasicTableDemo.tsx" />
+</details>
+
+## Minimal Example
+
+```tsx
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+import type { ColumnDef } from '@witqq/spreadsheet';
+
+interface Employee {
+  name: string;
+  department: string;
+  salary: number;
+  startDate: string;
+}
+
+const columns: ColumnDef[] = [
+  { key: 'name', title: 'Name', width: 180, type: 'string' },
+  { key: 'department', title: 'Department', width: 150, type: 'string' },
+  { key: 'salary', title: 'Salary', width: 120, type: 'number' },
+  { key: 'startDate', title: 'Start Date', width: 130, type: 'date' },
+];
+
+const data: Employee[] = [
+  { name: 'Alice Johnson', department: 'Engineering', salary: 95000, startDate: '2022-03-15' },
+  { name: 'Bob Smith', department: 'Marketing', salary: 72000, startDate: '2021-07-01' },
+  { name: 'Carol White', department: 'Engineering', salary: 105000, startDate: '2020-11-20' },
+  { name: 'Dan Brown', department: 'Sales', salary: 68000, startDate: '2023-01-10' },
+];
+
+export default function App() {
+  return (
+    <Spreadsheet<Employee>
+      columns={columns}
+      data={data}
+      editable={true}
+      sortable={true}
+      height={400}
+      onCellChange={(event) => {
+        console.log(`Cell [${event.row},${event.col}]: ${event.oldValue} → ${event.newValue}`);
+      }}
+      onSelectionChange={(event) => {
+        console.log('Selection:', event.selection);
+      }}
+    />
+  );
+}
+```
+
+## What This Creates
+
+The code above renders a canvas-based spreadsheet with:
+
+- **4 columns** with typed cells (string, number, date)
+- **4 rows** of sample data
+- **Inline editing** — double-click or press F2 to edit any cell
+- **Sorting** — click column headers to sort ascending/descending
+- **Keyboard navigation** — arrow keys, Tab, Enter, Home/End, Ctrl+Home/End
+- **Selection** — click, Shift+click for range, Ctrl+click for multi-select
+- **Undo/Redo** — Ctrl+Z / Ctrl+Shift+Z (up to 100 steps)
+- **Clipboard** — Ctrl+C/X/V with Excel and Google Sheets interop
+- **Row numbers** — automatic row numbering on the left
+
+## Accessing the Engine
+
+Use a ref to access the underlying engine instance for programmatic control:
+
+```tsx
+import { useRef } from 'react';
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+import type { SpreadsheetRef } from '@witqq/spreadsheet-react';
+
+function App() {
+  const tableRef = useRef<SpreadsheetRef>(null);
+
+  const handleScrollToTop = () => {
+    tableRef.current?.scrollTo(0, 0);
+  };
+
+  const handleUndo = () => {
+    tableRef.current?.undo();
+  };
+
+  return (
+    <>
+      <button onClick={handleScrollToTop}>Scroll to Top</button>
+      <button onClick={handleUndo}>Undo</button>
+      <Spreadsheet ref={tableRef} columns={columns} data={data} editable={true} />
+    </>
+  );
+}
+```
+
+## Next Steps
+
+- [Configuration](/getting-started/configuration/) — All available options and column definitions
+- [TypeScript](/getting-started/typescript/) — Type-safe usage patterns
+- [Events](/concepts/events/) — Full event reference

@@ -1,0 +1,32 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+coverage/
+test-results/
+playwright-report/
+*.log
+.DS_Store
+.env
+.env.local
+.env.remote
+docs/api/
+
+# Private deployment configs
+docker-compose.remote.yml
+.deploy-config.json
+
+# Moira workflow workspace
+moira-ws/
+
+# Claude supervisor logs
+.supervisor_logs/
+.idea/
+docker-compose.remote.yml
+CLAUDE.md
+
+# Internal files (not for public repo)
+research/
+deploy-logs/
+.github/workflows/
+tmp/

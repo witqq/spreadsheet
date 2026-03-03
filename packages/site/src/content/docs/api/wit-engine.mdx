@@ -1,0 +1,187 @@
+---
+title: SpreadsheetEngine API
+description: Complete API reference for the SpreadsheetEngine orchestrator class.
+---
+
+# SpreadsheetEngine API
+
+`SpreadsheetEngine` is the central orchestrator that creates and wires all subsystems. It is the single entry point for programmatic control of the spreadsheet.
+
+```ts
+import { SpreadsheetEngine } from '@witqq/spreadsheet';
+
+const engine = new SpreadsheetEngine({
+  columns,
+  data,
+  editable: true,
+  theme: lightTheme,
+});
+
+engine.mount(document.getElementById('grid')!);
+```
+
+## Lifecycle
+
+| Method | Signature | Description |
+|---|---|---|
+| `mount` | `(container: HTMLElement) => void` | Mount engine into DOM container, create canvas, attach events |
+| `destroy` | `() => void` | Destroy engine, remove canvas, detach all event listeners |
+| `render` | `() => void` | Force immediate re-render of the entire canvas |
+| `requestRender` | `() => void` | Schedule re-render on next animation frame |
+
+## Cell Data
+
+| Method | Signature | Description |
+|---|---|---|
+| `getCell` | `(row, col) => CellData \| undefined` | Get cell data at logical row/col |
+| `setCell` | `(row, col, value) => void` | Set cell value at logical row/col |
+| `getCellStore` | `() => CellStore` | Access the underlying CellStore |
+
+## Cell Status (Change Tracking)
+
+| Method | Signature | Description |
+|---|---|---|
+| `setCellStatus` | `(row, col, status, errorMessage?) => void` | Set cell tracking status |
+| `getCellStatus` | `(row, col) => CellMetadata['status'] \| undefined` | Get cell tracking status |
+| `getChangedCells` | `() => Array<{row, col}>` | Get all cells with 'changed' status |
+| `getChangeTracker` | `() => ChangeTracker` | Access the ChangeTracker instance |
+
+## Row & Column Layout
+
+| Method | Signature | Description |
+|---|---|---|
+| `getRowStore` | `() => RowStore` | Access RowStore for row heights |
+| `setRowHeight` | `(row, height) => void` | Set a specific row height |
+| `getLayoutEngine` | `() => LayoutEngine \| null` | Access cumulative position arrays |
+
+## Selection
+
+| Method | Signature | Description |
+|---|---|---|
+| `getSelection` | `() => Selection` | Get current selection state |
+| `getSelectionManager` | `() => SelectionManager` | Access SelectionManager |
+| `getKeyboardNavigator` | `() => KeyboardNavigator \| null` | Access keyboard navigation |
+
+## Commands (Undo/Redo)
+
+| Method | Signature | Description |
+|---|---|---|
+| `getCommandManager` | `() => CommandManager` | Access undo/redo stack |
+
+## Sorting
+
+| Method | Signature | Description |
+|---|---|---|
+| `getSortColumns` | `() => readonly SortColumn[]` | Get current sort state |
+| `getSortEngine` | `() => SortEngine` | Access SortEngine |
+
+## Filtering
+
+| Method | Signature | Description |
+|---|---|---|
+| `setColumnFilter` | `(col, conditions) => void` | Set filter on column |
+| `removeColumnFilter` | `(col) => void` | Remove filter from column |
+| `clearFilters` | `() => void` | Remove all filters |
+| `getFilteredRowCount` | `() => number` | Number of visible rows after filtering |
+| `getFilterEngine` | `() => FilterEngine` | Access FilterEngine |
+| `openFilterPanel` | `(col) => void` | Open filter panel UI for column |
+| `closeFilterPanel` | `() => void` | Close filter panel |
+| `isFilterPanelOpen` | `boolean` (getter) | Whether filter panel is open |
+
+## Merging
+
+| Method | Signature | Description |
+|---|---|---|
+| `mergeCells` | `(region, value?) => boolean` | Merge cells in region (false if invalid) |
+| `unmergeCells` | `(startRow, startCol) => boolean` | Unmerge cells at anchor (false if none) |
+| `getMergedRegion` | `(row, col) => MergedRegion \| null` | Get merged region containing cell |
+| `getMergeManager` | `() => MergeManager` | Access MergeManager |
+
+## Row Groups
+
+| Method | Signature | Description |
+|---|---|---|
+| `setRowGroups` | `(groups: RowGroupDef[]) => void` | Define row groups |
+| `toggleRowGroup` | `(logicalRow) => void` | Toggle expand/collapse |
+| `expandAllGroups` | `() => void` | Expand all groups |
+| `collapseAllGroups` | `() => void` | Collapse all groups |
+| `clearRowGroups` | `() => void` | Remove all groups |
+| `setGroupAggregates` | `(aggregates) => void` | Set aggregate functions for group headers |
+| `getRowGroupManager` | `() => RowGroupManager` | Access RowGroupManager |
+
+## Validation
+
+| Method | Signature | Description |
+|---|---|---|
+| `setColumnValidation` | `(col, rules) => void` | Set validation rules for column |
+| `setCellValidation` | `(row, col, rules) => void` | Set validation rules for cell |
+| `removeColumnValidation` | `(col) => void` | Remove column validation |
+| `removeCellValidation` | `(row, col) => void` | Remove cell validation |
+| `getValidationEngine` | `() => ValidationEngine` | Access ValidationEngine |
+
+## Context Menu
+
+| Method | Signature | Description |
+|---|---|---|
+| `registerContextMenuItem` | `(item: ContextMenuItem) => void` | Register a menu item |
+| `unregisterContextMenuItem` | `(id: string) => void` | Remove a menu item |
+| `getContextMenuManager` | `() => ContextMenuManager \| null` | Access ContextMenuManager |
+
+## Clipboard
+
+| Method | Signature | Description |
+|---|---|---|
+| `getClipboardManager` | `() => ClipboardManager \| null` | Access ClipboardManager |
+
+## Inline Editing
+
+| Method | Signature | Description |
+|---|---|---|
+| `getInlineEditor` | `() => InlineEditor \| null` | Access InlineEditor |
+
+## Render Layers
+
+| Method | Signature | Description |
+|---|---|---|
+| `addRenderLayer` | `(layer) => void` | Append a render layer |
+| `insertRenderLayerBefore` | `(layer, beforeLayer) => void` | Insert layer before another |
+| `getRenderLayer` | `<T>(layerClass) => T \| undefined` | Get layer by class |
+| `removeRenderLayer` | `(layer) => void` | Remove a render layer |
+
+## Theme
+
+| Method | Signature | Description |
+|---|---|---|
+| `getTheme` | `() => SpreadsheetTheme` | Get current theme |
+| `setTheme` | `(theme: SpreadsheetTheme) => void` | Switch theme at runtime |
+
+## Plugins
+
+| Method | Signature | Description |
+|---|---|---|
+| `installPlugin` | `(plugin: SpreadsheetPlugin) => void` | Install a plugin (checks dependencies) |
+| `removePlugin` | `(name: string) => void` | Remove plugin by name |
+| `getPlugin` | `(name: string) => SpreadsheetPlugin \| undefined` | Get installed plugin |
+
+## Events
+
+| Method | Signature | Description |
+|---|---|---|
+| `on` | `(event, handler) => void` | Subscribe to an event |
+| `off` | `(event, handler) => void` | Unsubscribe from an event |
+| `getEventBus` | `() => EventBus` | Access the EventBus |
+
+See [Event System](/concepts/events/) for a full list of events.
+
+## Data & Viewport
+
+| Method | Signature | Description |
+|---|---|---|
+| `getVisibleRange` | `() => CellRange` | Get currently visible row/col range |
+| `getDataView` | `() => DataView` | Access logical↔physical row mapping |
+| `getViewportManager` | `() => ViewportManager \| null` | Access viewport calculation |
+| `getDirtyTracker` | `() => DirtyTracker \| null` | Access dirty tracking |
+| `getScrollManager` | `() => ScrollManager \| null` | Access scroll container |
+| `getConfig` | `() => SpreadsheetEngineConfig` | Get engine configuration |
+| `getCanvasElement` | `() => HTMLCanvasElement \| null` | Get the canvas DOM element |
+| `getCellTypeRegistry` | `() => CellTypeRegistry` | Access cell type registry |

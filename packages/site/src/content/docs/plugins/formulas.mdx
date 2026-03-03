@@ -1,0 +1,317 @@
+---
+title: "Formula Engine"
+description: "Spreadsheet formulas with cell references, 20+ built-in functions, and automatic recalculation."
+---
+
+import { FormulaDemo } from '../../../components/demos/FormulaDemo';
+import formulaSource from '../../../components/demos/FormulaDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+# Formula Engine
+
+The `FormulaPlugin` adds spreadsheet-style formulas to @witqq/spreadsheet. It includes a tokenizer, parser, evaluator, and dependency graph for automatic recalculation when referenced cells change.
+
+<FormulaDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={formulaSource} lang="tsx" title="FormulaDemo.tsx" />
+</details>
+
+## Installation
+
+```ts
+import { FormulaPlugin } from '@witqq/spreadsheet-plugins';
+
+const formulaPlugin = new FormulaPlugin();
+engine.installPlugin(formulaPlugin);
+```
+
+### Options
+
+```ts
+interface FormulaPluginOptions {
+  worker?: Worker;    // Web Worker for off-thread evaluation
+  syncOnly?: boolean; // Force synchronous mode (default: false)
+}
+```
+
+## Formula Syntax
+
+Formulas start with `=` and are entered in any cell:
+
+```
+=SUM(A1:A10)
+=IF(B2>100, "High", "Low")
+=AVERAGE(C1:C50) * 1.1
+```
+
+### Cell References
+
+| Syntax | Description |
+|---|---|
+| `A1` | Relative reference (column A, row 1) |
+| `$A$1` | Absolute reference (won't shift on copy) |
+| `A1:B10` | Range reference |
+
+### Operators
+
+| Category | Operators |
+|---|---|
+| Arithmetic | `+`, `-`, `*`, `/`, `^`, `%` |
+| Comparison | `=`, `<>`, `<`, `>`, `<=`, `>=` |
+| Text | `&` (concatenation) |
+
+## Built-in Functions
+
+### Aggregate
+
+| Function | Description |
+|---|---|
+| `SUM(range)` | Sum of numeric values |
+| `AVERAGE(range)` | Arithmetic mean |
+| `COUNT(range)` | Count of numeric values |
+| `COUNTA(range)` | Count of non-empty cells |
+| `MIN(range)` | Minimum value |
+| `MAX(range)` | Maximum value |
+
+### Logic
+
+| Function | Description |
+|---|---|
+| `IF(condition, then, else)` | Conditional evaluation |
+| `AND(a, b, ...)` | All arguments are truthy |
+| `OR(a, b, ...)` | Any argument is truthy |
+| `NOT(value)` | Logical negation |
+
+### Math
+
+| Function | Description |
+|---|---|
+| `ABS(value)` | Absolute value |
+| `ROUND(value, digits)` | Round to N decimal places |
+
+### Text
+
+| Function | Description |
+|---|---|
+| `CONCATENATE(a, b, ...)` | Join strings |
+| `LEN(text)` | String length |
+| `UPPER(text)` | Convert to uppercase |
+| `LOWER(text)` | Convert to lowercase |
+| `LEFT(text, n)` | First N characters |
+| `RIGHT(text, n)` | Last N characters |
+
+### Date
+
+| Function | Description |
+|---|---|
+| `TODAY()` | Current date |
+
+## Dependency Graph
+
+The formula engine maintains a directed dependency graph. When a cell value changes, all dependent formulas are automatically recalculated in topological order:
+
+```
+A1 = 10
+B1 = =A1 * 2        → 20
+C1 = =B1 + A1       → 30
+```
+
+Changing `A1` to `5` triggers: `B1` → `10`, then `C1` → `15`.
+
+## Error Types
+
+| Error | Cause |
+|---|---|
+| `#REF!` | Invalid cell reference |
+| `#VALUE!` | Wrong argument type |
+| `#DIV/0!` | Division by zero |
+| `#NAME?` | Unknown function name |
+| `#NUM!` | Invalid numeric value |
+| `#NULL!` | Null intersection of ranges |
+
+## Usage with React
+
+```tsx
+import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+import { FormulaPlugin } from '@witqq/spreadsheet-plugins';
+
+interface Row {
+  price: number;
+  quantity: number;
+  total: string;
+}
+
+const columns: ColumnDef[] = [
+  { key: 'price', title: 'Price', width: 100, type: 'number' },
+  { key: 'quantity', title: 'Qty', width: 80, type: 'number' },
+  { key: 'total', title: 'Total', width: 120, type: 'formula' },
+];
+
+function App() {
+  const ref = useRef<SpreadsheetRef>(null);
+
+  useEffect(() => {
+    ref.current?.installPlugin(new FormulaPlugin());
+  }, []);
+
+  const data: Row[] = [
+    { price: 10, quantity: 5, total: '=A1*B1' },
+    { price: 20, quantity: 3, total: '=A2*B2' },
+  ];
+
+  return <Spreadsheet ref={ref} columns={columns} data={data} />;
+}
+```
+
+## Formula Internals
+
+### Tokenizer
+
+The `tokenize()` function converts a formula string into a token stream:
+
+```typescript
+import { tokenize, TokenType, type Token } from '@witqq/spreadsheet-plugins';
+
+const tokens: Token[] = tokenize('A1*2+SUM(B1:B10)');
+// TokenType: Number, String, Boolean, CellRef, FunctionName, Operator, OpenParen, CloseParen, Comma, Colon, EOF
+```
+
+### Parser
+
+The `parse()` function builds an AST from tokens using recursive descent:
+
+```typescript
+import { parse, type ASTNode } from '@witqq/spreadsheet-plugins';
+
+const ast: ASTNode = parse(tokens);
+```
+
+**AST Node Types:** `NumberNode`, `StringNode`, `BooleanNode`, `CellRefNode`, `RangeNode`, `BinaryOpNode`, `UnaryOpNode`, `FunctionCallNode`, `PercentNode`, `ErrorNode`.
+
+### Evaluator
+
+The `evaluate()` function walks the AST and computes the result:
+
+```typescript
+import { evaluate, type CellValueResolver } from '@witqq/spreadsheet-plugins';
+
+const resolver: CellValueResolver = {
+  getCellValue: (row, col) => cellStore.get(row, col)?.value,
+};
+
+const result = evaluate(ast, resolver); // number | string | boolean | FormulaError
+```
+
+### Dependency Graph Utilities
+
+```typescript
+import { cellKey, parseCellKey, extractDependencies } from '@witqq/spreadsheet-plugins';
+
+cellKey(5, 3);               // "5:3"
+parseCellKey("5:3");          // { row: 5, col: 3 }
+extractDependencies(ast);     // ["0:0", "1:0", "1:1", ...] — all referenced cells
+```
+
+The dependency graph performs topological sort for recalculation order and detects circular references.
+
+## Worker Mode
+
+For large datasets, offload formula evaluation to a Web Worker:
+
+```ts
+const worker = new Worker(
+  new URL('@witqq/spreadsheet-plugins/formula-worker', import.meta.url),
+  { type: 'module' }
+);
+
+const formulaPlugin = new FormulaPlugin({ worker });
+engine.installPlugin(formulaPlugin);
+```
+
+Worker mode uses `FormulaWorkerBridge` internally. It posts `setCellValue`, `processFormula`, `cellChanged`, and `recalculateAll` messages to the worker thread and receives computed results asynchronously.
+
+## API Types
+
+### TokenType
+
+Enum of all token categories produced by the tokenizer.
+
+```ts
+enum TokenType {
+  Number = 'Number',
+  String = 'String',
+  Boolean = 'Boolean',
+  CellRef = 'CellRef',
+  FunctionName = 'FunctionName',
+  Operator = 'Operator',
+  OpenParen = 'OpenParen',
+  CloseParen = 'CloseParen',
+  Comma = 'Comma',
+  Colon = 'Colon',
+  EOF = 'EOF',
+}
+```
+
+### Token
+
+A single token produced by `tokenize()`, carrying its type, raw text, and position in the formula string.
+
+```ts
+interface Token {
+  type: TokenType;
+  value: string;
+  position: number;
+}
+```
+
+### ASTNode
+
+Union type of all AST nodes produced by `parse()`.
+
+```ts
+type ASTNode =
+  | NumberNode
+  | StringNode
+  | BooleanNode
+  | CellRefNode
+  | RangeNode
+  | BinaryOpNode
+  | UnaryOpNode
+  | FunctionCallNode
+  | PercentNode
+  | ErrorNode;
+
+interface NumberNode { type: 'Number'; value: number; }
+interface StringNode { type: 'String'; value: string; }
+interface BooleanNode { type: 'Boolean'; value: boolean; }
+interface CellRefNode { type: 'CellRef'; ref: string; col: number; row: number; absCol: boolean; absRow: boolean; }
+interface RangeNode { type: 'Range'; start: CellRefNode; end: CellRefNode; }
+interface BinaryOpNode { type: 'BinaryOp'; op: string; left: ASTNode; right: ASTNode; }
+interface UnaryOpNode { type: 'UnaryOp'; op: string; operand: ASTNode; }
+interface FunctionCallNode { type: 'FunctionCall'; name: string; args: ASTNode[]; }
+interface PercentNode { type: 'Percent'; operand: ASTNode; }
+interface ErrorNode { type: 'Error'; error: FormulaError; }
+```
+
+### FunctionDef
+
+Signature for built-in function implementations used by the evaluator.
+
+```ts
+type FunctionDef = (
+  args: ASTNode[],
+  resolver: CellValueResolver,
+  evalNode: (node: ASTNode) => FormulaResult,
+) => FormulaResult;
+```
+
+### CellValueResolver
+
+Interface for resolving cell values during formula evaluation.
+
+```ts
+interface CellValueResolver {
+  getCellValue(row: number, col: number): unknown;
+}

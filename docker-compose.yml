@@ -1,0 +1,17 @@
+services:
+  witqq-spreadsheet:
+    build:
+      context: .
+      dockerfile: config/Dockerfile
+    container_name: witqq-spreadsheet
+    ports:
+      - "3150:80"
+    restart: unless-stopped
+  collab-server:
+    build:
+      context: .
+      dockerfile: config/Dockerfile.collab
+    container_name: witqq-spreadsheet-collab
+    ports:
+      - "3151:3151"
+    restart: unless-stopped

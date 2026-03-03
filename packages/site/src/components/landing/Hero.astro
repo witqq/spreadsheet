@@ -1,0 +1,35 @@
+---
+import { HeroDemo } from '../demos/HeroDemo';
+import { MillionRowsDemo } from '../demos/MillionRowsDemo';
+---
+
+<section class="hero">
+  <h1>@witqq/spreadsheet</h1>
+  <p class="subtitle">Canvas spreadsheet engine for the web</p>
+  <div class="metrics">
+    <span>1M rows</span>
+    <span>·</span>
+    <span>60 FPS</span>
+    <span>·</span>
+    <span>&lt;500KB</span>
+    <span>·</span>
+    <span>Zero deps</span>
+    <span>·</span>
+    <span>Free for non-commercial</span>
+  </div>
+  <div class="cta-buttons">
+    <a href="/getting-started/" class="btn btn-primary">Get Started</a>
+    <a href="/getting-started/quick-start/" class="btn btn-secondary">Live Demo</a>
+    <a href="https://github.com/witqq/spreadsheet" class="btn btn-secondary" target="_blank" rel="noopener">GitHub ★</a>
+  </div>
+  <div class="install-box">
+    <code>npm install @witqq/spreadsheet @witqq/spreadsheet-react</code>
+    <button class="copy-btn" aria-label="Copy install command" onclick="navigator.clipboard.writeText('npm install @witqq/spreadsheet @witqq/spreadsheet-react').then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='📋',1500)})">📋</button>
+  </div>
+  <div id="hero-demo" class="hero-demo">
+    <HeroDemo client:load />
+  </div>
+  <div class="million-demo">
+    <MillionRowsDemo height={420} client:visible />
+  </div>
+</section>

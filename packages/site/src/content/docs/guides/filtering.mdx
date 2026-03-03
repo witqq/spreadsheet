@@ -1,0 +1,133 @@
+---
+title: Filtering
+description: Column filtering with 14 operators, AND logic, FilterPanel UI, and programmatic filter control.
+---
+
+import { FilteringDemo } from '../../../components/demos/FilteringDemo';
+import filteringSource from '../../../components/demos/FilteringDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+Spreadsheet provides a `FilterEngine` with 14 built-in operators and AND logic within and across columns. A `FilterPanel` DOM overlay gives users a point-and-click interface for setting filters. Filtering integrates with sorting — filters are applied first, then sort operates on the filtered result set via `DataView`.
+
+<FilteringDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={filteringSource} lang="tsx" title="FilteringDemo.tsx" />
+</details>
+
+## Supported Operators
+
+| Operator | Description |
+|---|---|
+| `equals` | Exact match |
+| `notEquals` | Not equal |
+| `contains` | Substring match |
+| `startsWith` | Starts with value |
+| `endsWith` | Ends with value |
+| `greaterThan` | Greater than (numeric/date) |
+| `lessThan` | Less than (numeric/date) |
+| `greaterThanOrEqual` | Greater than or equal |
+| `lessThanOrEqual` | Less than or equal |
+| `between` | Value in range (inclusive) |
+| `in` | Value in set |
+| `notIn` | Value not in set |
+| `isEmpty` | Cell is empty/null |
+| `isNotEmpty` | Cell has a value |
+
+## Filterable Table
+
+```tsx
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+
+const columns: ColumnDef[] = [
+  { key: 'name', title: 'Name', filterable: true },
+  { key: 'status', title: 'Status', filterable: true },
+  { key: 'amount', title: 'Amount', type: 'number', filterable: true },
+];
+
+function App() {
+  return (
+    <Spreadsheet
+      columns={columns}
+      data={data}
+      onFilterChange={(filters) => {
+        console.log('Active filters:', filters);
+      }}
+    />
+  );
+}
+```
+
+## Programmatic Filtering
+
+```tsx
+const ref = useRef<SpreadsheetRef>(null);
+
+// Set a filter on column 1
+ref.current?.getInstance().getFilterEngine().setColumnFilter(1, [
+  { col: 1, operator: 'contains', value: 'active' },
+]);
+
+// Set a range filter
+ref.current?.getInstance().getFilterEngine().setColumnFilter(2, [
+  { col: 2, operator: 'between', value: 100, valueTo: 500 },
+]);
+
+// Remove a column filter
+ref.current?.getInstance().getFilterEngine().removeColumnFilter(1);
+
+// Clear all filters
+ref.current?.getInstance().getFilterEngine().clearFilters();
+```
+
+## API Reference
+
+### FilterEngine
+
+| Method | Signature | Description |
+|---|---|---|
+| `setColumnFilter` | `(col: number, conditions: FilterCondition[]) => void` | Set filter on column |
+| `removeColumnFilter` | `(col: number) => void` | Remove filter from column |
+| `clearFilters` | `() => void` | Remove all filters |
+| `getColumnFilters` | `(col: number) => FilterCondition[]` | Get filters for column |
+
+### FilterCondition
+
+```typescript
+interface FilterCondition {
+  col: number;
+  operator: FilterOperator;
+  value?: CellValue;
+  valueTo?: CellValue;       // Second value for 'between' operator
+  values?: CellValue[];      // Values for 'in' / 'notIn' operators
+}
+
+type FilterOperator =
+  | 'equals' | 'notEquals'
+  | 'contains' | 'startsWith' | 'endsWith'
+  | 'greaterThan' | 'lessThan'
+  | 'greaterThanOrEqual' | 'lessThanOrEqual'
+  | 'between' | 'in' | 'notIn'
+  | 'isEmpty' | 'isNotEmpty';
+```
+
+### evaluateCondition
+
+The low-level function used by `FilterEngine` to test a single cell value:
+
+```typescript
+import { evaluateCondition } from '@witqq/spreadsheet';
+
+const matches = evaluateCondition(cellValue, {
+  col: 1,
+  operator: 'between',
+  value: 100,
+  valueTo: 500,
+}); // true | false
+```
+
+## See Also
+
+- [Sorting](/guides/sorting/) — sort operates on filtered result set
+- [DataView](/guides/dataview/) — logical↔physical row mapping

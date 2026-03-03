@@ -1,0 +1,23 @@
+---
+const features = [
+  { icon: '⚡', title: 'Canvas Rendering', desc: '60 FPS at 100K+ rows. No DOM ceiling.' },
+  { icon: '📦', title: '<500KB Bundle', desc: '10x smaller than competitors. Tree-shakeable.' },
+  { icon: '🔌', title: 'Zero Dependencies', desc: 'Pure TypeScript core. Works in Node, Workers, any framework.' },
+  { icon: '🧩', title: 'Plugin System', desc: 'Extensible via plugins. Load only what you need.' },
+  { icon: '📊', title: 'Formula Engine', desc: 'Custom formula engine, no GPL dependencies.' },
+  { icon: '♿', title: 'Accessible', desc: 'WCAG 2.1 AA, role=grid, keyboard-first navigation.' },
+];
+---
+
+<section class="features" id="features">
+  <h2 class="section-title">Why @witqq/spreadsheet?</h2>
+  <div class="features-grid">
+    {features.map((f) => (
+      <div class="feature-card">
+        <div class="icon">{f.icon}</div>
+        <h3>{f.title}</h3>
+        <p>{f.desc}</p>
+      </div>
+    ))}
+  </div>
+</section>

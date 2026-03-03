@@ -1,0 +1,91 @@
+---
+title: Installation
+description: "How to install @witqq/spreadsheet packages via npm"
+---
+
+# Installation
+
+## React Project (Recommended)
+
+Install the core engine and the React wrapper together:
+
+```bash
+npm install @witqq/spreadsheet @witqq/spreadsheet-react
+```
+
+This gives you the `Spreadsheet` React component with full TypeScript support.
+
+### Peer Dependencies
+
+The React wrapper requires React 18 or later:
+
+```json
+{
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  }
+}
+```
+
+If your project already has React installed, no additional action is needed.
+
+## Core Only (Vanilla TypeScript)
+
+If you are not using React, install just the core engine:
+
+```bash
+npm install @witqq/spreadsheet
+```
+
+The core package has **zero external dependencies**. It works in any JavaScript environment — browsers, Node.js, Web Workers, or any framework.
+
+You can build your own framework wrapper on top of the core `SpreadsheetEngine` class.
+
+## Plugins
+
+Official plugins are available as a separate package:
+
+```bash
+npm install @witqq/spreadsheet-plugins
+```
+
+This package includes:
+
+| Plugin | Description |
+|--------|-------------|
+| Formula | Tokenizer, parser, evaluator, dependency graph |
+| Conditional Format | Gradients, data bars, icon sets |
+| Excel I/O | Import/export via lazy-loaded SheetJS (Apache-2.0) |
+| Context Menu | Right-click menu with keyboard navigation |
+
+Plugins are registered via the engine's plugin API and can be installed or removed at runtime.
+
+## Verify Installation
+
+After installing, verify the packages are available by importing them in your project:
+
+```ts
+import { SpreadsheetEngine } from '@witqq/spreadsheet';
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+
+// Both imports should resolve without errors
+console.log('@witqq/spreadsheet installed successfully');
+```
+
+Run your development server or build to confirm there are no module resolution issues.
+
+## Package Sizes
+
+| Package | Size (minified + gzipped) |
+|---------|---------------------------|
+| `@witqq/spreadsheet` | ~120 KB |
+| `@witqq/spreadsheet-react` | ~8 KB |
+| `@witqq/spreadsheet-plugins` | ~45 KB (without SheetJS) |
+
+The core engine is designed to stay under 500KB total to keep bundle sizes reasonable for web applications.
+
+## Next Steps
+
+- [Quick Start](/getting-started/quick-start/) — Build your first table
+- [Configuration](/getting-started/configuration/) — All available options

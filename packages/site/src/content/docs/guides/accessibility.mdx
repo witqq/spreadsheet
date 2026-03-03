@@ -1,0 +1,80 @@
+---
+title: Accessibility (WCAG 2.1 AA)
+description: Built-in ARIA grid semantics, live announcements, and keyboard-first navigation.
+---
+
+import { AccessibilityDemo } from '../../../components/demos/AccessibilityDemo';
+import accessibilitySource from '../../../components/demos/AccessibilityDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+Spreadsheet is accessible by default — no special configuration required. The `AriaManager` applies WCAG 2.1 AA compliant attributes to the grid container and manages an `aria-live="polite"` region for dynamic announcements.
+
+<AccessibilityDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={accessibilitySource} lang="tsx" title="AccessibilityDemo.tsx" />
+</details>
+
+## Built-in ARIA Attributes
+
+The grid container receives these attributes automatically:
+
+| Attribute | Value | Purpose |
+|---|---|---|
+| `role` | `grid` | Identifies the component as a data grid |
+| `aria-rowcount` | Total row count | Communicates full size (not just visible) |
+| `aria-colcount` | Total column count | Communicates full size |
+| `aria-label` | Table name | Identifies the grid |
+
+## Automatic Announcements
+
+`AriaManager` announces state changes to screen readers through the `aria-live` region:
+
+- **Selection** — "Cell B3 selected", "Range A1 to C5 selected"
+- **Sort** — "Column Name sorted ascending"
+- **Filter** — "Column Status filtered, 42 rows visible"
+- **Validation** — "Cell B3: Email is required"
+- **Edit** — "Editing cell B3", "Cell B3 updated"
+
+## Default Accessible Table
+
+No configuration needed. All accessibility features are built in:
+
+```tsx
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+
+function App() {
+  return (
+    <Spreadsheet
+      columns={columns}
+      data={data}
+      aria-label="Employee directory"
+    />
+  );
+}
+```
+
+## Keyboard Support
+
+All features are accessible via keyboard:
+
+| Shortcut | Action |
+|---|---|
+| Arrow keys | Navigate cells |
+| Enter / F2 | Start editing |
+| Escape | Cancel editing / close menu |
+| Tab | Move to next cell |
+| Ctrl+A | Select all |
+| Ctrl+C / Ctrl+X / Ctrl+V | Copy / Cut / Paste |
+| Ctrl+Z / Ctrl+Y | Undo / Redo |
+
+## API Reference
+
+### AriaManager
+
+| Method | Signature | Description |
+|---|---|---|
+| `announce` | `(message: string) => void` | Push message to aria-live region |
+| `attach` | `(container: HTMLElement) => void` | Attach ARIA attributes to container |
+| `detach` | `() => void` | Remove ARIA attributes |

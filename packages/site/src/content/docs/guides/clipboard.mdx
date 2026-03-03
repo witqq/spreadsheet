@@ -1,0 +1,83 @@
+---
+title: Copy, Cut & Paste
+description: Clipboard operations with dual TSV/HTML format, Excel interop, and undoable cut.
+---
+
+import { ClipboardDemo } from '../../../components/demos/ClipboardDemo';
+import clipboardSource from '../../../components/demos/ClipboardDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+Spreadsheet's `ClipboardManager` provides full clipboard support. Selected cells can be copied (Ctrl+C), cut (Ctrl+X), or pasted (Ctrl+V). Data is written in two formats simultaneously: `text/plain` as tab-separated values (TSV) and `text/html` as an HTML table. This dual-format approach enables seamless interop with Excel and Google Sheets.
+
+<ClipboardDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={clipboardSource} lang="tsx" title="ClipboardDemo.tsx" />
+</details>
+
+Cut operations clear the source cells using an undoable `BatchCellEditCommand`, so Ctrl+Z restores the original values. Paste clips at grid boundaries — if the pasted data exceeds the grid dimensions, excess rows and columns are silently dropped.
+
+## Editable Table with Clipboard
+
+Clipboard works automatically on any editable table. No additional configuration is needed:
+
+```tsx
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+
+function App() {
+  return (
+    <Spreadsheet
+      columns={columns}
+      data={data}
+      editable={true}
+    />
+  );
+}
+```
+
+Select a range, press Ctrl+C to copy, click a destination cell, and press Ctrl+V to paste.
+
+## Listening to Clipboard Events
+
+```tsx
+<Spreadsheet
+  columns={columns}
+  data={data}
+  editable={true}
+  onClipboardCopy={(cells) => {
+    console.log('Copied', cells.length, 'cells');
+  }}
+  onClipboardCut={(cells) => {
+    console.log('Cut', cells.length, 'cells');
+  }}
+  onClipboardPaste={(cells, target) => {
+    console.log('Pasted at', target.row, target.col);
+  }}
+/>
+```
+
+## Clipboard Format Details
+
+| Format | MIME Type | Content |
+|---|---|---|
+| TSV | `text/plain` | Tab-separated values, newlines between rows |
+| HTML | `text/html` | `<table>` with `<tr>` and `<td>` elements |
+
+When pasting from external sources, Spreadsheet reads `text/plain` (TSV) first. If unavailable, it falls back to parsing `text/html`.
+
+## Serialization Utilities
+
+The clipboard module exports standalone serialization functions:
+
+```typescript
+import { serializeToTSV, serializeToHTML, parseTSV, parseHTML } from '@witqq/spreadsheet';
+
+// Serialize cell data to clipboard formats
+const tsv: string = serializeToTSV(cells);    // Tab-separated values
+const html: string = serializeToHTML(cells);   // HTML <table>
+
+// Parse clipboard data back to cell values
+const fromTSV: CellValue[][] = parseTSV(tsvString);
+const fromHTML: CellValue[][] = parseHTML(htmlString);
+```

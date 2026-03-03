@@ -1,0 +1,140 @@
+---
+title: "Excel Import/Export"
+description: "Import and export .xlsx files using the ExcelPlugin with lazy-loaded SheetJS."
+---
+
+import { ExcelDemo } from '../../../components/demos/ExcelDemo';
+import excelSource from '../../../components/demos/ExcelDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+# Excel Import/Export
+
+The `ExcelPlugin` provides Excel file import and export via [SheetJS](https://sheetjs.com/) (Apache-2.0). SheetJS is **lazy-loaded from CDN** on first use — no bundle size impact until you actually import or export.
+
+<ExcelDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={excelSource} lang="tsx" title="ExcelDemo.tsx" />
+</details>
+
+## Installation
+
+```ts
+import { ExcelPlugin } from '@witqq/spreadsheet-plugins';
+
+const excelPlugin = new ExcelPlugin();
+engine.installPlugin(excelPlugin);
+```
+
+## Import
+
+### importExcel
+
+```ts
+importExcel(buffer: ArrayBuffer, sheetIndex?: number): Promise<ExcelImportResult>
+```
+
+Reads an `.xlsx` file buffer and returns structured data ready to apply to the table.
+
+```ts
+interface ExcelImportResult {
+  columns: ColumnDef[];  // Auto-detected column definitions
+  rowCount: number;      // Number of data rows
+  sheetName: string;     // Name of the imported sheet
+}
+```
+
+Features:
+- Auto-detects column types from cell data (string, number, date, boolean)
+- Preserves column widths from the Excel file
+- Handles merged regions
+
+### File Input Example
+
+```tsx
+import { ExcelPlugin } from '@witqq/spreadsheet-plugins';
+import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+
+function App() {
+  const ref = useRef<SpreadsheetRef>(null);
+  const excelRef = useRef<ExcelPlugin>();
+  const [columns, setColumns] = useState<ColumnDef[]>([]);
+  const [data, setData] = useState<Record<string, unknown>[]>([]);
+
+  useEffect(() => {
+    const plugin = new ExcelPlugin();
+    excelRef.current = plugin;
+    ref.current?.installPlugin(plugin);
+  }, []);
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !excelRef.current) return;
+
+    const buffer = await file.arrayBuffer();
+    const result = await excelRef.current.importExcel(buffer);
+
+    setColumns(result.columns);
+    // Data is applied to the engine internally;
+    // update React state to match
+  };
+
+  return (
+    <div>
+      <input type="file" accept=".xlsx,.xls" onChange={handleImport} />
+      <Spreadsheet ref={ref} columns={columns} data={data} />
+    </div>
+  );
+}
+```
+
+## Export
+
+### exportExcel
+
+```ts
+exportExcel(options?: ExcelExportOptions): Promise<ArrayBuffer>
+```
+
+Exports the current table data as an `.xlsx` file buffer.
+
+```ts
+interface ExcelExportOptions {
+  sheetName?: string;       // Sheet name (default: 'Sheet1')
+  includeHeaders?: boolean; // Include column headers (default: true)
+  maxRows?: number;         // Limit exported rows
+}
+```
+
+### Export Button Example
+
+```tsx
+const handleExport = async () => {
+  if (!excelRef.current) return;
+
+  const buffer = await excelRef.current.exportExcel({
+    sheetName: 'Sales Data',
+    includeHeaders: true,
+  });
+
+  // Trigger browser download
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'export.xlsx';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+return <button onClick={handleExport}>Export to Excel</button>;
+```
+
+## SheetJS Loading
+
+SheetJS (v0.20.3) is loaded from CDN on first `importExcel` or `exportExcel` call. This keeps the core bundle small — the ~300KB SheetJS library is only fetched when needed.
+
+If you need to pre-load SheetJS (e.g. to avoid latency on first use), the plugin handles caching automatically after the first load.

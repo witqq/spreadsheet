@@ -1,0 +1,11 @@
+node_modules
+dist
+*.log
+.git
+.claude*
+moira-ws
+research
+tests
+playwright-report
+test-results
+.deploy-config.json

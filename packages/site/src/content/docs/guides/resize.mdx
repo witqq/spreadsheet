@@ -1,0 +1,88 @@
+---
+title: Column & Row Resize
+description: Drag-to-resize columns and rows with min/max constraints and undo support.
+---
+
+import { ResizeDemo } from '../../../components/demos/ResizeDemo';
+import resizeSource from '../../../components/demos/ResizeDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+Spreadsheet supports resizing columns and rows by dragging borders. Drag the right border of a column header to resize the column, or drag the bottom border of a row number cell to resize the row. Both operations are undoable via `ResizeColumnCommand` and `ResizeRowCommand`.
+
+<ResizeDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={resizeSource} lang="tsx" title="ResizeDemo.tsx" />
+</details>
+
+Column resize respects `ColumnDef.minWidth` and `ColumnDef.maxWidth` constraints. Row resize is bounded between 12px minimum and 400px maximum.
+
+## Resizable Columns
+
+Enable resize per-column through `ColumnDef.resizable`:
+
+```tsx
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+
+const columns: ColumnDef[] = [
+  { key: 'id', title: 'ID', width: 60, resizable: false },
+  { key: 'name', title: 'Name', width: 200, minWidth: 100, maxWidth: 400, resizable: true },
+  { key: 'email', title: 'Email', width: 250, minWidth: 150, resizable: true },
+];
+
+function App() {
+  return (
+    <Spreadsheet
+      columns={columns}
+      data={data}
+      onColumnResize={(col, width) => {
+        console.log(`Column ${col} resized to ${width}px`);
+      }}
+    />
+  );
+}
+```
+
+## Resize Events
+
+Listen to resize lifecycle events for custom behavior:
+
+```tsx
+<Spreadsheet
+  columns={columns}
+  data={data}
+  onColumnResizeStart={(col, startWidth) => {
+    console.log('Resize started:', col);
+  }}
+  onColumnResizeEnd={(col, newWidth) => {
+    // Persist new width to backend
+    saveColumnWidth(col, newWidth);
+  }}
+  onRowResizeStart={(row, startHeight) => {
+    console.log('Row resize started:', row);
+  }}
+  onRowResizeEnd={(row, newHeight) => {
+    saveRowHeight(row, newHeight);
+  }}
+/>
+```
+
+## API Reference
+
+### ColumnResizeManager
+
+Handles column width changes with constraints from `ColumnDef`:
+
+- `minWidth` — Minimum column width in pixels (default: 30)
+- `maxWidth` — Maximum column width in pixels (default: unlimited)
+- `resizable` — Whether the column can be resized (default: true)
+
+### RowResizeManager
+
+Handles row height changes:
+
+- Minimum height: 12px
+- Maximum height: 400px
+
+Both managers create undoable commands, so Ctrl+Z reverts a resize operation.

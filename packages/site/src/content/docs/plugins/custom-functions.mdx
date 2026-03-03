@@ -1,0 +1,169 @@
+---
+title: "Custom Functions"
+description: "Extend the formula engine with your own spreadsheet functions."
+---
+
+# Custom Functions
+
+The formula engine can be extended with custom functions by working with the `FormulaComputeEngine` directly. Custom functions follow the same signature as built-in functions and integrate with the dependency graph for automatic recalculation.
+
+## FormulaComputeEngine
+
+The compute engine handles formula evaluation and cell dependency tracking:
+
+```ts
+interface ComputeResult {
+  row: number;
+  col: number;
+  value: string | number | boolean;
+  formula: string;
+}
+
+class FormulaComputeEngine {
+  processFormula(row: number, col: number, formula: string): ComputeResult[];
+  cellChanged(row: number, col: number, value: unknown): ComputeResult[];
+  recalculateAll(
+    cells: Array<{ row: number; col: number; value: unknown; formula?: string }>
+  ): ComputeResult[];
+  setCellValue(row: number, col: number, value: unknown): void;
+  reset(): void;
+}
+```
+
+| Method | Description |
+|---|---|
+| `processFormula` | Evaluate a formula and return results including cascaded dependents |
+| `cellChanged` | Notify the engine of a value change, returns recalculated dependents |
+| `recalculateAll` | Bulk recalculate all formulas (e.g. after data load) |
+| `setCellValue` | Update the engine's internal cell value without triggering recalc |
+| `reset` | Clear all state and dependencies |
+
+## Function Signature
+
+Every formula function — built-in or custom — follows this signature:
+
+```ts
+type FnImpl = (
+  args: ASTNode[],
+  resolver: CellValueResolver,
+  evalNode: (node: ASTNode) => FormulaResult
+) => FormulaResult;
+```
+
+- **`args`** — parsed AST nodes for each argument
+- **`resolver`** — resolves cell references to values via `resolver.getCellValue(row, col)`
+- **`evalNode`** — recursively evaluates an AST node (use this to evaluate argument expressions)
+
+## Registering a Custom Function
+
+Custom functions are registered by adding entries to the evaluator's function registry:
+
+```ts
+import { FormulaPlugin } from '@witqq/spreadsheet-plugins';
+
+// Example: DISCOUNT function
+// Usage in cell: =DISCOUNT(A1, 0.15)
+// Applies a percentage discount to a value
+
+function discountFn(
+  args: ASTNode[],
+  resolver: CellValueResolver,
+  evalNode: (node: ASTNode) => FormulaResult
+): FormulaResult {
+  if (args.length < 2) {
+    return new FormulaError(FormulaErrorType.VALUE, 'DISCOUNT requires 2 arguments');
+  }
+
+  const value = evalNode(args[0]);
+  const rate = evalNode(args[1]);
+
+  if (typeof value !== 'number' || typeof rate !== 'number') {
+    return new FormulaError(FormulaErrorType.VALUE, 'Arguments must be numbers');
+  }
+
+  return value * (1 - rate);
+}
+```
+
+## Example: VLOOKUP-like Function
+
+A simplified lookup function that searches a column range for a value and returns from a result column:
+
+```ts
+// Usage: =LOOKUP(searchValue, A1:A100, B1:B100)
+
+function lookupFn(
+  args: ASTNode[],
+  resolver: CellValueResolver,
+  evalNode: (node: ASTNode) => FormulaResult
+): FormulaResult {
+  if (args.length < 3) {
+    return new FormulaError(FormulaErrorType.VALUE, 'LOOKUP requires 3 arguments');
+  }
+
+  const searchValue = evalNode(args[0]);
+
+  // args[1] and args[2] should be range nodes
+  const searchRange = args[1]; // e.g. A1:A100
+  const resultRange = args[2]; // e.g. B1:B100
+
+  if (searchRange.type !== 'Range' || resultRange.type !== 'Range') {
+    return new FormulaError(FormulaErrorType.VALUE, 'Arguments 2-3 must be ranges');
+  }
+
+  // Iterate search range rows
+  for (let row = searchRange.startRow; row <= searchRange.endRow; row++) {
+    const cellValue = resolver.getCellValue(row, searchRange.startCol);
+    if (cellValue === searchValue) {
+      return resolver.getCellValue(row, resultRange.startCol);
+    }
+  }
+
+  return new FormulaError(FormulaErrorType.REF, 'Value not found');
+}
+```
+
+## Argument Handling
+
+### Evaluating arguments
+
+Always use `evalNode` to evaluate arguments — they may be expressions, cell references, or literal values:
+
+```ts
+const arg = evalNode(args[0]);
+// arg could be: number, string, boolean, or FormulaError
+```
+
+### Error propagation
+
+Check for errors before using values:
+
+```ts
+const val = evalNode(args[0]);
+if (val instanceof FormulaError) {
+  return val; // Propagate the error
+}
+```
+
+### Type checking
+
+Validate argument types explicitly:
+
+```ts
+if (typeof val !== 'number') {
+  return new FormulaError(FormulaErrorType.VALUE, 'Expected a number');
+}
+```
+
+## Error Types
+
+Custom functions can return any of the standard formula errors:
+
+| Error | Constant | Use when |
+|---|---|---|
+| `#REF!` | `FormulaErrorType.REF` | Invalid cell reference |
+| `#VALUE!` | `FormulaErrorType.VALUE` | Wrong argument type or count |
+| `#DIV/0!` | `FormulaErrorType.DIV0` | Division by zero |
+| `#NAME?` | `FormulaErrorType.NAME` | Unknown function |
+| `#NUM!` | `FormulaErrorType.NUM` | Invalid numeric result |
+| `#NULL!` | `FormulaErrorType.NULL` | Empty range intersection |

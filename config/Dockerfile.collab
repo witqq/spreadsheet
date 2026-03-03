@@ -1,0 +1,17 @@
+# syntax=docker/dockerfile:1
+
+FROM node:20-slim
+WORKDIR /app
+COPY package*.json ./
+COPY packages/core/package.json packages/core/
+COPY packages/react/package.json packages/react/
+COPY packages/plugins/package.json packages/plugins/
+COPY packages/server/package.json packages/server/
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts
+COPY packages/core/ packages/core/
+COPY packages/plugins/ packages/plugins/
+COPY packages/server/ packages/server/
+COPY tsconfig*.json ./
+EXPOSE 3151
+CMD ["npx", "tsx", "packages/server/src/index.ts"]

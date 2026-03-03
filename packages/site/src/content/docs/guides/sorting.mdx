@@ -1,0 +1,105 @@
+---
+title: Sorting
+description: Single and multi-column sorting with click-to-sort, type-aware comparison, and programmatic control.
+---
+
+import { SortingDemo } from '../../../components/demos/SortingDemo';
+import sortingSource from '../../../components/demos/SortingDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+Spreadsheet supports single and multi-column sorting through the `SortEngine`. Click a column header to cycle through sort states: none → ascending → descending → none. Hold Shift while clicking to add secondary sort columns.
+
+Sorting is type-aware via `CellTypeRegistry`. Cross-type comparison order: number &lt; boolean &lt; string. Null values are always sorted last regardless of direction.
+
+<SortingDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={sortingSource} lang="tsx" title="SortingDemo.tsx" />
+</details>
+
+## Sortable Table
+
+Enable sorting globally or per-column:
+
+```tsx
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+
+const columns: ColumnDef[] = [
+  { key: 'name', title: 'Name', sortable: true },
+  { key: 'age', title: 'Age', type: 'number', sortable: true },
+  { key: 'id', title: 'ID', sortable: false },
+];
+
+function App() {
+  return (
+    <Spreadsheet
+      columns={columns}
+      data={data}
+      sortable={true}
+      onSortChange={(sortColumns) => {
+        console.log('Sort changed:', sortColumns);
+      }}
+    />
+  );
+}
+```
+
+## Programmatic Sorting
+
+Control sort state directly through the `SortEngine`:
+
+```tsx
+const ref = useRef<SpreadsheetRef>(null);
+
+// Set multi-column sort
+ref.current?.getInstance().getSortEngine().setSortColumns([
+  { col: 1, direction: 'asc' },
+  { col: 3, direction: 'desc' },
+]);
+
+// Toggle a single column
+ref.current?.getInstance().getSortEngine().toggleColumn(2);
+
+// Clear all sorting
+ref.current?.getInstance().getSortEngine().clearSort();
+
+// Read current sort state
+const cols = ref.current?.getInstance().getSortEngine().sortColumns;
+```
+
+## API Reference
+
+### SortEngine
+
+| Method | Signature | Description |
+|---|---|---|
+| `toggleColumn` | `(col: number) => SortColumn[]` | Cycle sort on column (none→asc→desc→none) |
+| `setSortColumns` | `(columns: SortColumn[]) => void` | Set full sort state |
+| `clearSort` | `() => void` | Remove all sorting |
+| `sortColumns` | `readonly SortColumn[]` | Current sort columns (getter) |
+
+### SortColumn
+
+```typescript
+interface SortColumn {
+  col: number;
+  direction: 'asc' | 'desc';
+}
+```
+
+### compareCellValues
+
+The low-level comparison function used by `SortEngine`:
+
+```typescript
+import { compareCellValues } from '@witqq/spreadsheet';
+
+// Type-aware: number < boolean < string, nulls always last
+compareCellValues(valA, valB, 'asc'); // -1 | 0 | 1
+```
+
+## See Also
+
+- [Filtering](/guides/filtering/) — filters applied before sort via DataView pipeline
+- [DataView](/guides/dataview/) — logical↔physical row mapping

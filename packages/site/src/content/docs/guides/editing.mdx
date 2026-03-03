@@ -1,0 +1,79 @@
+---
+title: Inline Editing
+description: Cell editing with textarea overlay, commit/cancel behavior, and cell-level editability control.
+---
+
+import { EditingDemo } from '../../../components/demos/EditingDemo';
+import editingSource from '../../../components/demos/EditingDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+Spreadsheet uses an `InlineEditor` — a textarea overlay positioned over the active cell. Double-click a cell or press F2 to open the editor. Press Enter to commit the value, Escape to cancel, and Tab to commit and move to the next cell. Scrolling while editing auto-commits and closes the editor.
+
+<EditingDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={editingSource} lang="tsx" title="EditingDemo.tsx" />
+</details>
+
+## Editable Table
+
+Enable editing on the entire table and listen for changes:
+
+```tsx
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+
+function App() {
+  const [data, setData] = useState(initialData);
+
+  return (
+    <Spreadsheet
+      columns={columns}
+      data={data}
+      editable={true}
+      onCellChange={(row, col, oldValue, newValue) => {
+        console.log(`Cell [${row},${col}]: ${oldValue} → ${newValue}`);
+        // Update your data source
+      }}
+    />
+  );
+}
+```
+
+## Per-Column Editability
+
+Control which columns are editable through `ColumnDef.editable`:
+
+```tsx
+const columns: ColumnDef[] = [
+  { key: 'id', title: 'ID', editable: false },
+  { key: 'name', title: 'Name', editable: true },
+  { key: 'email', title: 'Email', editable: true },
+  { key: 'role', title: 'Role', editable: false },
+];
+```
+
+## Editor Close Reasons
+
+When the editor closes, the reason is provided as `EditorCloseReason`:
+
+```typescript
+type EditorCloseReason = 'enter' | 'tab' | 'escape' | 'blur' | 'scroll';
+```
+
+- `enter` — User pressed Enter (commits value, moves down)
+- `tab` — User pressed Tab (commits value, moves to next cell)
+- `escape` — User pressed Escape (cancels edit, restores original)
+- `blur` — Editor lost focus (commits value)
+- `scroll` — User scrolled while editing (auto-commits value)
+
+## API Reference
+
+### InlineEditor
+
+| Method | Signature | Description |
+|---|---|---|
+| `open` | `(row: number, col: number) => void` | Open editor on cell |
+| `commitAndClose` | `() => void` | Commit current value and close |
+| `cancelAndClose` | `() => void` | Discard changes and close |
+| `isEditing` | `() => boolean` | Whether editor is currently open |

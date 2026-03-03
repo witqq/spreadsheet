@@ -1,0 +1,19 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "packages/core/src/index.ts"
+  ],
+  "out": "docs/api",
+  "name": "witqq spreadsheet API Reference",
+  "tsconfig": "tsconfig.typedoc.json",
+  "exclude": [
+    "**/node_modules/**",
+    "**/tests/**",
+    "**/demo/**",
+    "**/dist/**"
+  ],
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "readme": "none",
+  "githubPages": false
+}

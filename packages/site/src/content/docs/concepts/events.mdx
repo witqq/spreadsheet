@@ -1,0 +1,346 @@
+---
+title: Events
+description: "EventBus system and all available events in @witqq/spreadsheet"
+---
+
+import { EventBusDemo } from '../../../components/demos/EventBusDemo';
+import eventBusSource from '../../../components/demos/EventBusDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+# Events
+
+## EventBus
+
+All inter-subsystem communication in @witqq/spreadsheet goes through a typed `EventBus`. It implements a publish/subscribe pattern with type-safe event names and payloads.
+
+<EventBusDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={eventBusSource} lang="tsx" title="EventBusDemo.tsx" />
+</details>
+
+```ts
+const engine = tableRef.current?.getInstance();
+
+// Subscribe to an event
+const unsubscribe = engine.on('cellChange', (event) => {
+  console.log(`Cell [${event.row}, ${event.col}] changed`);
+  console.log(`Old: ${event.oldValue}, New: ${event.newValue}`);
+});
+
+// Unsubscribe when done
+unsubscribe();
+```
+
+## Event Reference
+
+### Cell Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `cellClick` | `{ row, col, originalEvent }` | Single click on a cell |
+| `cellDoubleClick` | `{ row, col, originalEvent }` | Double-click on a cell (opens editor) |
+| `cellChange` | `{ row, col, oldValue, newValue }` | Cell value changed after edit commit |
+| `cellStatusChange` | `{ row, col, status }` | Cell status lifecycle: changed → saving → saved, error |
+| `cellValidation` | `{ row, col, valid, errors }` | Validation result after cell edit |
+
+### Selection Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `selectionChange` | `{ activeCell, ranges, anchor }` | Selection changed (click, keyboard, or programmatic) |
+
+### Scroll Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `scroll` | `{ scrollTop, scrollLeft, viewport }` | Scroll position changed |
+
+### Lifecycle Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `ready` | `{ engine }` | Engine initialization complete |
+| `destroy` | `{}` | Engine destroyed and resources cleaned up |
+
+### Command Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `commandExecute` | `{ command }` | A command was executed |
+| `commandUndo` | `{ command }` | A command was undone |
+| `commandRedo` | `{ command }` | A command was redone |
+
+### Clipboard Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `clipboardCopy` | `{ cells, text }` | Cells copied to clipboard |
+| `clipboardCut` | `{ cells, text }` | Cells cut to clipboard |
+| `clipboardPaste` | `{ cells, target }` | Data pasted from clipboard |
+
+### Resize Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `columnResizeStart` | `{ col, width }` | Column resize drag started |
+| `columnResize` | `{ col, width }` | Column width changing during drag |
+| `columnResizeEnd` | `{ col, oldWidth, newWidth }` | Column resize drag completed |
+| `rowResizeStart` | `{ row, height }` | Row resize drag started |
+| `rowResize` | `{ row, height }` | Row height changing during drag |
+| `rowResizeEnd` | `{ row, oldHeight, newHeight }` | Row resize drag completed |
+
+### Autofill Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `autofillStart` | `{ startCell, direction }` | Fill handle drag started |
+| `autofillPreview` | `{ range, values }` | Preview values during drag |
+| `autofillComplete` | `{ range, values }` | Fill operation completed |
+
+### Sort & Filter Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `sortChange` | `{ columns }` | Sort configuration changed |
+| `sortRejected` | `{ column, reason }` | Sort request rejected |
+| `filterChange` | `{ filters }` | Filter configuration changed |
+
+### Group Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `rowGroupToggle` | `{ groupKey, expanded }` | Row group expanded/collapsed |
+| `rowGroupChange` | `{ groups }` | Row grouping configuration changed |
+
+### Theme Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `themeChange` | `{ theme }` | Theme changed via `setTheme()` |
+
+## Event Types Reference
+
+TypeScript interfaces for all event payloads. Import from `@witqq/spreadsheet`.
+
+### CellEvent
+
+Fired on `cellClick` and `cellDoubleClick`.
+
+```ts
+interface CellEvent {
+  row: number;
+  col: number;
+  value: CellValue;
+  column: ColumnDef;
+}
+```
+
+### CommandEvent
+
+Fired on `commandExecute`, `commandUndo`, and `commandRedo`.
+
+```ts
+interface CommandEvent {
+  description: string;
+}
+```
+
+### ClipboardDataEvent
+
+Fired on `clipboardCopy`, `clipboardCut`, and `clipboardPaste`.
+
+```ts
+interface ClipboardDataEvent {
+  rowCount: number;
+  colCount: number;
+}
+```
+
+### ColumnResizeEvent
+
+Fired on `columnResize` and `columnResizeEnd`.
+
+```ts
+interface ColumnResizeEvent {
+  colIndex: number;
+  oldWidth: number;
+  newWidth: number;
+}
+```
+
+### RowResizeEvent
+
+Fired on `rowResize` and `rowResizeEnd`.
+
+```ts
+interface RowResizeEvent {
+  rowIndex: number;
+  oldHeight: number;
+  newHeight: number;
+}
+```
+
+### CellStatusChangeEvent
+
+Fired on `cellStatusChange` when a cell's tracking status transitions (e.g. changed → saving → saved).
+
+```ts
+interface CellStatusChangeEvent {
+  row: number;
+  col: number;
+  oldStatus: CellMetadata['status'] | undefined;
+  newStatus: CellMetadata['status'] | undefined;
+  errorMessage?: string;
+}
+```
+
+### CellValidationEvent
+
+Fired on `cellValidation` after a cell edit is validated against column/cell rules.
+
+```ts
+interface CellValidationEvent {
+  row: number;
+  col: number;
+  result: ValidationResult;
+}
+```
+
+### GridMouseEvent
+
+Fired on internal `gridMouseDown`, `gridMouseMove`, `gridMouseUp`, `gridMouseHover`, and `gridContextMenu`.
+
+```ts
+interface GridMouseEvent extends HitTestResult {
+  readonly originalEvent: MouseEvent;
+  readonly shiftKey: boolean;
+  readonly ctrlKey: boolean;
+}
+```
+
+### GridKeyboardEvent
+
+Fired on internal `gridKeyDown`.
+
+```ts
+interface GridKeyboardEvent {
+  readonly originalEvent: KeyboardEvent;
+  readonly key: string;
+  readonly shiftKey: boolean;
+  readonly ctrlKey: boolean;
+}
+```
+
+### RowGroupToggleEvent
+
+Fired on `rowGroupToggle` when a row group is expanded or collapsed.
+
+```ts
+interface RowGroupToggleEvent {
+  readonly headerRow: number;
+  readonly expanded: boolean;
+}
+```
+
+### RowGroupChangeEvent
+
+Fired on `rowGroupChange` when the set of group headers changes.
+
+```ts
+interface RowGroupChangeEvent {
+  readonly groupHeaders: readonly number[];
+}
+```
+
+### ScrollEvent
+
+Fired on `scroll` when the viewport scroll position changes.
+
+```ts
+interface ScrollEvent {
+  scrollTop: number;
+  scrollLeft: number;
+}
+```
+
+### SortRejectedEvent
+
+Fired on `sortRejected` when a sort request is blocked (e.g. merged regions exist).
+
+```ts
+interface SortRejectedEvent {
+  readonly reason: 'merged-regions-exist';
+}
+```
+
+### FilterChangeEvent
+
+Fired on `filterChange` after filters are applied or cleared.
+
+```ts
+interface FilterChangeEvent {
+  readonly visibleRowCount: number;
+  readonly totalRowCount: number;
+}
+```
+
+### AutofillStartEvent
+
+Fired on `autofillStart` when the user begins dragging the fill handle.
+
+```ts
+interface AutofillStartEvent {
+  sourceRange: CellRange;
+}
+```
+
+## EventTranslator
+
+The `EventTranslator` converts raw DOM events (mouse clicks, touch, keyboard) into cell-level events. It performs hit-testing to determine which cell or region was interacted with.
+
+Regions identified by EventTranslator:
+
+| Region | Area | Actions |
+|--------|------|---------|
+| `cell` | Data cells in the grid body | Click, edit, select |
+| `header` | Column header row | Sort toggle, filter open, resize |
+| `row-number` | Row number column on the left | Row selection |
+| `corner` | Top-left corner (row numbers × header) | Select all |
+
+## Touch Events
+
+On touch devices, the EventTranslator maps gestures:
+
+| Gesture | Action |
+|---------|--------|
+| Tap | Select cell |
+| Double-tap | Open inline editor |
+| Scroll | Native scroll (CSS `touch-action: pan-x pan-y`) |
+
+## React Event Callbacks
+
+In the React wrapper, events are exposed as props:
+
+```tsx
+<Spreadsheet<Row>
+  columns={columns}
+  data={data}
+  onCellChange={(event: CellChangeEvent) => {
+    // event.row, event.col, event.oldValue, event.newValue
+  }}
+  onSelectionChange={(event: SelectionChangeEvent) => {
+    // event.selection
+  }}
+  onSortChange={(event: SortChangeEvent) => {
+    // event.columns
+  }}
+  onFilterChange={(event: FilterChangeEvent) => {
+    // event.filters
+  }}
+  onReady={() => {
+    // Table mounted and ready
+  }}
+/>
+```

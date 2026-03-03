@@ -1,0 +1,193 @@
+---
+title: "React Integration"
+description: "Spreadsheet React component — props, callbacks, ref API, and plugin installation."
+---
+
+# React Integration
+
+The `@witqq/spreadsheet-react` package provides `Spreadsheet<TRow>`, a generic React component that wraps the core canvas engine with React-friendly props, callbacks, and an imperative ref API.
+
+## Installation
+
+```bash
+npm install @witqq/spreadsheet @witqq/spreadsheet-react
+```
+
+## Spreadsheet Component
+
+```tsx
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+
+<Spreadsheet<MyRow>
+  columns={columns}
+  data={data}
+  onCellChange={handleCellChange}
+  onReady={handleReady}
+/>
+```
+
+All `SpreadsheetEngineConfig` props pass through to the core engine (columns, data, theme, frozenColumns, frozenRows, etc.).
+
+## Callbacks
+
+```ts
+interface SpreadsheetCallbacks {
+  onCellChange?: (event: CellChangeEvent) => void;
+  onSelectionChange?: (event: SelectionChangeEvent) => void;
+  onSortChange?: (event: SortChangeEvent) => void;
+  onFilterChange?: (event: FilterChangeEvent) => void;
+  onScroll?: (event: ScrollEvent) => void;
+  onReady?: () => void;
+}
+```
+
+| Callback | Fires when |
+|---|---|
+| `onCellChange` | A cell value is edited (includes row, col, oldValue, newValue) |
+| `onSelectionChange` | Active cell or selection range changes |
+| `onSortChange` | Column sort is applied or cleared |
+| `onFilterChange` | Filter is applied, changed, or removed |
+| `onScroll` | The viewport scrolls |
+| `onReady` | The engine is fully initialized and rendered |
+
+## SpreadsheetRef
+
+Use `useRef<SpreadsheetRef>` for imperative control:
+
+```ts
+interface SpreadsheetRef {
+  getInstance(): SpreadsheetEngine;
+  focus(): void;
+  getSelection(): Selection;
+  selectCell(row: number, col: number): void;
+  getCell(row: number, col: number): CellData | undefined;
+  setCell(row: number, col: number, value: CellValue): void;
+  undo(): void;
+  redo(): void;
+  scrollTo(x: number, y: number): void;
+  requestRender(): void;
+  installPlugin(plugin: SpreadsheetPlugin): void;
+  removePlugin(name: string): void;
+  print(): void;
+}
+```
+
+| Method | Description |
+|---|---|
+| `getInstance()` | Access the underlying `SpreadsheetEngine` directly |
+| `focus()` | Focus the table canvas |
+| `getSelection()` | Current selection state |
+| `selectCell(row, col)` | Programmatically select a cell |
+| `getCell(row, col)` | Read cell data |
+| `setCell(row, col, value)` | Write a cell value (triggers change event) |
+| `undo() / redo()` | Command history navigation |
+| `scrollTo(x, y)` | Scroll to pixel position |
+| `requestRender()` | Force a canvas re-render |
+| `installPlugin(plugin)` | Install a plugin at runtime |
+| `removePlugin(name)` | Remove a plugin by name |
+| `print()` | Trigger print layout |
+
+## Live Prop Updates
+
+`Spreadsheet` reacts to prop changes:
+
+- **`data`** — updates the cell store and re-renders
+- **`theme`** — propagates to all subsystems (canvas layers, editor overlay, tooltips)
+- **`columns`** — updates column definitions and layout
+
+## Complete Example
+
+```tsx
+import { useRef, useState, useCallback } from 'react';
+import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+import type { ColumnDef } from '@witqq/spreadsheet';
+
+interface Employee {
+  name: string;
+  department: string;
+  salary: number;
+  active: boolean;
+}
+
+const columns: ColumnDef[] = [
+  { key: 'name', title: 'Name', width: 180, type: 'string' },
+  { key: 'department', title: 'Department', width: 140, type: 'string' },
+  { key: 'salary', title: 'Salary', width: 120, type: 'number', sortable: true },
+  { key: 'active', title: 'Active', width: 80, type: 'boolean' },
+];
+
+const data: Employee[] = [
+  { name: 'Alice', department: 'Engineering', salary: 95000, active: true },
+  { name: 'Bob', department: 'Marketing', salary: 72000, active: true },
+  { name: 'Carol', department: 'Engineering', salary: 110000, active: false },
+];
+
+function App() {
+  const ref = useRef<SpreadsheetRef>(null);
+  const [rows, setRows] = useState(data);
+
+  const handleCellChange = useCallback((event) => {
+    console.log(`Cell [${event.row},${event.col}]: ${event.oldValue} → ${event.newValue}`);
+  }, []);
+
+  return (
+    <Spreadsheet<Employee>
+      ref={ref}
+      columns={columns}
+      data={rows}
+      onCellChange={handleCellChange}
+      onReady={() => console.log('Table ready')}
+    />
+  );
+}
+```
+
+## Ref Usage
+
+```tsx
+function Controls({ tableRef }: { tableRef: RefObject<SpreadsheetRef> }) {
+  return (
+    <div>
+      <button onClick={() => tableRef.current?.undo()}>Undo</button>
+      <button onClick={() => tableRef.current?.redo()}>Redo</button>
+      <button onClick={() => tableRef.current?.scrollTo(0, 0)}>Go to top</button>
+      <button onClick={() => tableRef.current?.print()}>Print</button>
+      <button onClick={() => {
+        const sel = tableRef.current?.getSelection();
+        console.log('Selection:', sel);
+      }}>
+        Log Selection
+      </button>
+    </div>
+  );
+}
+```
+
+## Plugin Installation in React
+
+```tsx
+import { useRef, useEffect } from 'react';
+import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+import { FormulaPlugin, ExcelPlugin, ConditionalFormattingPlugin } from '@witqq/spreadsheet-plugins';
+
+function App() {
+  const ref = useRef<SpreadsheetRef>(null);
+
+  useEffect(() => {
+    const table = ref.current;
+    if (!table) return;
+
+    table.installPlugin(new FormulaPlugin());
+    table.installPlugin(new ExcelPlugin());
+    table.installPlugin(new ConditionalFormattingPlugin());
+
+    return () => {
+      table.removePlugin('formula');
+      table.removePlugin('excel');
+      table.removePlugin('conditional-format');
+    };
+  }, []);
+
+  return <Spreadsheet ref={ref} columns={columns} data={data} />;
+}
+```

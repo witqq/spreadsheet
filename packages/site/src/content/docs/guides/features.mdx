@@ -1,0 +1,90 @@
+---
+title: Features Overview
+description: "Complete feature map of @witqq/spreadsheet with links to detailed documentation."
+---
+
+# Features Overview
+
+@witqq/spreadsheet is a canvas-based spreadsheet engine for the web. This page maps every capability to its documentation.
+
+## Core Engine
+
+| Feature | Description | Docs |
+|---|---|---|
+| Canvas 2D Rendering | Layer-based pipeline, 60 FPS at 100K+ rows | [Rendering](/concepts/rendering/) |
+| Data Model | Sparse CellStore, RowStore, ColStore, StylePool | [Data Model](/concepts/data-model/) |
+| Event System | Typed EventBus with 25+ events | [Events](/concepts/events/) |
+| Themes | Light/dark themes, runtime switching, full customization | [Themes](/concepts/themes/) |
+| Architecture | Zero-dependency core, plugin system, framework wrappers | [Architecture](/concepts/architecture/) |
+
+## Selection & Navigation
+
+| Feature | Description | Docs |
+|---|---|---|
+| Cell Selection | Click, Shift+click range, Ctrl+click multi-select | [Selection](/guides/selection/) |
+| Keyboard Navigation | Arrow keys, Tab, Enter, Home/End, PageUp/Down, Ctrl+Home/End | [Selection](/guides/selection/) |
+| Row/Column Selection | Click row numbers or headers for full row/column selection | [Selection](/guides/selection/) |
+
+## Editing
+
+| Feature | Description | Docs |
+|---|---|---|
+| Inline Editor | Textarea overlay, F2/double-click open, Enter/Escape/Tab | [Editing](/guides/editing/) |
+| Undo & Redo | 100-step command stack, Ctrl+Z / Ctrl+Y | [Undo & Redo](/guides/undo-redo/) |
+| Clipboard | Copy/Cut/Paste, TSV + HTML formats, Excel/Sheets interop | [Clipboard](/guides/clipboard/) |
+| Drag-to-Fill | Pattern detection (numbers, dates, text), merge-aware | [Autofill](/guides/autofill/) |
+| Validation | Column/cell rules: required, min/max, regex, custom | [Validation](/guides/validation/) |
+| Change Tracking | Cell status lifecycle: changed → saving → saved, error | [Change Tracking](/guides/change-tracking/) |
+
+## Data Management
+
+| Feature | Description | Docs |
+|---|---|---|
+| Sorting | Multi-column stable sort, type-aware, header click toggle | [Sorting](/guides/sorting/) |
+| Filtering | 14 operators, AND logic, FilterPanel UI | [Filtering](/guides/filtering/) |
+| DataView | Logical↔physical row mapping for sort/filter pipeline | [DataView](/guides/dataview/) |
+| Frozen Panes | Freeze rows/columns, 4-region rendering with ImageData caching | [Frozen Panes](/guides/frozen-panes/) |
+| Cell Merging | Spatial index, anchor/hidden cells, merge-aware navigation | [Merging](/guides/merging/) |
+| Row Grouping | Parent-child tree, expand/collapse, cascading aggregates | [Row Grouping](/guides/row-grouping/) |
+| Streaming | pushRows/updateRow/deleteRow, throttle batching | [Streaming](/guides/streaming/) |
+| Pivot Tables | Cross-tabulation, 5 aggregate functions, drill-down | [Pivot Tables](/guides/pivot/) |
+
+## Plugins
+
+| Plugin | Description | Docs |
+|---|---|---|
+| Formula Engine | Custom tokenizer/parser/evaluator, dependency graph, Web Worker mode | [Formulas](/plugins/formulas/) |
+| Custom Functions | Register domain-specific functions (e.g. TAX, DISCOUNT) | [Custom Functions](/plugins/custom-functions/) |
+| Conditional Formatting | Value rules, gradient scales, data bars, icon sets | [Conditional Format](/plugins/conditional-format/) |
+| Excel I/O | Import/export via SheetJS (Apache-2.0), lazy-loaded | [Excel](/plugins/excel/) |
+| Collaboration | OT engine, WebSocket transport, remote cursors | [Collaboration](/plugins/collaboration/) |
+| Progressive Loader | Chunked loading with scheduler.yield, progress overlay | [Progressive Loader](/plugins/progressive-loader/) |
+| Plugin System | Install/remove/dependencies, isolated state, PluginAPI | [Plugin System](/plugins/overview/) |
+
+## Framework Wrappers
+
+| Framework | Description | Docs |
+|---|---|---|
+| React | `Spreadsheet<TRow>` component, callbacks, ref API, prop updates | [React](/frameworks/react/) |
+| Vue 3 | Composition API, props/emits/defineExpose | [Vue 3](/frameworks/vue/) |
+| Angular | Standalone component, Input/Output bindings | [Angular](/frameworks/angular/) |
+| Vanilla JS / Widget | IIFE/UMD bundle, `Spreadsheet.create()`, &lt;36KB gzip | [Widget](/frameworks/widget/) |
+
+## Infrastructure
+
+| Feature | Description | Docs |
+|---|---|---|
+| Performance | 100K rows default, 1M rows toggle, FPS counter, measureInitTime | [Performance](/getting-started/performance/) |
+| Column/Row Resize | Drag headers/row numbers, min/max constraints, undoable | [Resize](/guides/resize/) |
+| Context Menu | Right-click menu, extensible items, keyboard navigation | [Context Menu](/guides/context-menu/) |
+| Accessibility | WCAG 2.1 AA, role=grid, aria-live announcements | [Accessibility](/guides/accessibility/) |
+| Print Support | @media print CSS, DOM table generation, maxPrintRows | [Print](/guides/print/) |
+| Cell Types | Built-in (string, number, boolean, date) + custom renderers | [Cell Types](/api/cell-types/) |
+
+## API Reference
+
+| Page | Description |
+|---|---|
+| [SpreadsheetEngine API](/api/wit-engine/) | All public methods on the engine orchestrator |
+| [Core Types](/api/types/) | CellValue, CellData, CellStyle, ColumnDef, CellRange, etc. |
+| [Cell Types](/api/cell-types/) | CellTypeRegistry, built-in and custom type renderers |

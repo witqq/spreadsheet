@@ -1,0 +1,69 @@
+---
+title: Row Grouping
+description: Hierarchical row groups with expand/collapse, cascading aggregates, and multi-level nesting.
+---
+
+import { RowGroupingDemo } from '../../../components/demos/RowGroupingDemo';
+import rowGroupingSource from '../../../components/demos/RowGroupingDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+`RowGroupManager` organizes rows into parent-child groups with expand/collapse toggling and aggregate computation. Groups can be nested (multi-level) and each level can have independent expand/collapse state.
+
+<RowGroupingDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={rowGroupingSource} lang="tsx" title="RowGroupingDemo.tsx" />
+</details>
+
+## Configuring Groups
+
+```tsx
+import { useRef, useEffect } from 'react';
+import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+
+function App() {
+  const ref = useRef<SpreadsheetRef>(null);
+
+  useEffect(() => {
+    const engine = ref.current?.getInstance();
+    if (!engine) return;
+    const rgm = engine.getRowGroupManager();
+
+    rgm.setCellStore(engine.getCellStore());
+    rgm.setGroups([
+      { headerRow: 0, childRows: [1, 2, 3], expanded: true },
+      { headerRow: 4, childRows: [5, 6], expanded: false },
+    ]);
+    rgm.setAggregates([
+      { col: 2, fn: 'sum' },
+    ]);
+    engine.requestRender();
+  }, []);
+
+  return <Spreadsheet ref={ref} columns={columns} data={data} />;
+}
+```
+
+## Aggregate Functions
+
+| Function | Description |
+|---|---|
+| `sum` | Sum of leaf row values |
+| `count` | Number of leaf rows |
+| `average` | Average of leaf row values |
+| `min` | Minimum value |
+| `max` | Maximum value |
+
+## API Reference
+
+### RowGroupManager
+
+| Method | Signature | Description |
+|---|---|---|
+| `setGroups` | `(groups: RowGroupDef[]) => void` | Define all groups |
+| `toggleGroup` | `(headerRow: number) => void` | Toggle expand/collapse |
+| `expandAll` | `() => void` | Expand all groups |
+| `collapseAll` | `() => void` | Collapse all groups |
+| `setAggregates` | `(agg: ColumnAggregate[]) => void` | Configure aggregates |
+| `computeAggregates` | `(headerRow: number) => AggregateResult[]` | Compute for group |

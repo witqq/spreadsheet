@@ -1,0 +1,141 @@
+---
+title: "Plugin Architecture"
+description: "How the @witqq/spreadsheet plugin system works — interfaces, lifecycle, and building custom plugins."
+---
+
+import { PluginShowcaseDemo } from '../../../components/demos/PluginShowcaseDemo';
+import pluginShowcaseSource from '../../../components/demos/PluginShowcaseDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+# Plugin Architecture
+
+@witqq/spreadsheet uses a lightweight plugin system that lets you extend the engine without modifying core code. Plugins can add render layers, listen to events, store isolated state, and integrate with undo/redo.
+
+<PluginShowcaseDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={pluginShowcaseSource} lang="tsx" title="PluginShowcaseDemo.tsx" />
+</details>
+
+## SpreadsheetPlugin Interface
+
+Every plugin implements `SpreadsheetPlugin`:
+
+```ts
+interface SpreadsheetPlugin {
+  readonly name: string;
+  readonly version: string;
+  readonly dependencies?: string[];
+  install(api: PluginAPI): void;
+  destroy?(): void;
+}
+```
+
+| Field | Description |
+|---|---|
+| `name` | Unique identifier (e.g. `'formula'`, `'conditional-format'`) |
+| `version` | Semver string |
+| `dependencies` | Optional array of plugin names that must be installed first |
+| `install(api)` | Called when the plugin is added to the engine |
+| `destroy()` | Optional cleanup — unbind events, remove layers |
+
+## PluginAPI
+
+The `install` method receives a `PluginAPI` object:
+
+```ts
+interface PluginAPI {
+  readonly engine: SpreadsheetEngine;
+  getPluginState<T>(key: string): T | undefined;
+  setPluginState<T>(key: string, value: T): void;
+}
+```
+
+- **`engine`** — full access to `SpreadsheetEngine` (event bus, cell store, render pipeline, etc.)
+- **`getPluginState / setPluginState`** — isolated key-value storage per plugin, managed by the engine
+
+## Installing and Removing Plugins
+
+### Direct engine access
+
+```ts
+import { SpreadsheetEngine } from '@witqq/spreadsheet';
+
+const engine = new SpreadsheetEngine(config);
+engine.installPlugin(myPlugin);
+engine.removePlugin('my-plugin');
+```
+
+### Via React ref
+
+```tsx
+const tableRef = useRef<SpreadsheetRef>(null);
+
+// After mount
+tableRef.current?.installPlugin(myPlugin);
+tableRef.current?.removePlugin('my-plugin');
+```
+
+## Official Plugins
+
+| Plugin | Package | Description |
+|---|---|---|
+| `FormulaPlugin` | `@witqq/spreadsheet-plugins` | Spreadsheet formulas with dependency graph |
+| `ConditionalFormattingPlugin` | `@witqq/spreadsheet-plugins` | Color scales, data bars, icon sets |
+| `ExcelPlugin` | `@witqq/spreadsheet-plugins` | Import/export `.xlsx` via lazy-loaded SheetJS |
+| `createContextMenuPlugin` | `@witqq/spreadsheet-plugins` | Right-click context menu with custom items |
+| `CollaborationPlugin` | `@witqq/spreadsheet-plugins` | Real-time OT collaboration with remote cursors |
+| `ProgressiveLoaderPlugin` | `@witqq/spreadsheet-plugins` | Non-blocking large dataset loading with progress overlay |
+
+## Custom Plugin Example
+
+A plugin that highlights the active row:
+
+```ts
+import type { SpreadsheetPlugin, PluginAPI } from '@witqq/spreadsheet';
+
+const activeRowPlugin: SpreadsheetPlugin = {
+  name: 'active-row-highlight',
+  version: '1.0.0',
+
+  install(api: PluginAPI) {
+    const { engine } = api;
+
+    const handler = (event: { selection: Selection }) => {
+      const row = event.selection.activeCell.row;
+      api.setPluginState('activeRow', row);
+      engine.requestRender();
+    };
+
+    engine.on('selectionChange', handler);
+    api.setPluginState('handler', handler);
+  },
+
+  destroy() {
+    // Cleanup handled by engine when plugin is removed
+  },
+};
+```
+
+## Installing Plugins in React
+
+```tsx
+import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+import { FormulaPlugin, ConditionalFormattingPlugin } from '@witqq/spreadsheet-plugins';
+
+function App() {
+  const ref = useRef<SpreadsheetRef>(null);
+
+  useEffect(() => {
+    ref.current?.installPlugin(new FormulaPlugin());
+    ref.current?.installPlugin(new ConditionalFormattingPlugin());
+    return () => {
+      ref.current?.removePlugin('formula');
+      ref.current?.removePlugin('conditional-format');
+    };
+  }, []);
+
+  return <Spreadsheet ref={ref} columns={columns} data={data} />;
+}
+```

@@ -1,0 +1,127 @@
+---
+title: Performance — 1M Rows
+description: Live demo of 1,000,000 rows rendered at 60 FPS with canvas virtual scrolling
+sidebar:
+  order: 1
+---
+
+import { MillionRowsDemo, MillionRowsExplanation } from '../../../components/demos/MillionRowsDemo';
+
+# 1,000,000 Rows at 60 FPS
+
+@witqq/spreadsheet renders a million rows with the same performance as a hundred. Click the button below to load 1,000,000 rows and scroll through them.
+
+<MillionRowsDemo height={500} client:visible />
+
+<MillionRowsExplanation client:visible />
+
+## Why Canvas?
+
+Traditional DOM-based tables create one `<tr>` and multiple `<td>` elements per row. At 1M rows that's **7M+ DOM nodes** — browsers cannot handle this. Even with virtual scrolling (creating/destroying DOM nodes on scroll), the constant DOM manipulation creates jank.
+
+@witqq/spreadsheet takes a different approach: a single `<canvas>` element where only visible rows (~30-50) are drawn each frame. The rendering cost is **O(viewport size)**, not O(total rows).
+
+## Memory
+
+The data array for 1M rows with 7 columns uses approximately 200-400MB of JavaScript heap memory. The rendering engine itself adds negligible overhead — only the visible viewport state is tracked per frame.
+
+## Try It Yourself
+
+```tsx
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+import { ProgressiveLoaderPlugin } from '@witqq/spreadsheet-plugins';
+
+const columns = [
+  { key: 'id', title: 'ID', width: 80, type: 'number' as const },
+  { key: 'name', title: 'Name', width: 200 },
+  { key: 'value', title: 'Value', width: 120, type: 'number' as const },
+];
+
+function App() {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const engine = ref.current?.getInstance();
+    if (!engine) return;
+
+    const loader = new ProgressiveLoaderPlugin({
+      totalRows: 1_000_000,
+      chunkBudgetMs: 50,
+      columnKeys: columns.map(c => c.key),
+      generateRow: (i) => ({
+        id: i + 1,
+        name: `Row ${i + 1}`,
+        value: Math.random() * 1000,
+      }),
+      onComplete: (ms) => console.log(`Loaded in ${ms}ms`),
+    });
+    engine.installPlugin(loader);
+    loader.start(); // Table renders immediately, data streams in
+  }, []);
+
+  return (
+    <Spreadsheet
+      ref={ref}
+      columns={columns}
+      data={[]}
+      showRowNumbers
+      style={{ width: '100%', height: '600px' }}
+    />
+  );
+}
+```
+
+The `ProgressiveLoaderPlugin` loads data in time-budgeted chunks using `scheduler.yield()` (Chrome 129+) or `MessageChannel` fallback, showing an animated progress overlay. The table is interactive immediately — scroll and navigate while data loads.
+
+## Benchmark Utilities
+
+@witqq/spreadsheet includes two benchmark utilities for measuring performance:
+
+### measureInitTime
+
+Measure execution time of a factory function:
+
+```typescript
+import { measureInitTime } from '@witqq/spreadsheet';
+
+const { timeMs } = measureInitTime(() => {
+  const engine = new SpreadsheetEngine(config);
+  engine.mount(container);
+});
+console.log(`Init: ${timeMs.toFixed(1)}ms`);
+```
+
+### FPSCounter
+
+Measure scroll/render FPS over a window:
+
+```typescript
+import { FPSCounter, type FPSResult } from '@witqq/spreadsheet';
+
+const counter = new FPSCounter();
+counter.start();
+
+// Call tick() on each requestAnimationFrame
+function loop() {
+  counter.tick();
+  if (measuring) requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// After measurement window
+const result: FPSResult = counter.stop();
+console.log(`Avg FPS: ${result.avgFPS.toFixed(1)}`);
+console.log(`Min FPS: ${result.minFPS.toFixed(1)}`);
+console.log(`Max FPS: ${result.maxFPS.toFixed(1)}`);
+console.log(`Frames: ${result.frameCount}`);
+```
+
+**FPSResult fields:**
+
+| Field | Type | Description |
+|---|---|---|
+| `avgFPS` | `number` | Average FPS during measurement |
+| `minFPS` | `number` | Minimum FPS recorded |
+| `maxFPS` | `number` | Maximum FPS recorded |
+| `frameCount` | `number` | Number of frames sampled |
+| `durationMs` | `number` | Total measurement duration in ms |

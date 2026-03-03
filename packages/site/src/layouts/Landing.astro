@@ -1,0 +1,60 @@
+---
+import '../styles/landing.css';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@witqq/spreadsheet — Canvas spreadsheet engine for the web</title>
+    <meta name="description" content="High-performance canvas-based spreadsheet engine. 100K rows at 60 FPS, zero dependencies, plugin architecture." />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="@witqq/spreadsheet — Canvas spreadsheet engine for the web" />
+    <meta property="og:description" content="High-performance canvas-based spreadsheet engine. 100K rows at 60 FPS, zero dependencies, plugin architecture." />
+    <meta property="og:url" content={Astro.url.href} />
+    <meta property="og:site_name" content="@witqq/spreadsheet" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="@witqq/spreadsheet — Canvas spreadsheet engine for the web" />
+    <meta name="twitter:description" content="High-performance canvas-based spreadsheet engine. 100K rows at 60 FPS, zero dependencies, plugin architecture." />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareSourceCode",
+      "name": "@witqq/spreadsheet",
+      "description": "Canvas-based spreadsheet engine for React, Vue, Angular. 100K+ rows, zero dependencies.",
+      "codeRepository": "https://github.com/witqq/spreadsheet",
+      "license": "https://mariadb.com/bsl11/",
+      "programmingLanguage": ["TypeScript", "JavaScript"],
+      "runtimePlatform": "Browser",
+      "version": "0.1.0",
+      "keywords": "spreadsheet, datagrid, canvas, react, vue, angular, typescript",
+      "author": {
+        "@type": "Organization",
+        "name": "witqq",
+        "url": "https://github.com/witqq"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <nav class="landing-nav">
+      <a href="/" class="nav-logo">@witqq/spreadsheet</a>
+      <div class="nav-links">
+        <a href="/getting-started/">Docs</a>
+        <a href="/getting-started/quick-start/">Quick Start</a>
+        <a href="/api/cell-types/">API</a>
+        <a href="https://github.com/witqq/spreadsheet" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </nav>
+    <slot />
+  </body>
+</html>

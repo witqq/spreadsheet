@@ -1,0 +1,91 @@
+---
+title: Cell Merging
+description: Merge and unmerge cell regions with O(1) spatial index, anchor/hidden cell model, and programmatic API.
+---
+
+import { MergingDemo } from '../../../components/demos/MergingDemo';
+import mergingSource from '../../../components/demos/MergingDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+`MergeManager` handles cell merging with an O(1) spatial index for fast lookups. Each merged region has an anchor cell (top-left) that holds the content and rendered text. All other cells in the region become hidden — they exist in the data model but are not rendered individually. The anchor cell expands visually to cover the full merged area.
+
+<MergingDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={mergingSource} lang="tsx" title="MergingDemo.tsx" />
+</details>
+
+## Merging Cells via Ref
+
+```tsx
+import { useRef } from 'react';
+import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+
+function App() {
+  const ref = useRef<SpreadsheetRef>(null);
+
+  const handleMerge = () => {
+    // Merge cells from A1 to C3 (rows 0-2, cols 0-2)
+    ref.current?.getInstance().getMergeManager().merge({
+      startRow: 0, startCol: 0,
+      endRow: 2, endCol: 2,
+    });
+  };
+
+  const handleUnmerge = () => {
+    ref.current?.getInstance().getMergeManager().unmerge(0, 0);
+  };
+
+  return (
+    <>
+      <button onClick={handleMerge}>Merge A1:C3</button>
+      <button onClick={handleUnmerge}>Unmerge</button>
+      <Spreadsheet ref={ref} columns={columns} data={data} />
+    </>
+  );
+}
+```
+
+## Querying Merged Regions
+
+```tsx
+const mm = ref.current?.getInstance().getMergeManager();
+
+// Check if a cell is the anchor (top-left) of a merged region
+mm.isAnchorCell(0, 0); // true
+
+// Check if a cell is hidden by a merge
+mm.isHiddenCell(1, 1); // true
+
+// Get the merged region containing a cell
+const region = mm.getMergedRegion(1, 1);
+// { startRow: 0, startCol: 0, endRow: 2, endCol: 2 }
+
+// List all merged regions
+const all = mm.getAllRegions();
+```
+
+## API Reference
+
+### MergeManager
+
+| Method | Signature | Description |
+|---|---|---|
+| `merge` | `(region: MergedRegion) => boolean` | Merge cells in region |
+| `unmerge` | `(startRow: number, startCol: number) => boolean` | Unmerge cells starting at position |
+| `getMergedRegion` | `(row: number, col: number) => MergedRegion \| null` | Get region containing cell |
+| `isAnchorCell` | `(row: number, col: number) => boolean` | Is cell the merge anchor |
+| `isHiddenCell` | `(row: number, col: number) => boolean` | Is cell hidden by merge |
+| `getAllRegions` | `() => MergedRegion[]` | List all merged regions |
+
+### MergedRegion
+
+```typescript
+interface MergedRegion {
+  startRow: number;
+  startCol: number;
+  endRow: number;
+  endCol: number;
+}
+```

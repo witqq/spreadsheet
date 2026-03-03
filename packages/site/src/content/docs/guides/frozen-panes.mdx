@@ -1,0 +1,75 @@
+---
+title: Frozen Rows & Columns
+description: Pin rows and columns with FrozenPaneManager for fixed headers, sidebars, and 4-region viewport rendering.
+---
+
+import { FrozenPanesDemo } from '../../../components/demos/FrozenPanesDemo';
+import frozenPanesSource from '../../../components/demos/FrozenPanesDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+Spreadsheet supports freezing rows and columns via `FrozenPaneManager`. Frozen rows stay pinned at the top and frozen columns stay pinned on the left as the user scrolls. The renderer splits the viewport into four independent regions: corner (frozen rows + frozen cols), frozen-row strip, frozen-col strip, and main scrollable content.
+
+Merged regions cannot span across frozen boundaries — a merge must be entirely within frozen or unfrozen space.
+
+## Frozen Header and Sidebar
+
+```tsx
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+
+function App() {
+  return (
+    <Spreadsheet
+      columns={columns}
+      data={data}
+      frozenRows={1}
+      frozenColumns={2}
+    />
+  );
+}
+```
+
+The first row and first two columns remain visible while the rest of the grid scrolls.
+
+<FrozenPanesDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={frozenPanesSource} lang="tsx" title="FrozenPanesDemo.tsx" />
+</details>
+
+## Header Row Freeze Pattern
+
+A common pattern is freezing just the header row so column labels remain visible when scrolling through large datasets:
+
+```tsx
+function LargeDataTable({ data }: { data: Row[] }) {
+  const columns: ColumnDef[] = [
+    { key: 'id', title: 'ID', width: 60 },
+    { key: 'name', title: 'Name', width: 200 },
+    { key: 'department', title: 'Department', width: 150 },
+    { key: 'salary', title: 'Salary', type: 'number', width: 120 },
+  ];
+
+  return (
+    <Spreadsheet
+      columns={columns}
+      data={data}
+      frozenRows={1}
+      frozenColumns={0}
+    />
+  );
+}
+```
+
+## 4-Region Rendering
+
+When both rows and columns are frozen, the canvas renders four independent regions:
+
+| Region | Position | Content |
+|---|---|---|
+| Corner | Top-left | Intersection of frozen rows and frozen cols |
+| Frozen-row | Top-right | Frozen rows in scrollable columns |
+| Frozen-col | Bottom-left | Frozen columns in scrollable rows |
+| Main | Bottom-right | Scrollable content |
+
+Each region is clipped independently and the frozen regions use cached `ImageData` for performance — they only re-render when their content changes, not on every scroll frame.

@@ -1,0 +1,323 @@
+# HandsOnTable → witqq spreadsheet Migration Guide
+
+This guide maps HandsOnTable (HoT) concepts to their witqq spreadsheet equivalents.
+
+## Constructor / Initialization
+
+### HandsOnTable
+```js
+const hot = new Handsontable(container, {
+  data: [['A1', 'B1'], ['A2', 'B2']],
+  columns: [{ data: 'name', type: 'text' }, { data: 'age', type: 'numeric' }],
+  colHeaders: ['Name', 'Age'],
+  rowHeaders: true,
+  width: 800,
+  height: 600,
+  readOnly: false,
+});
+```
+
+### witqq spreadsheet
+```ts
+import { WitEngine } from '@witqq/spreadsheet';
+
+const engine = new WitEngine({
+  columns: [
+    { key: 'name', title: 'Name', width: 150, type: 'string' },
+    { key: 'age', title: 'Age', width: 80, type: 'number' },
+  ],
+  data: [{ name: 'A1', age: 1 }, { name: 'A2', age: 2 }],
+  showRowNumbers: true,
+  width: 800,
+  height: 600,
+  editable: true,
+});
+engine.mount(document.getElementById('grid')!);
+```
+
+**Key differences:**
+- `columns` combines `colHeaders` and column config into `ColumnDef`
+- `data` uses column `key` for binding, not `data` property
+- `readOnly: false` → `editable: true`
+- `mount()` must be called after construction
+
+---
+
+## Data Access
+
+| HandsOnTable | witqq spreadsheet | Notes |
+|---|---|---|
+| `hot.getData()` | `engine.getCellStore()` | CellStore is sparse Map, not 2D array |
+| `hot.getDataAtCell(row, col)` | `engine.getCell(row, col)` | Returns `CellData \| undefined` |
+| `hot.setDataAtCell(row, col, val)` | `engine.setCell(row, col, val)` | Auto-creates cell if absent |
+| `hot.getDataAtRow(row)` | Iterate columns with `getCell()` | No direct row-as-array method |
+| `hot.countRows()` | `engine.getRowCount()` | |
+| `hot.alter('insert_row_below')` | `engine.setRowCount(n + 1)` | Row operations via count change |
+
+### CellStore direct access
+```ts
+const store = engine.getCellStore();
+store.get(row, col);        // CellData | undefined
+store.setValue(row, col, v); // set raw value
+store.set(row, col, data);   // set full CellData (with displayValue, style, etc.)
+```
+
+---
+
+## Events / Hooks
+
+| HandsOnTable Hook | witqq spreadsheet Event | Payload |
+|---|---|---|
+| `afterChange` | `cellChange` | `CellChangeEvent` |
+| `afterSelection` | `selectionChange` | `SelectionChangeEvent` |
+| `afterScrollVertically` | `scroll` | `ScrollEvent` |
+| `afterInit` | `ready` | — |
+| `beforeCopy` / `afterCopy` | `clipboardCopy` | `ClipboardDataEvent` |
+| `beforePaste` / `afterPaste` | `clipboardPaste` | `ClipboardDataEvent` |
+| `afterColumnResize` | `columnResize` | `ColumnResizeEvent` |
+| `afterRowResize` | `rowResize` | `RowResizeEvent` |
+| `afterUndo` / `afterRedo` | `commandUndo` / `commandRedo` | `CommandEvent` |
+
+### Subscribing
+```ts
+// HandsOnTable
+hot.addHook('afterChange', (changes) => { ... });
+
+// witqq spreadsheet
+engine.on('cellChange', (event) => {
+  console.log(event.row, event.col, event.oldValue, event.newValue);
+});
+```
+
+---
+
+## Column Configuration
+
+| HandsOnTable | witqq spreadsheet `ColumnDef` | Notes |
+|---|---|---|
+| `data: 'field'` | `key: 'field'` | Data binding key |
+| `title: 'Header'` | `title: 'Header'` | Same |
+| `width: 120` | `width: 120` | Same (pixels) |
+| `type: 'numeric'` | `type: 'number'` | Type names differ |
+| `type: 'text'` | `type: 'string'` | |
+| `type: 'checkbox'` | `type: 'boolean'` | |
+| `type: 'date'` | `type: 'date'` | Same |
+| `readOnly: true` | `editable: false` | Inverted logic |
+| `renderer` | Custom `CellTypeRenderer` | Via CellTypeRegistry |
+| `allowEmpty: false` | Validation rule | Via ValidationEngine |
+
+---
+
+## Sorting
+
+```ts
+// HandsOnTable
+hot.getPlugin('columnSorting').sort({ column: 0, sortOrder: 'asc' });
+
+// witqq spreadsheet
+engine.sortBy(0, 'asc');           // single column
+engine.sortBy([                    // multi-column
+  { col: 0, direction: 'asc' },
+  { col: 2, direction: 'desc' },
+]);
+engine.clearSort();
+engine.getSortColumns();           // current sort state
+```
+
+Enable sorting per column: `{ key: 'name', sortable: true }` in ColumnDef, or globally via `sortable: true` in config.
+
+---
+
+## Filtering
+
+```ts
+// HandsOnTable
+hot.getPlugin('filters').addCondition(0, 'contains', ['text']);
+hot.getPlugin('filters').filter();
+
+// witqq spreadsheet
+engine.setColumnFilter(0, { operator: 'contains', value: 'text' });
+engine.removeColumnFilter(0);
+engine.clearFilters();
+engine.getFilteredRowCount();      // visible rows after filter
+```
+
+Supported operators: `equals`, `notEquals`, `contains`, `notContains`, `startsWith`, `endsWith`, `greaterThan`, `lessThan`, `greaterThanOrEqual`, `lessThanOrEqual`, `between`, `notBetween`, `isEmpty`, `isNotEmpty`.
+
+---
+
+## Frozen Panes
+
+```ts
+// HandsOnTable
+new Handsontable(el, { fixedRowsTop: 2, fixedColumnsLeft: 1 });
+
+// witqq spreadsheet
+new WitEngine({ frozenRows: 2, frozenColumns: 1, columns: [...] });
+```
+
+---
+
+## Merged Cells
+
+```ts
+// HandsOnTable
+new Handsontable(el, { mergeCells: [{ row: 0, col: 0, rowspan: 2, colspan: 3 }] });
+
+// witqq spreadsheet
+engine.mergeCells({ startRow: 0, startCol: 0, endRow: 1, endCol: 2 });
+engine.unmergeCells({ startRow: 0, startCol: 0, endRow: 1, endCol: 2 });
+engine.getMergedRegion(0, 0);      // MergedRegion | undefined
+```
+
+---
+
+## Plugins
+
+### HandsOnTable
+```js
+Handsontable.plugins.registerPlugin('MyPlugin', MyPlugin);
+```
+
+### witqq spreadsheet
+```ts
+import type { WitPlugin, PluginAPI } from '@witqq/spreadsheet';
+
+const myPlugin: WitPlugin = {
+  name: 'my-plugin',
+  version: '1.0.0',
+  install(api: PluginAPI) {
+    const { engine } = api;
+    engine.on('cellChange', (e) => { /* ... */ });
+    api.setPluginState('counter', 0);
+  },
+  destroy() {
+    // cleanup
+  },
+};
+
+engine.installPlugin(myPlugin);
+engine.removePlugin('my-plugin');
+engine.getPlugin('my-plugin');
+```
+
+**Key differences:**
+- Plugins are plain objects implementing `WitPlugin` interface (no class registration)
+- `PluginAPI` provides isolated state via `getPluginState` / `setPluginState`
+- Plugin dependencies declared via `dependencies: ['other-plugin']`
+
+---
+
+## Undo / Redo
+
+```ts
+// HandsOnTable
+hot.undo();
+hot.redo();
+
+// witqq spreadsheet
+engine.getCommandManager().undo();
+engine.getCommandManager().redo();
+```
+
+---
+
+## Clipboard
+
+```ts
+// HandsOnTable — managed via hooks
+hot.addHook('beforeCopy', (data) => { ... });
+
+// witqq spreadsheet — ClipboardManager handles Ctrl+C/X/V automatically
+engine.on('clipboardCopy', (e) => console.log(e.rowCount, e.colCount));
+engine.on('clipboardPaste', (e) => console.log(e.rowCount, e.colCount));
+```
+
+Clipboard supports TSV and HTML table formats for Excel/Sheets interop.
+
+---
+
+## Validation
+
+```ts
+// HandsOnTable
+columns: [{ validator: (value, callback) => callback(value > 0) }]
+
+// witqq spreadsheet
+engine.setColumnValidation(0, [
+  { type: 'required', message: 'Value is required' },
+  { type: 'min', min: 0, message: 'Must be positive' },
+]);
+engine.setCellValidation(0, 0, [
+  { type: 'custom', validate: (v) => v !== null, message: 'Cannot be null' },
+]);
+```
+
+Built-in rules: `required`, `min`, `max`, `range`, `minLength`, `maxLength`, `pattern` (regex), `custom` (function).
+
+---
+
+## Theming
+
+```ts
+// HandsOnTable — CSS classes
+// witqq spreadsheet — theme object
+import { lightTheme, darkTheme } from '@witqq/spreadsheet';
+
+const engine = new WitEngine({ theme: darkTheme, columns: [...] });
+engine.setTheme(lightTheme);  // switch at runtime
+```
+
+Create custom themes by spreading a built-in theme:
+```ts
+const myTheme: WitTheme = {
+  ...lightTheme,
+  name: 'my-theme',
+  colors: { ...lightTheme.colors, background: '#f5f5f5' },
+};
+```
+
+---
+
+## React Integration
+
+```tsx
+// HandsOnTable
+import { HotTable } from '@handsontable/react';
+<HotTable data={data} columns={columns} />
+
+// witqq spreadsheet
+import { WitTable, WitTableRef } from '@witqq/spreadsheet-react';
+const ref = useRef<WitTableRef>(null);
+<WitTable
+  ref={ref}
+  columns={columns}
+  data={data}
+  editable
+  onCellChange={(e) => console.log(e)}
+/>
+// Imperative access:
+ref.current?.getCell(0, 0);
+ref.current?.selectCell(0, 0);
+ref.current?.print();
+```
+
+---
+
+## Performance Comparison
+
+| Feature | HandsOnTable | witqq spreadsheet |
+|---|---|---|
+| Rendering | DOM-based (TD elements) | Canvas 2D |
+| Max rows (smooth) | ~10K | 100K+ |
+| Initialization 1M rows | N/A | ~800ms |
+| Memory per cell | ~2KB (DOM node) | ~64 bytes (sparse Map) |
+| Bundle size | ~800KB min | <300KB gzipped |
+| Dependencies | 0 (but large core) | 0 (core) |
+
+---
+
+## License
+
+- HandsOnTable: Proprietary (paid) for commercial use
+- witqq spreadsheet: BSL 1.1 (converts to Apache 2.0 on 2030-03-01)

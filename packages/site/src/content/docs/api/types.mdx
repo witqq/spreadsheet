@@ -1,0 +1,838 @@
+---
+title: Core Types
+description: Type definitions for cells, styles, geometry, columns, selection, merges, validation, configuration, rendering, and general utilities.
+---
+
+# Core Types
+
+All types are exported from `@witqq/spreadsheet`.
+
+```ts
+import type { CellValue, CellData, CellStyle, ColumnDef, CellRange } from '@witqq/spreadsheet';
+```
+
+## Cell Types
+
+### CellValue
+
+```typescript
+type CellValue = string | number | boolean | Date | null;
+```
+
+### CellData
+
+```typescript
+interface CellData {
+  readonly value: CellValue;
+  readonly displayValue?: string;    // Override default formatting
+  readonly formula?: string;         // Formula expression (e.g. "=SUM(A1:A10)")
+  readonly style?: CellStyleRef;     // Reference to shared style
+  readonly type?: CellType;          // Cell type for rendering
+  readonly metadata?: CellMetadata;  // Status, links, comments
+}
+```
+
+### CellMetadata
+
+```typescript
+interface CellMetadata {
+  readonly status?: 'changed' | 'error' | 'saving' | 'saved';
+  readonly errorMessage?: string;
+  readonly link?: { url: string; label?: string };
+  readonly comment?: string;
+}
+```
+
+### CellType
+
+```typescript
+type CellType =
+  | 'string' | 'number' | 'boolean' | 'date'
+  | 'select' | 'dynamicSelect' | 'formula'
+  | 'link' | 'image' | 'progressBar' | 'rating' | 'badge'
+  | 'custom';
+```
+
+## Style Types
+
+### CellStyle
+
+```typescript
+interface CellStyle {
+  readonly bgColor?: string;
+  readonly textColor?: string;
+  readonly fontFamily?: string;
+  readonly fontSize?: number;
+  readonly fontWeight?: 'normal' | 'bold';
+  readonly fontStyle?: 'normal' | 'italic';
+  readonly textAlign?: 'left' | 'center' | 'right';
+  readonly verticalAlign?: 'top' | 'middle' | 'bottom';
+  readonly borderTop?: BorderStyle;
+  readonly borderRight?: BorderStyle;
+  readonly borderBottom?: BorderStyle;
+  readonly borderLeft?: BorderStyle;
+  readonly numberFormat?: string;
+  readonly textWrap?: boolean;
+  readonly indent?: number;
+}
+```
+
+### BorderStyle
+
+```typescript
+interface BorderStyle {
+  readonly width: number;
+  readonly color: string;
+  readonly style: 'solid' | 'dashed' | 'dotted';
+}
+```
+
+### CellStyleRef
+
+```typescript
+interface CellStyleRef {
+  readonly ref: string;       // Unique key in StylePool
+  readonly style: CellStyle;  // Resolved style object
+}
+```
+
+## Geometry Types
+
+### CellAddress
+
+```typescript
+interface CellAddress {
+  readonly row: number;
+  readonly col: number;
+}
+```
+
+### CellRange
+
+```typescript
+interface CellRange {
+  readonly startRow: number;
+  readonly startCol: number;
+  readonly endRow: number;
+  readonly endCol: number;
+}
+```
+
+### CellRect
+
+Pixel-space rectangle for a cell on canvas:
+
+```typescript
+interface CellRect {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+```
+
+## Column Types
+
+### ColumnDef
+
+```typescript
+interface ColumnDef {
+  readonly key: string;          // Data binding key
+  readonly title: string;        // Header display text
+  readonly width: number;        // Width in pixels
+  readonly minWidth?: number;    // Minimum resize width
+  readonly maxWidth?: number;    // Maximum resize width
+  readonly type?: CellType;      // Cell type for rendering
+  readonly frozen?: boolean;     // Pin to frozen pane
+  readonly sortable?: boolean;   // Enable header click sorting
+  readonly filterable?: boolean; // Enable filter panel
+  readonly editable?: boolean;   // Allow inline editing
+  readonly resizable?: boolean;  // Allow drag-to-resize
+  readonly hidden?: boolean;     // Hide from display and print
+}
+```
+
+## Selection Types
+
+### Selection
+
+```typescript
+interface Selection {
+  readonly type: SelectionType;
+  readonly ranges: readonly CellRange[];
+  readonly activeCell: CellAddress;
+  readonly anchorCell: CellAddress;
+}
+
+type SelectionType = 'cell' | 'range' | 'row' | 'column' | 'all';
+```
+
+## Merge Types
+
+### MergedRegion
+
+```typescript
+interface MergedRegion {
+  readonly startRow: number;
+  readonly startCol: number;
+  readonly endRow: number;    // inclusive
+  readonly endCol: number;    // inclusive
+}
+```
+
+## Validation Types
+
+### ValidationRule
+
+```typescript
+interface ValidationRule {
+  readonly type: string;
+  readonly message?: string;
+  readonly severity?: 'error' | 'warning' | 'info';
+}
+```
+
+### ValidationResult
+
+```typescript
+interface ValidationResult {
+  readonly valid: boolean;
+  readonly message?: string;
+  readonly severity?: 'error' | 'warning' | 'info';
+}
+```
+
+## Theme Types
+
+### SpreadsheetTheme
+
+Theme controls all visual dimensions and colors. See [Themes & Styling](/concepts/themes/) for details.
+
+```typescript
+interface SpreadsheetTheme {
+  rowHeight: number;
+  headerHeight: number;
+  cellPadding: number;
+  rowNumberWidth: number;
+  colors: {
+    background: string;
+    cellText: string;
+    cellBorder: string;
+    headerBg: string;
+    headerText: string;
+    selectionBg: string;
+    selectionBorder: string;
+    // ... additional color tokens
+  };
+  fonts: {
+    cell: string;
+    header: string;
+  };
+}
+```
+
+Built-in themes: `lightTheme`, `darkTheme`.
+
+## Configuration Types
+
+Options objects passed when constructing core subsystems.
+
+### CommandManagerConfig
+
+```typescript
+interface CommandManagerConfig {
+  historyLimit?: number;
+  onAfterExecute?: CommandCallback;
+  onAfterUndo?: CommandCallback;
+  onAfterRedo?: CommandCallback;
+}
+```
+
+Undo/redo stack options and lifecycle callbacks.
+
+### ClipboardManagerConfig
+
+```typescript
+interface ClipboardManagerConfig {
+  cellStore: CellStore;
+  dataView: DataView;
+  selectionManager: SelectionManager;
+  commandManager: CommandManager;
+  eventBus: EventBus;
+  isEditing: () => boolean;
+  onDataChange: () => void;
+}
+```
+
+Dependencies for copy/cut/paste with TSV and HTML table format support.
+
+### FilterEngineConfig
+
+```typescript
+interface FilterEngineConfig {
+  cellStore: CellStore;
+  totalRowCount: number;
+}
+```
+
+Cell store and row count for evaluating filter conditions.
+
+### SortEngineConfig
+
+```typescript
+interface SortEngineConfig {
+  cellStore: CellStore;
+  totalRowCount: number;
+}
+```
+
+Cell store and row count for multi-column stable sorting.
+
+### SelectionManagerConfig
+
+```typescript
+interface SelectionManagerConfig {
+  rowCount: number;
+  colCount: number;
+  onChange?: (selection: Selection, previousSelection: Selection) => void;
+}
+```
+
+Grid dimensions and optional selection change callback.
+
+### InlineEditorConfig
+
+```typescript
+interface InlineEditorConfig {
+  container: HTMLElement;
+  scrollContainer: HTMLElement;
+  layoutEngine: LayoutEngine;
+  scrollManager: ScrollManager;
+  cellStore: CellStore;
+  dataView: DataView;
+  theme: SpreadsheetTheme;
+  onCommit: (row: number, col: number, oldValue: CellValue, newValue: CellValue) => void;
+  onClose: (reason: EditorCloseReason) => void;
+  frozenRows?: number;
+  frozenColumns?: number;
+}
+```
+
+Textarea overlay editor positioning, commit/close callbacks, and frozen pane offsets.
+
+### KeyboardNavigatorConfig
+
+```typescript
+interface KeyboardNavigatorConfig {
+  selectionManager: SelectionManager;
+  getVisibleRowCount: () => number;
+}
+```
+
+Selection manager and viewport row count for PageUp/PageDown navigation.
+
+### LayoutEngineConfig
+
+```typescript
+interface LayoutEngineConfig {
+  columns: ColumnDef[];
+  rowCount: number;
+  rowHeight: number;
+  headerHeight: number;
+  rowNumberWidth: number;
+  rowStore?: RowStore;
+}
+```
+
+Column definitions and dimension constants for cumulative position arrays.
+
+### ViewportConfig
+
+```typescript
+interface ViewportConfig {
+  rowBuffer?: number;   // Default: 10
+  colBuffer?: number;   // Default: 5
+}
+```
+
+Extra rows/columns to pre-render outside the visible area.
+
+### ScrollManagerConfig
+
+```typescript
+interface ScrollManagerConfig {
+  container: HTMLElement;
+  totalWidth: number;
+  totalHeight: number;
+  onScroll: (scrollX: number, scrollY: number) => void;
+}
+```
+
+Scroll container setup and scroll position change callback.
+
+### ValidationEngineConfig
+
+```typescript
+interface ValidationEngineConfig {
+  cellStore: CellStore;
+  eventBus: EventBus;
+}
+```
+
+Cell store and event bus for validation rule evaluation and error events.
+
+### AutofillManagerConfig
+
+```typescript
+interface AutofillManagerConfig {
+  cellStore: CellStore;
+  dataView: DataView;
+  selectionManager: SelectionManager;
+  layoutEngine: LayoutEngine;
+  scrollManager: ScrollManager;
+  commandManager: CommandManager;
+  eventBus: EventBus;
+  dirtyTracker: DirtyTracker;
+  renderScheduler: RenderScheduler;
+  container: HTMLElement;
+  rowCount: number;
+  colCount: number;
+  mergeManager?: MergeManager;
+}
+```
+
+Dependencies for drag-to-fill handle, pattern detection, and merge-aware autofill.
+
+### ColumnResizeManagerConfig
+
+```typescript
+interface ColumnResizeManagerConfig {
+  layoutEngine: LayoutEngine;
+  gridGeometry: GridGeometry;
+  scrollManager: ScrollManager;
+  commandManager: CommandManager;
+  eventBus: EventBus;
+  columns: ColumnDef[];
+  container: HTMLElement;
+  onResize: () => void;
+}
+```
+
+Dependencies for header border drag-to-resize with undo support.
+
+### RowResizeManagerConfig
+
+```typescript
+interface RowResizeManagerConfig {
+  layoutEngine: LayoutEngine;
+  scrollManager: ScrollManager;
+  commandManager: CommandManager;
+  eventBus: EventBus;
+  container: HTMLElement;
+  onResize: () => void;
+}
+```
+
+Dependencies for row-number border drag-to-resize with undo support.
+
+### ContextMenuManagerConfig
+
+```typescript
+interface ContextMenuManagerConfig {
+  container: HTMLElement;
+  engine: SpreadsheetEngine;
+  eventBus: EventBus;
+  theme: SpreadsheetTheme;
+}
+```
+
+Container, engine reference, and theme for the right-click context menu overlay.
+
+### AriaManagerConfig
+
+```typescript
+interface AriaManagerConfig {
+  container: HTMLElement;
+  scrollContainer: HTMLElement;
+  eventBus: EventBus;
+  cellStore: CellStore;
+  dataView: DataView;
+  columns: ColumnDef[];
+  rowCount: number;
+}
+```
+
+DOM elements and data sources for WCAG 2.1 AA `role=grid` and `aria-live` announcements.
+
+### PrintManagerConfig
+
+```typescript
+interface PrintManagerConfig {
+  container: HTMLElement;
+  cellStore: CellStore;
+  dataView: DataView;
+  columns: ColumnDef[];
+  rowStore: RowStore;
+  theme: SpreadsheetTheme;
+  maxPrintRows?: number;  // Default: 10000
+}
+```
+
+Data sources and row cap for `@media print` DOM table generation.
+
+### CanvasManagerConfig
+
+```typescript
+interface CanvasManagerConfig {
+  container: HTMLElement;
+  dpr?: number;  // Defaults to window.devicePixelRatio
+}
+```
+
+Container element and optional device pixel ratio override for canvas setup.
+
+### GridGeometryConfig
+
+```typescript
+interface GridGeometryConfig {
+  columns: ColumnDef[];
+  theme: SpreadsheetTheme;
+  showRowNumbers: boolean;
+  rowPositions?: Float64Array;
+  rowHeights?: Float64Array;
+}
+```
+
+Column definitions, theme, and shared layout arrays for coordinate computation.
+
+### EventTranslatorConfig
+
+```typescript
+interface EventTranslatorConfig {
+  scrollContainer: HTMLElement;
+  layoutEngine: LayoutEngine;
+  scrollManager: ScrollManager;
+  eventBus: EventBus;
+  cellStore: CellStore;
+  dataView: DataView;
+  columns: ColumnDef[];
+  rowGroupManager?: RowGroupManager;
+}
+```
+
+DOM-to-cell hit-testing pipeline dependencies and optional row group toggle detection.
+
+## Rendering & Layout Types
+
+Types used by the render pipeline, viewport management, and dirty tracking.
+
+### GridRenderConfig
+
+```typescript
+interface GridRenderConfig {
+  columns: ColumnDef[];
+  cellStore: CellStore;
+  dataView: DataView;
+  rowCount: number;
+  theme: SpreadsheetTheme;
+  showRowNumbers: boolean;
+  showGridLines: boolean;
+  selectionManager?: SelectionManager;
+  cellTypeRegistry?: CellTypeRegistry;
+  rowPositions?: Float64Array;
+  rowHeights?: Float64Array;
+}
+```
+
+Top-level configuration for creating the `GridRenderer` render pipeline.
+
+### RenderMode
+
+```typescript
+type RenderMode = 'full' | 'light' | 'placeholder';
+```
+
+Rendering fidelity level — `placeholder` during fast scroll, `full` when idle.
+
+### PaneRegion
+
+```typescript
+type PaneRegion = 'corner' | 'frozenRow' | 'frozenCol' | 'main' | 'full';
+```
+
+Identifies which frozen pane region a render pass targets.
+
+### ViewportRange
+
+```typescript
+interface ViewportRange {
+  readonly startRow: number;
+  readonly endRow: number;
+  readonly startCol: number;
+  readonly endCol: number;
+  readonly visibleRowCount: number;
+  readonly visibleColCount: number;
+}
+```
+
+Inclusive row/column range of visible cells including buffer zone.
+
+### FrozenViewportRanges
+
+```typescript
+interface FrozenViewportRanges {
+  corner: ViewportRange;
+  frozenRow: ViewportRange;
+  frozenCol: ViewportRange;
+  main: ViewportRange;
+}
+```
+
+Viewport ranges for all four frozen pane regions.
+
+### DirtyRegion
+
+```typescript
+type DirtyRegion = 'full' | 'viewport-change' | 'cell-update';
+```
+
+Invalidation scope — `full` redraws everything, `cell-update` redraws only changed cells.
+
+### DirtyCell
+
+```typescript
+interface DirtyCell {
+  row: number;
+  col: number;
+}
+```
+
+Logical row/column address of a cell that needs re-rendering.
+
+### DirtyRect
+
+```typescript
+interface DirtyRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+```
+
+Pixel-space rectangle for partial canvas invalidation.
+
+## General Types
+
+Utility types, enums, and interfaces used across multiple subsystems.
+
+### CellAlignment
+
+```typescript
+type CellAlignment = 'left' | 'center' | 'right';
+```
+
+Horizontal text alignment within a cell, used by `CellTypeRenderer`.
+
+### ComparisonOperator
+
+```typescript
+type ComparisonOperator =
+  | 'greaterThan' | 'lessThan'
+  | 'greaterThanOrEqual' | 'lessThanOrEqual'
+  | 'equal' | 'notEqual'
+  | 'between' | 'notBetween';
+```
+
+Comparison operators for conditional formatting value conditions.
+
+### EditorCloseReason
+
+```typescript
+type EditorCloseReason =
+  | 'enter' | 'shift-enter' | 'tab' | 'shift-tab'
+  | 'escape' | 'blur' | 'scroll' | 'programmatic';
+```
+
+Reason the inline editor was closed, determines next-cell navigation direction.
+
+### FillDirection
+
+```typescript
+type FillDirection = 'down' | 'up' | 'right' | 'left';
+```
+
+Direction of an autofill drag operation.
+
+### PatternType
+
+```typescript
+type PatternType = 'number-sequence' | 'number-increment' | 'date-sequence' | 'text-repeat';
+```
+
+Type of pattern detected by the autofill `PatternDetector`.
+
+### DetectedPattern
+
+```typescript
+interface DetectedPattern {
+  readonly type: PatternType;
+  readonly step: number;
+  readonly sourceValues: readonly CellValue[];
+}
+```
+
+Result of autofill pattern detection with step increment and source values.
+
+### HitRegion
+
+```typescript
+type HitRegion =
+  | 'cell' | 'header' | 'header-sort-icon' | 'header-filter-icon'
+  | 'row-number' | 'row-group-toggle' | 'corner' | 'outside';
+```
+
+Region of the grid where a mouse event occurred.
+
+### HitTestResult
+
+```typescript
+interface HitTestResult {
+  readonly region: HitRegion;
+  readonly row: number;   // -1 if not applicable
+  readonly col: number;   // -1 if not applicable
+}
+```
+
+Result of coordinate-to-cell hit testing.
+
+### Command
+
+```typescript
+interface Command {
+  execute(): void;
+  undo(): void;
+  readonly description: string;
+}
+```
+
+Interface for undoable operations in the command stack.
+
+### CommandCallback
+
+```typescript
+type CommandCallback = (command: Command) => void;
+```
+
+Callback invoked after command execution, undo, or redo.
+
+### CellEdit
+
+```typescript
+interface CellEdit {
+  readonly row: number;
+  readonly col: number;
+  readonly oldValue: CellValue;
+  readonly newValue: CellValue;
+}
+```
+
+Single cell value change, used by `BatchCellEditCommand` for bulk operations.
+
+### RowCommandDeps
+
+```typescript
+interface RowCommandDeps {
+  cellStore: CellStore;
+  mergeManager: MergeManager | null;
+  setRowCount: (count: number) => void;
+  getRowCount: () => number;
+}
+```
+
+Dependencies for insert/delete row commands.
+
+### ColumnAggregate
+
+```typescript
+interface ColumnAggregate {
+  col: number;
+  fn: AggregateFunction;
+}
+```
+
+Column index and aggregate function for row group summary calculations.
+
+### MenuContext
+
+```typescript
+type MenuContext = 'cell' | 'header' | 'row-number' | 'corner';
+```
+
+Grid region where the context menu was triggered.
+
+### MenuActionContext
+
+```typescript
+interface MenuActionContext {
+  readonly row: number;
+  readonly col: number;
+  readonly region: string;
+  readonly engine: SpreadsheetEngine;
+}
+```
+
+Context passed to context menu item action and visibility callbacks.
+
+### RequiredRule
+
+```typescript
+interface RequiredRule {
+  readonly type: 'required';
+  readonly message?: string;
+  readonly severity?: 'error' | 'warning' | 'info';
+}
+```
+
+Validation rule that rejects empty, null, or undefined values.
+
+### RangeRule
+
+```typescript
+interface RangeRule {
+  readonly type: 'range';
+  readonly min?: number;
+  readonly max?: number;
+  readonly message?: string;
+  readonly severity?: 'error' | 'warning' | 'info';
+}
+```
+
+Validation rule that enforces numeric min/max bounds.
+
+### RegexRule
+
+```typescript
+interface RegexRule {
+  readonly type: 'regex';
+  readonly pattern: string;
+  readonly flags?: string;
+  readonly message?: string;
+  readonly severity?: 'error' | 'warning' | 'info';
+}
+```
+
+Validation rule that tests cell value against a regular expression.
+
+### CustomRule
+
+```typescript
+interface CustomRule {
+  readonly type: 'custom';
+  readonly validate: (value: CellValue) => ValidationResult;
+  readonly message?: string;
+  readonly severity?: 'error' | 'warning' | 'info';
+}
+```
+
+Validation rule with a user-supplied validation function.

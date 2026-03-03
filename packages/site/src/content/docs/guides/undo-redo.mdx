@@ -1,0 +1,97 @@
+---
+title: Undo & Redo
+description: Command-based undo/redo with 100-step history, batch operations, and programmatic control.
+---
+
+import { UndoRedoDemo } from '../../../components/demos/UndoRedoDemo';
+import undoRedoSource from '../../../components/demos/UndoRedoDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+Spreadsheet implements undo/redo through a `CommandManager` that maintains a history stack. Every mutating operation (cell edit, resize, merge) is wrapped in a `Command` object with `execute()` and `undo()` methods. Press Ctrl+Z to undo and Ctrl+Y or Ctrl+Shift+Z to redo.
+
+<UndoRedoDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={undoRedoSource} lang="tsx" title="UndoRedoDemo.tsx" />
+</details>
+
+The history stack holds up to 100 commands by default. When the limit is reached, the oldest command is discarded.
+
+## Built-in Commands
+
+| Command | Description |
+|---|---|
+| `CellEditCommand` | Single cell value change |
+| `BatchCellEditCommand` | Multiple cell changes (paste, cut, autofill) |
+| `ResizeColumnCommand` | Column width change |
+| `ResizeRowCommand` | Row height change |
+| `MergeCellsCommand` | Merge a cell region |
+| `UnmergeCellsCommand` | Unmerge a cell region |
+| `InsertRowCommand` | Insert a row at a given index |
+| `DeleteRowCommand` | Delete a row at a given index |
+
+## Undo/Redo Buttons
+
+Expose undo and redo through toolbar buttons via ref:
+
+```tsx
+import { useRef, useState } from 'react';
+import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+
+function App() {
+  const ref = useRef<SpreadsheetRef>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  return (
+    <>
+      <button
+        disabled={!canUndo}
+        onClick={() => ref.current?.getInstance().getCommandManager().undo()}
+      >
+        Undo
+      </button>
+      <button
+        disabled={!canRedo}
+        onClick={() => ref.current?.getInstance().getCommandManager().redo()}
+      >
+        Redo
+      </button>
+      <Spreadsheet
+        ref={ref}
+        columns={columns}
+        data={data}
+        editable={true}
+        onCommandExecuted={() => {
+          setCanUndo(ref.current?.getInstance().getCommandManager().canUndo() ?? false);
+          setCanRedo(ref.current?.getInstance().getCommandManager().canRedo() ?? false);
+        }}
+      />
+    </>
+  );
+}
+```
+
+## API Reference
+
+### CommandManager
+
+| Method | Signature | Description |
+|---|---|---|
+| `execute` | `(command: Command) => void` | Execute and push to history |
+| `undo` | `() => void` | Undo last command |
+| `redo` | `() => void` | Redo last undone command |
+| `canUndo` | `() => boolean` | Whether undo is available |
+| `canRedo` | `() => boolean` | Whether redo is available |
+| `clear` | `() => void` | Clear entire history |
+
+### Command Interface
+
+```typescript
+interface Command {
+  execute(): void;
+  undo(): void;
+  description: string;
+}
+```

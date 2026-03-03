@@ -1,0 +1,57 @@
+{
+  "name": "@witqq/spreadsheet-widget",
+  "version": "0.1.0",
+  "description": "Embeddable spreadsheet widget — single-file IIFE/UMD bundle",
+  "keywords": [
+    "spreadsheet",
+    "datagrid",
+    "canvas",
+    "table",
+    "grid",
+    "excel",
+    "typescript",
+    "widget",
+    "embed",
+    "web-component",
+    "zero-dependencies"
+  ],
+  "license": "BUSL-1.1",
+  "type": "module",
+  "main": "./dist/witqq-spreadsheet-widget.umd.cjs",
+  "module": "./dist/witqq-spreadsheet-widget.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/witqq-spreadsheet-widget.js",
+      "require": "./dist/witqq-spreadsheet-widget.umd.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@witqq/spreadsheet": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "vite": "^6.3.0",
+    "vite-plugin-dts": "^4.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/witqq/spreadsheet.git",
+    "directory": "packages/widget"
+  },
+  "homepage": "https://spreadsheet.witqq.ru/frameworks/widget",
+  "bugs": {
+    "url": "https://github.com/witqq/spreadsheet/issues"
+  },
+  "author": "witqq team <belyiwork@mail.ru>"
+}

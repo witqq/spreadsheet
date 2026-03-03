@@ -1,0 +1,212 @@
+---
+title: "Vue 3 Integration"
+description: "Spreadsheet Vue 3 component — props, events, template ref API, and reactive watchers."
+---
+
+# Vue 3 Integration
+
+The `@witqq/spreadsheet-vue` package provides a `Spreadsheet` component built with Vue 3 Composition API. It wraps the core canvas engine with Vue-friendly props, events, and an exposed API via template refs.
+
+## Installation
+
+```bash
+npm install @witqq/spreadsheet @witqq/spreadsheet-vue
+```
+
+Requires Vue 3.3+.
+
+## Spreadsheet Component
+
+```vue
+<script setup lang="ts">
+import { Spreadsheet } from '@witqq/spreadsheet-vue';
+import type { ColumnDef } from '@witqq/spreadsheet';
+
+const columns: ColumnDef[] = [
+  { key: 'name', title: 'Name', width: 180 },
+  { key: 'email', title: 'Email', width: 220 },
+];
+
+const data = [
+  { name: 'Alice', email: 'alice@example.com' },
+  { name: 'Bob', email: 'bob@example.com' },
+];
+</script>
+
+<template>
+  <Spreadsheet :columns="columns" :data="data" />
+</template>
+```
+
+## Props
+
+All props map directly to `SpreadsheetEngineConfig` fields:
+
+| Prop | Type | Required | Description |
+|---|---|---|---|
+| `columns` | `ColumnDef[]` | Yes | Column definitions |
+| `data` | `Record<string, unknown>[]` | No | Row data array |
+| `rowCount` | `number` | No | Total row count (virtual scrolling) |
+| `theme` | `SpreadsheetTheme` | No | Theme object |
+| `frozenRows` | `number` | No | Number of frozen rows |
+| `frozenColumns` | `number` | No | Number of frozen columns |
+| `editable` | `boolean` | No | Enable cell editing |
+| `sortable` | `boolean` | No | Enable column sorting |
+| `showGridLines` | `boolean` | No | Show grid lines |
+| `showRowNumbers` | `boolean` | No | Show row numbers |
+| `rowHeight` | `number` | No | Default row height (px) |
+| `headerHeight` | `number` | No | Header row height (px) |
+| `width` | `number \| string` | No | Container width |
+| `height` | `number \| string` | No | Container height |
+
+## Events
+
+```vue
+<Spreadsheet
+  :columns="columns"
+  :data="data"
+  @cell-change="onCellChange"
+  @selection-change="onSelectionChange"
+  @sort-change="onSortChange"
+  @filter-change="onFilterChange"
+  @scroll="onScroll"
+  @ready="onReady"
+/>
+```
+
+| Event | Payload | Fires when |
+|---|---|---|
+| `cell-change` | `CellChangeEvent` | A cell value is edited |
+| `selection-change` | `SelectionChangeEvent` | Active cell or selection range changes |
+| `sort-change` | `SortChangeEvent` | Column sort is applied or cleared |
+| `filter-change` | `FilterChangeEvent` | Filter is applied, changed, or removed |
+| `scroll` | `ScrollEvent` | The viewport scrolls |
+| `ready` | — | The engine is fully initialized |
+
+## Template Ref (Exposed API)
+
+Access the component's imperative API via `ref`:
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue';
+import { Spreadsheet } from '@witqq/spreadsheet-vue';
+import type { SpreadsheetExposed } from '@witqq/spreadsheet-vue';
+
+const tableRef = ref<InstanceType<typeof Spreadsheet> & SpreadsheetExposed>();
+
+function handleUndo() {
+  tableRef.value?.undo();
+}
+</script>
+
+<template>
+  <Spreadsheet ref="tableRef" :columns="columns" :data="data" />
+  <button @click="handleUndo">Undo</button>
+</template>
+```
+
+### SpreadsheetExposed Interface
+
+```ts
+interface SpreadsheetExposed {
+  getInstance(): SpreadsheetEngine;
+  focus(): void;
+  getSelection(): Selection;
+  selectCell(row: number, col: number): void;
+  getCell(row: number, col: number): CellData | undefined;
+  setCell(row: number, col: number, value: CellValue): void;
+  undo(): void;
+  redo(): void;
+  scrollTo(x: number, y: number): void;
+  requestRender(): void;
+  installPlugin(plugin: SpreadsheetPlugin): void;
+  removePlugin(name: string): void;
+  print(): void;
+}
+```
+
+| Method | Description |
+|---|---|
+| `getInstance()` | Access the underlying `SpreadsheetEngine` |
+| `focus()` | Focus the table container |
+| `getSelection()` | Current selection state |
+| `selectCell(row, col)` | Programmatically select a cell |
+| `getCell(row, col)` | Read cell data |
+| `setCell(row, col, value)` | Write a cell value |
+| `undo() / redo()` | Command history navigation |
+| `scrollTo(x, y)` | Scroll to pixel position |
+| `requestRender()` | Force a canvas re-render |
+| `installPlugin(plugin)` | Install a plugin at runtime |
+| `removePlugin(name)` | Remove a plugin by name |
+| `print()` | Trigger print layout |
+
+## Reactive Watchers
+
+The component watches two props and updates the engine automatically:
+
+- **`theme`** — calls `engine.setTheme()` when the theme object changes
+- **`data`** — clears the cell store, bulk-loads the new data, updates row count, and re-renders
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue';
+import { lightTheme, darkTheme } from '@witqq/spreadsheet';
+
+const isDark = ref(false);
+const currentTheme = computed(() => isDark.value ? darkTheme : lightTheme);
+const rows = ref(initialData);
+</script>
+
+<template>
+  <Spreadsheet :columns="columns" :data="rows" :theme="currentTheme" />
+  <button @click="isDark = !isDark">Toggle theme</button>
+</template>
+```
+
+## Plugin Installation
+
+```vue
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue';
+import { Spreadsheet } from '@witqq/spreadsheet-vue';
+import type { SpreadsheetExposed } from '@witqq/spreadsheet-vue';
+import { FormulaPlugin, ExcelPlugin } from '@witqq/spreadsheet-plugins';
+
+const tableRef = ref<InstanceType<typeof Spreadsheet> & SpreadsheetExposed>();
+
+onMounted(() => {
+  tableRef.value?.installPlugin(new FormulaPlugin());
+  tableRef.value?.installPlugin(new ExcelPlugin());
+});
+
+onUnmounted(() => {
+  tableRef.value?.removePlugin('formula');
+  tableRef.value?.removePlugin('excel');
+});
+</script>
+
+<template>
+  <Spreadsheet ref="tableRef" :columns="columns" :data="data" />
+</template>
+```
+
+## TypeScript
+
+The component is fully typed. Import types from `@witqq/spreadsheet`:
+
+```ts
+import type {
+  ColumnDef,
+  CellData,
+  CellValue,
+  Selection,
+  SpreadsheetTheme,
+  SpreadsheetPlugin,
+  CellChangeEvent,
+  SelectionChangeEvent,
+  SortChangeEvent,
+  FilterChangeEvent,
+  ScrollEvent,
+} from '@witqq/spreadsheet';
+```

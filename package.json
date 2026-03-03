@@ -1,0 +1,44 @@
+{
+  "name": "@witqq/spreadsheet-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/core",
+    "packages/react",
+    "packages/vue",
+    "packages/angular",
+    "packages/widget",
+    "packages/plugins",
+    "packages/server",
+    "packages/demo",
+    "packages/site"
+  ],
+  "scripts": {
+    "dev": "DOCKER_BUILDKIT=1 docker compose up --build -d && echo 'http://localhost:3150'",
+    "dev:stop": "docker compose down",
+    "dev:logs": "docker compose logs -f witqq spreadsheet",
+    "dev:remote": "echo 'Configure your deploy server in .deploy-config.json'",
+    "build": "npm run build -w packages/core && npm run build -w packages/react && npm run build -w packages/plugins",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:remote": "BASE_URL=http://testold:3150 playwright test",
+    "typecheck": "tsc --build",
+    "lint": "eslint packages/*/src",
+    "format": "prettier --write \"packages/*/src/**/*.{ts,tsx}\"",
+    "docs": "typedoc"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
+    "jsdom": "^28.1.0",
+    "prettier": "^3.0.0",
+    "typedoc": "^0.28.17",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

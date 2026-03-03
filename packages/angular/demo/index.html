@@ -1,0 +1,47 @@
+<!-- Angular Demo: @wit-table/angular -->
+<!-- This file demonstrates the Angular component usage pattern.
+     To run: create an Angular project, import WitTableComponent, and use the template below. -->
+
+<h2>@wit-table/angular — Usage Example</h2>
+
+<pre><code>
+import { Component } from '@angular/core';
+import { WitTableComponent } from '@wit-table/angular';
+import type { ColumnDef } from '@wit-table/angular';
+
+@Component({
+  selector: 'app-demo',
+  standalone: true,
+  imports: [WitTableComponent],
+  template: `
+    &lt;wit-table
+      [columns]="columns"
+      [data]="data"
+      [theme]="theme"
+      (cellChange)="onCellChange($event)"
+      (selectionChange)="onSelectionChange($event)"
+    /&gt;
+  `,
+})
+export class DemoComponent {
+  columns: ColumnDef[] = [
+    { key: 'id', title: 'ID', width: 60, type: 'number' },
+    { key: 'name', title: 'Name', width: 150 },
+    { key: 'email', title: 'Email', width: 200 },
+  ];
+
+  data = Array.from({ length: 100 }, (_, i) => ({
+    id: i + 1,
+    name: `User ${i + 1}`,
+    email: `user${i + 1}@example.com`,
+  }));
+
+  onCellChange(event: any) {
+    console.log('Cell changed:', event);
+  }
+
+  onSelectionChange(event: any) {
+    console.log('Selection:', event);
+  }
+}
+</code></pre>

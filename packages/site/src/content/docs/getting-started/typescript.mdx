@@ -1,0 +1,139 @@
+---
+title: TypeScript
+description: "Type-safe usage patterns for @witqq/spreadsheet"
+---
+
+# TypeScript
+
+@witqq/spreadsheet is built with TypeScript and provides full generic type inference for row data, columns, events, and refs.
+
+## Generic Row Type
+
+The `Spreadsheet` component accepts a generic type parameter `TRow` that represents your row data shape:
+
+```tsx
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  inStock: boolean;
+  category: string;
+}
+
+<Spreadsheet<Product>
+  columns={columns}
+  data={products}
+  editable={true}
+/>
+```
+
+This ensures that `data` must be an array of `Product` objects and that column `key` values correspond to fields on `Product`.
+
+## Typed Columns
+
+Use `satisfies` to get autocomplete while keeping the array type compatible:
+
+```ts
+import type { ColumnDef } from '@witqq/spreadsheet';
+
+const columns = [
+  { key: 'id', title: 'ID', width: 60, type: 'number' as const },
+  { key: 'name', title: 'Product', width: 200, type: 'string' as const },
+  { key: 'price', title: 'Price', width: 100, type: 'number' as const },
+  { key: 'inStock', title: 'In Stock', width: 80, type: 'boolean' as const },
+  { key: 'category', title: 'Category', width: 150, type: 'string' as const },
+] satisfies ColumnDef[];
+```
+
+## Typed Event Callbacks
+
+Event callbacks receive typed parameters:
+
+```tsx
+<Spreadsheet<Product>
+  columns={columns}
+  data={products}
+  editable={true}
+  onCellChange={(event: CellChangeEvent) => {
+    console.log(`Row ${event.row}, Col ${event.col}: ${event.oldValue} → ${event.newValue}`);
+  }}
+  onSelectionChange={(event: SelectionChangeEvent) => {
+    console.log('Active cell:', event.selection.activeCell);
+    console.log('Ranges:', event.selection.ranges);
+  }}
+  onSortChange={(event: SortChangeEvent) => {
+    console.log('Sort changed:', event);
+  }}
+  onFilterChange={(event: FilterChangeEvent) => {
+    console.log('Active filters:', event);
+  }}
+/>
+```
+
+## Typed Ref
+
+Use `SpreadsheetRef` to get type-safe access to imperative methods:
+
+```tsx
+import { useRef } from 'react';
+import type { SpreadsheetRef } from '@witqq/spreadsheet-react';
+
+function ProductTable() {
+  const tableRef = useRef<SpreadsheetRef>(null);
+
+  const selectFirstCell = () => {
+    tableRef.current?.selectCell(0, 0);
+  };
+
+  const readCell = () => {
+    const value = tableRef.current?.getCell(0, 0);
+    console.log('Cell [0,0]:', value);
+  };
+
+  const updateCell = () => {
+    tableRef.current?.setCell(0, 1, 'Updated Name');
+  };
+
+  return <Spreadsheet<Product> ref={tableRef} columns={columns} data={products} />;
+}
+```
+
+### SpreadsheetRef Methods
+
+All methods available on the ref:
+
+```ts
+interface SpreadsheetRef {
+  getInstance(): SpreadsheetEngine;       // Access underlying engine
+  focus(): void;                  // Focus the table canvas
+  getSelection(): Selection;      // Current selection state
+  selectCell(row: number, col: number): void;
+  getCell(row: number, col: number): unknown;
+  setCell(row: number, col: number, value: unknown): void;
+  undo(): void;
+  redo(): void;
+  scrollTo(x: number, y: number): void;
+  requestRender(): void;          // Force re-render
+  installPlugin(plugin: SpreadsheetPlugin): void;
+  removePlugin(name: string): void;
+  print(): void;                  // Trigger print view
+}
+```
+
+## Type-Safe Cell Access
+
+When working with the engine directly, cell values are typed through the `CellData` interface:
+
+```ts
+import type { CellData } from '@witqq/spreadsheet';
+
+const engine = tableRef.current?.getInstance();
+if (engine) {
+  const cell: CellData | undefined = engine.getCellStore().get(0, 0);
+  if (cell) {
+    console.log(cell.value);        // CellValue (string | number | boolean | Date | null)
+    console.log(cell.displayValue); // Formatted string for rendering
+    console.log(cell.type);         // CellType
+  }
+}
+```

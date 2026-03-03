@@ -1,0 +1,76 @@
+---
+title: Print Support
+description: "Print canvas grids via DOM table generation with @media print CSS and row limits."
+---
+
+import { PrintSupportDemo } from '../../../components/demos/PrintSupportDemo';
+import printSupportSource from '../../../components/demos/PrintSupportDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+`PrintManager` enables printing canvas-rendered tables by generating a temporary DOM `<table>` element and injecting `@media print` CSS. Since canvas content is not included in the browser print flow, the print manager reconstructs the visible data as an HTML table at print time.
+
+<PrintSupportDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={printSupportSource} lang="tsx" title="PrintSupportDemo.tsx" />
+</details>
+
+The print output respects `DataView` — if the table is filtered or sorted, only the filtered/sorted data is printed.
+
+## Print Button
+
+Trigger printing through the table ref:
+
+```tsx
+import { useRef } from 'react';
+import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+
+function App() {
+  const ref = useRef<SpreadsheetRef>(null);
+
+  return (
+    <>
+      <button onClick={() => ref.current?.print()}>
+        Print Table
+      </button>
+      <Spreadsheet
+        ref={ref}
+        columns={columns}
+        data={data}
+      />
+    </>
+  );
+}
+```
+
+## maxPrintRows
+
+Large datasets are capped at `maxPrintRows` (default: 10,000) to prevent browser freezes. When truncated, a notice is appended to the printed output indicating how many rows were omitted.
+
+```tsx
+<Spreadsheet
+  ref={ref}
+  columns={columns}
+  data={data}
+  maxPrintRows={5000}
+/>
+```
+
+## How It Works
+
+1. `PrintManager` reads all visible rows from `DataView`
+2. Generates an HTML `<table>` with column headers and cell values
+3. Injects `@media print` CSS that hides the canvas and shows the table
+4. Calls `window.print()`
+5. Cleans up the temporary DOM elements after printing
+
+## API Reference
+
+### PrintManager
+
+| Method | Signature | Description |
+|---|---|---|
+| `attach` | `(engine: SpreadsheetEngine) => void` | Attach to engine instance |
+| `detach` | `() => void` | Detach and clean up |
+| `print` | `() => void` | Generate DOM table and trigger print |

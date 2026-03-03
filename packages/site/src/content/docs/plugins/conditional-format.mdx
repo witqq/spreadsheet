@@ -1,0 +1,310 @@
+---
+title: "Conditional Formatting"
+description: "Color scales, data bars, and icon sets — highlight cells based on their values."
+---
+
+import { ConditionalFormatDemo } from '../../../components/demos/ConditionalFormatDemo';
+import conditionalFormatSource from '../../../components/demos/ConditionalFormatDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+# Conditional Formatting
+
+The `ConditionalFormattingPlugin` applies visual formatting rules to cells based on their values. It supports four condition types: value-based styling, gradient color scales, data bars, and icon sets.
+
+<ConditionalFormatDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={conditionalFormatSource} lang="tsx" title="ConditionalFormatDemo.tsx" />
+</details>
+
+## Installation
+
+```ts
+import { ConditionalFormattingPlugin } from '@witqq/spreadsheet-plugins';
+
+const cfPlugin = new ConditionalFormattingPlugin();
+engine.installPlugin(cfPlugin);
+```
+
+## Condition Types
+
+### Value Condition
+
+Apply a style when a cell value matches a comparison:
+
+```ts
+interface ValueCondition {
+  type: 'value';
+  operator: ComparisonOperator;
+  value: number;
+  value2?: number; // Required for 'between' / 'notBetween'
+}
+```
+
+### Gradient Scale
+
+Interpolate colors across a numeric range:
+
+```ts
+interface GradientScaleCondition {
+  type: 'gradientScale';
+  stops: readonly { value: number; color: string }[];
+}
+```
+
+### Data Bar
+
+Fill a portion of the cell background proportional to the value:
+
+```ts
+interface DataBarCondition {
+  type: 'dataBar';
+  minValue?: number;
+  maxValue?: number;
+  color: string;
+  showValue?: boolean;
+}
+```
+
+### Icon Set
+
+Display an icon based on value thresholds:
+
+```ts
+interface IconSetCondition {
+  type: 'iconSet';
+  iconSet: IconSetName; // 'arrows' | 'circles' | 'flags' | 'stars'
+  thresholds: readonly { value: number; icon: string }[];
+  showValue?: boolean;
+}
+```
+
+Built-in icon sets:
+- **arrows** — `▲` `▶` `▼`
+- **circles** — colored circles
+- **flags** — flag indicators
+- **stars** — star ratings
+
+## Comparison Operators
+
+```ts
+type ComparisonOperator =
+  | 'greaterThan' | 'lessThan'
+  | 'greaterThanOrEqual' | 'lessThanOrEqual'
+  | 'equal' | 'notEqual'
+  | 'between' | 'notBetween';
+```
+
+## Static Factory Methods
+
+`ConditionalFormattingPlugin` provides convenience factories to create rules:
+
+### createValueRule
+
+```ts
+const rule = ConditionalFormattingPlugin.createValueRule(
+  { startRow: 0, startCol: 2, endRow: 99, endCol: 2 }, // range
+  'greaterThan',   // operator
+  1000,            // threshold
+  '#c6efce',       // bgColor
+  { textColor: '#006100', priority: 1 }
+);
+cfPlugin.addRule(rule);
+```
+
+### createGradientScale
+
+```ts
+const rule = ConditionalFormattingPlugin.createGradientScale(
+  { startRow: 0, startCol: 3, endRow: 99, endCol: 3 },
+  [
+    { value: 0, color: '#f8696b' },    // red (low)
+    { value: 50, color: '#ffeb84' },   // yellow (mid)
+    { value: 100, color: '#63be7b' },  // green (high)
+  ]
+);
+cfPlugin.addRule(rule);
+```
+
+### createDataBar
+
+```ts
+const rule = ConditionalFormattingPlugin.createDataBar(
+  { startRow: 0, startCol: 4, endRow: 99, endCol: 4 },
+  '#638ec6',
+  { minValue: 0, maxValue: 100, showValue: true }
+);
+cfPlugin.addRule(rule);
+```
+
+### createIconSet
+
+```ts
+const rule = ConditionalFormattingPlugin.createIconSet(
+  { startRow: 0, startCol: 5, endRow: 99, endCol: 5 },
+  'arrows',
+  { showValue: true }
+);
+cfPlugin.addRule(rule);
+```
+
+## Managing Rules
+
+```ts
+cfPlugin.addRule(rule);                  // Add a rule
+cfPlugin.removeRule(rule.id);            // Remove by ID
+cfPlugin.clearRules();                   // Remove all rules
+const rules = cfPlugin.getRules();       // Get all rules (readonly)
+```
+
+Rules are evaluated in `priority` order (lower number = higher priority). Set `stopIfTrue: true` to prevent further rule evaluation after a match.
+
+## Color Scale by Value
+
+Highlight high revenue cells in green, low in red:
+
+```ts
+import { ConditionalFormattingPlugin } from '@witqq/spreadsheet-plugins';
+import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+
+function App() {
+  const ref = useRef<SpreadsheetRef>(null);
+
+  useEffect(() => {
+    const cf = new ConditionalFormattingPlugin();
+    ref.current?.installPlugin(cf);
+
+    cf.addRule(
+      ConditionalFormattingPlugin.createValueRule(
+        { startRow: 0, startCol: 2, endRow: 999, endCol: 2 },
+        'greaterThan',
+        5000,
+        '#c6efce',
+        { textColor: '#006100' }
+      )
+    );
+
+    cf.addRule(
+      ConditionalFormattingPlugin.createValueRule(
+        { startRow: 0, startCol: 2, endRow: 999, endCol: 2 },
+        'lessThan',
+        1000,
+        '#ffc7ce',
+        { textColor: '#9c0006' }
+      )
+    );
+  }, []);
+
+  return <Spreadsheet ref={ref} columns={columns} data={data} />;
+}
+```
+
+## Data Bars for Progress
+
+```ts
+const progressRule = ConditionalFormattingPlugin.createDataBar(
+  { startRow: 0, startCol: 3, endRow: 49, endCol: 3 },
+  '#5b9bd5',
+  { minValue: 0, maxValue: 100, showValue: true }
+);
+cfPlugin.addRule(progressRule);
+```
+
+## Icon Sets for Status
+
+```ts
+const statusRule = ConditionalFormattingPlugin.createIconSet(
+  { startRow: 0, startCol: 4, endRow: 49, endCol: 4 },
+  'arrows',
+  { showValue: false }
+);
+cfPlugin.addRule(statusRule);
+```
+
+## Internal Utilities
+
+The conditional formatting layer uses several internal utilities:
+
+| Function | Description |
+|---|---|
+| `toNumber(value)` | Convert cell value to number for comparison |
+| `evaluateComparison(value, operator, threshold, threshold2?)` | Evaluate a comparison condition |
+| `interpolateColor(value, stops)` | Interpolate between color stops for gradient scales |
+| `getLayer()` | Access the `ConditionalFormatLayer` render layer instance |
+
+## API Types
+
+### ValueCondition
+
+Apply a style when a cell value matches a numeric comparison.
+
+```ts
+interface ValueCondition {
+  readonly type: 'value';
+  readonly operator: ComparisonOperator;
+  readonly value: number;
+  readonly value2?: number; // for 'between' / 'notBetween'
+}
+```
+
+### GradientScaleCondition
+
+Interpolate background colors across a numeric range using color stops.
+
+```ts
+interface GradientScaleCondition {
+  readonly type: 'gradientScale';
+  readonly stops: readonly GradientStop[];
+}
+
+interface GradientStop {
+  readonly value: number;
+  readonly color: string;
+}
+```
+
+### DataBarCondition
+
+Render a horizontal bar proportional to the cell value.
+
+```ts
+interface DataBarCondition {
+  readonly type: 'dataBar';
+  readonly minValue?: number;
+  readonly maxValue?: number;
+  readonly color: string;
+  readonly showValue?: boolean;
+}
+```
+
+### IconSetCondition
+
+Display an icon determined by value thresholds.
+
+```ts
+interface IconSetCondition {
+  readonly type: 'iconSet';
+  readonly iconSet: IconSetName;
+  readonly thresholds: readonly IconSetThreshold[];
+  readonly showValue?: boolean;
+}
+```
+
+### IconSetName
+
+Union of built-in icon set identifiers.
+
+```ts
+type IconSetName = 'arrows' | 'circles' | 'flags' | 'stars';
+```
+
+### IconSetThreshold
+
+A single threshold entry mapping a minimum value to an icon character.
+
+```ts
+interface IconSetThreshold {
+  readonly value: number;
+  readonly icon: string;
+}

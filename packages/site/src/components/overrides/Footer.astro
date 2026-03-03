@@ -1,0 +1,45 @@
+---
+import Default from '@astrojs/starlight/components/Footer.astro';
+---
+
+<Default {...Astro.props}><slot /></Default>
+
+<div class="made-with-moira">
+  <a href="https://moira-mcp.com" target="_blank" rel="noopener noreferrer">
+    <span class="moira-icon">⚡</span>
+    Made with <strong>Moira</strong>
+  </a>
+</div>
+
+<style>
+  .made-with-moira {
+    text-align: center;
+    padding: 1rem 0 1.5rem;
+    font-size: 0.8rem;
+  }
+
+  .made-with-moira a {
+    color: var(--sl-color-gray-3);
+    text-decoration: none;
+    transition: color 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .made-with-moira a:hover {
+    color: var(--sl-color-white);
+  }
+
+  .made-with-moira strong {
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 600;
+  }
+
+  .moira-icon {
+    font-size: 0.9rem;
+  }
+</style>

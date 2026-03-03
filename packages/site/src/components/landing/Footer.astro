@@ -1,0 +1,52 @@
+---
+const columns = [
+  {
+    title: 'Product',
+    links: [
+      { label: 'Features', href: '#features' },
+      { label: 'Pricing', href: '#pricing' },
+      { label: 'Changelog', href: 'https://github.com/witqq/spreadsheet/releases' },
+    ],
+  },
+  {
+    title: 'Resources',
+    links: [
+      { label: 'Documentation', href: '/getting-started/' },
+      { label: 'API Reference', href: '/api/cell-types/' },
+      { label: 'Quick Start', href: '/getting-started/quick-start/' },
+    ],
+  },
+  {
+    title: 'Community',
+    links: [
+      { label: 'GitHub', href: 'https://github.com/witqq/spreadsheet' },
+      { label: 'Discussions', href: 'https://github.com/witqq/spreadsheet/discussions' },
+      { label: 'Contributing', href: 'https://github.com/witqq/spreadsheet/blob/master/CONTRIBUTING.md' },
+    ],
+  },
+];
+---
+
+<footer class="footer">
+  <div class="footer-grid">
+    {columns.map((col) => (
+      <div class="footer-col">
+        <h4>{col.title}</h4>
+        <ul>
+          {col.links.map((link) => (
+            <li><a href={link.href}>{link.label}</a></li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+  <div class="footer-copy">
+    © 2026 @witqq/spreadsheet. Licensed under BSL 1.1 (free for non-commercial use).
+  </div>
+  <div class="made-with-moira">
+    <a href="https://moira-mcp.com" target="_blank" rel="noopener noreferrer">
+      <span class="moira-icon">⚡</span>
+      Made with <strong>Moira</strong>
+    </a>
+  </div>
+</footer>

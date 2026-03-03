@@ -1,0 +1,227 @@
+---
+title: "Angular Integration"
+description: "Spreadsheet Angular standalone component — inputs, outputs, ViewChild API, and change detection."
+---
+
+# Angular Integration
+
+The `@witqq/spreadsheet-angular` package provides `SpreadsheetComponent`, a standalone Angular component that wraps the core canvas engine with Angular-native inputs, outputs, and a public API accessible via `ViewChild`.
+
+## Installation
+
+```bash
+npm install @witqq/spreadsheet @witqq/spreadsheet-angular
+```
+
+Requires Angular 16+ (standalone component support).
+
+## SpreadsheetComponent
+
+```typescript
+import { Component } from '@angular/core';
+import { SpreadsheetComponent } from '@witqq/spreadsheet-angular';
+import type { ColumnDef } from '@witqq/spreadsheet';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [SpreadsheetComponent],
+  template: `
+    <witqq-spreadsheet
+      [columns]="columns"
+      [data]="data"
+      (cellChange)="onCellChange($event)"
+    />
+  `,
+})
+export class AppComponent {
+  columns: ColumnDef[] = [
+    { key: 'name', title: 'Name', width: 180 },
+    { key: 'email', title: 'Email', width: 220 },
+  ];
+
+  data = [
+    { name: 'Alice', email: 'alice@example.com' },
+    { name: 'Bob', email: 'bob@example.com' },
+  ];
+
+  onCellChange(event: any) {
+    console.log('Cell changed:', event);
+  }
+}
+```
+
+The component selector is `witqq-spreadsheet`. As a standalone component, import it directly into your component's `imports` array — no NgModule required.
+
+## Inputs
+
+All inputs map to `SpreadsheetEngineConfig` fields:
+
+| Input | Type | Required | Description |
+|---|---|---|---|
+| `columns` | `ColumnDef[]` | Yes | Column definitions |
+| `data` | `Record<string, unknown>[]` | No | Row data array |
+| `rowCount` | `number` | No | Total row count (virtual scrolling) |
+| `theme` | `SpreadsheetTheme` | No | Theme object |
+| `frozenRows` | `number` | No | Number of frozen rows |
+| `frozenColumns` | `number` | No | Number of frozen columns |
+| `editable` | `boolean` | No | Enable cell editing |
+| `sortable` | `boolean` | No | Enable column sorting |
+| `showGridLines` | `boolean` | No | Show grid lines |
+| `showRowNumbers` | `boolean` | No | Show row numbers |
+| `rowHeight` | `number` | No | Default row height (px) |
+| `headerHeight` | `number` | No | Header row height (px) |
+| `width` | `number \| string` | No | Container width |
+| `height` | `number \| string` | No | Container height |
+
+## Outputs
+
+```html
+<witqq-spreadsheet
+  [columns]="columns"
+  [data]="data"
+  (cellChange)="onCellChange($event)"
+  (selectionChange)="onSelectionChange($event)"
+  (sortChange)="onSortChange($event)"
+  (filterChange)="onFilterChange($event)"
+  (scroll)="onScroll($event)"
+  (ready)="onReady()"
+/>
+```
+
+| Output | Payload | Fires when |
+|---|---|---|
+| `cellChange` | `CellChangeEvent` | A cell value is edited |
+| `selectionChange` | `SelectionChangeEvent` | Active cell or selection range changes |
+| `sortChange` | `SortChangeEvent` | Column sort is applied or cleared |
+| `filterChange` | `FilterChangeEvent` | Filter is applied, changed, or removed |
+| `scroll` | `ScrollEvent` | The viewport scrolls |
+| `ready` | `void` | The engine is fully initialized |
+
+## ViewChild API
+
+Access the component's public methods via `@ViewChild`:
+
+```typescript
+import { Component, ViewChild } from '@angular/core';
+import { SpreadsheetComponent } from '@witqq/spreadsheet-angular';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [SpreadsheetComponent],
+  template: `
+    <witqq-spreadsheet #table [columns]="columns" [data]="data" />
+    <button (click)="undo()">Undo</button>
+    <button (click)="redo()">Redo</button>
+    <button (click)="table.print()">Print</button>
+  `,
+})
+export class AppComponent {
+  @ViewChild('table') table!: SpreadsheetComponent;
+
+  columns = [/* ... */];
+  data = [/* ... */];
+
+  undo() { this.table.undo(); }
+  redo() { this.table.redo(); }
+}
+```
+
+### Public Methods
+
+| Method | Description |
+|---|---|
+| `getInstance()` | Access the underlying `SpreadsheetEngine` |
+| `focus()` | Focus the table container |
+| `getSelection()` | Current selection state |
+| `selectCell(row, col)` | Programmatically select a cell |
+| `getCell(row, col)` | Read cell data |
+| `setCell(row, col, value)` | Write a cell value |
+| `undo() / redo()` | Command history navigation |
+| `scrollTo(x, y)` | Scroll to pixel position |
+| `requestRender()` | Force a canvas re-render |
+| `installPlugin(plugin)` | Install a plugin at runtime |
+| `removePlugin(name)` | Remove a plugin by name |
+| `print()` | Trigger print layout |
+
+## Change Detection (ngOnChanges)
+
+The component implements `OnChanges` and reacts to two input changes:
+
+- **`theme`** — calls `engine.setTheme()` when the theme input changes (skips first change)
+- **`data`** — clears the cell store, bulk-loads the new data, updates row count, and re-renders (skips first change since `ngOnInit` handles initial setup)
+
+```typescript
+@Component({
+  template: `<witqq-spreadsheet [columns]="columns" [data]="rows" [theme]="theme" />`,
+})
+export class AppComponent {
+  theme = lightTheme;
+  rows = initialData;
+
+  toggleTheme() {
+    this.theme = this.theme === lightTheme ? darkTheme : lightTheme;
+  }
+
+  updateData(newRows: Record<string, unknown>[]) {
+    this.rows = newRows; // triggers ngOnChanges → bulk reload
+  }
+}
+```
+
+## Lifecycle
+
+| Hook | Behavior |
+|---|---|
+| `ngOnInit` | Creates `SpreadsheetEngine`, mounts to container, subscribes to events |
+| `ngOnChanges` | Updates theme and data when inputs change |
+| `ngOnDestroy` | Unsubscribes events, calls `engine.destroy()`, nullifies reference |
+
+## Plugin Installation
+
+```typescript
+import { Component, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
+import { SpreadsheetComponent } from '@witqq/spreadsheet-angular';
+import { FormulaPlugin, ExcelPlugin } from '@witqq/spreadsheet-plugins';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [SpreadsheetComponent],
+  template: `<witqq-spreadsheet #table [columns]="columns" [data]="data" />`,
+})
+export class AppComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('table') table!: SpreadsheetComponent;
+
+  ngAfterViewInit() {
+    this.table.installPlugin(new FormulaPlugin());
+    this.table.installPlugin(new ExcelPlugin());
+  }
+
+  ngOnDestroy() {
+    this.table.removePlugin('formula');
+    this.table.removePlugin('excel');
+  }
+}
+```
+
+## TypeScript
+
+Import types from `@witqq/spreadsheet`:
+
+```ts
+import type {
+  ColumnDef,
+  CellData,
+  CellValue,
+  Selection,
+  SpreadsheetTheme,
+  SpreadsheetPlugin,
+  CellChangeEvent,
+  SelectionChangeEvent,
+  SortChangeEvent,
+  FilterChangeEvent,
+  ScrollEvent,
+} from '@witqq/spreadsheet';
+```

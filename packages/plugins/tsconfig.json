@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+    "composite": true,
+    "emitDeclarationOnly": true
+  },
+  "include": ["src", "formula/src", "context-menu/src", "conditional-format/src", "excel/src"],
+  "references": [
+    { "path": "../core" }
+  ]
+}

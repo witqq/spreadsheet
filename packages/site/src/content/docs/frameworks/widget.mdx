@@ -1,0 +1,230 @@
+---
+title: "Vanilla JS / Widget"
+description: "Embeddable Spreadsheet widget — zero framework dependencies, single script tag, global API."
+---
+
+# Vanilla JS / Widget
+
+The `@witqq/spreadsheet-widget` package provides an embeddable spreadsheet bundle that works with any web page — no framework, no build step. Include a single `<script>` tag and call `Spreadsheet.create()`.
+
+## Installation
+
+### CDN / Script Tag
+
+```html
+<script src="https://unpkg.com/@witqq/spreadsheet-widget/dist/witqq-spreadsheet-widget.iife.js"></script>
+```
+
+The script registers a global `Spreadsheet` object with `create()` and `embed()` functions.
+
+### npm
+
+```bash
+npm install @witqq/spreadsheet-widget
+```
+
+```js
+import { create, embed } from '@witqq/spreadsheet-widget';
+```
+
+## Bundle Size
+
+| Format | Size (gzip) |
+|---|---|
+| IIFE | < 36 KB |
+| UMD | < 36 KB |
+| ESM | < 34 KB |
+
+Zero external dependencies — the entire core engine is bundled.
+
+## Quick Start
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://unpkg.com/@witqq/spreadsheet-widget/dist/witqq-spreadsheet-widget.iife.js"></script>
+</head>
+<body>
+  <div id="grid" style="width: 800px; height: 400px;"></div>
+  <script>
+    const engine = Spreadsheet.create('#grid', {
+      columns: [
+        { key: 'name', title: 'Name', width: 200 },
+        { key: 'email', title: 'Email', width: 250 },
+        { key: 'role', title: 'Role', width: 150 },
+      ],
+      data: [
+        { name: 'Alice', email: 'alice@example.com', role: 'Engineer' },
+        { name: 'Bob', email: 'bob@example.com', role: 'Designer' },
+        { name: 'Carol', email: 'carol@example.com', role: 'PM' },
+      ],
+      showRowNumbers: true,
+      editable: true,
+    });
+  </script>
+</body>
+</html>
+```
+
+## API
+
+### `Spreadsheet.create(container, config)`
+
+Creates a spreadsheet inside the given container element.
+
+```ts
+function create(
+  container: HTMLElement | string,
+  config: WidgetConfig,
+): SpreadsheetEngine;
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `container` | `HTMLElement \| string` | DOM element or CSS selector |
+| `config` | `WidgetConfig` | Engine configuration |
+
+Returns the `SpreadsheetEngine` instance for programmatic access.
+
+**Container resolution**: Pass a DOM element directly or a CSS selector string. If the selector matches no element, an error is thrown.
+
+### `Spreadsheet.embed(container, config)`
+
+Creates a spreadsheet and returns a handle with a `destroy()` method:
+
+```ts
+function embed(
+  container: HTMLElement | string,
+  config: WidgetConfig,
+): { engine: SpreadsheetEngine; destroy: () => void };
+```
+
+```js
+const { engine, destroy } = Spreadsheet.embed('#grid', {
+  columns: [/* ... */],
+  data: [/* ... */],
+});
+
+// Later: clean up
+destroy();
+```
+
+### WidgetConfig
+
+Extends `SpreadsheetEngineConfig` with one additional option:
+
+```ts
+interface WidgetConfig extends SpreadsheetEngineConfig {
+  autoMount?: boolean; // default: true
+}
+```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `autoMount` | `boolean` | `true` | Mount engine to container immediately |
+| `columns` | `ColumnDef[]` | — | Column definitions (required) |
+| `data` | `Record<string, unknown>[]` | — | Row data |
+| `rowCount` | `number` | — | Total row count |
+| `theme` | `SpreadsheetTheme` | `lightTheme` | Theme object |
+| `frozenRows` | `number` | — | Frozen rows |
+| `frozenColumns` | `number` | — | Frozen columns |
+| `editable` | `boolean` | — | Enable editing |
+| `sortable` | `boolean` | — | Enable sorting |
+| `showGridLines` | `boolean` | — | Show grid lines |
+| `showRowNumbers` | `boolean` | — | Show row numbers |
+| `rowHeight` | `number` | — | Row height (px) |
+| `headerHeight` | `number` | — | Header height (px) |
+
+## Themes
+
+The widget re-exports `lightTheme` and `darkTheme`:
+
+```js
+// IIFE (global)
+const engine = Spreadsheet.create('#grid', {
+  columns: cols,
+  data: rows,
+  theme: Spreadsheet.darkTheme,
+});
+
+// Switch at runtime
+engine.setTheme(Spreadsheet.lightTheme);
+```
+
+```js
+// ESM
+import { create, lightTheme, darkTheme } from '@witqq/spreadsheet-widget';
+
+const engine = create('#grid', { columns: cols, theme: darkTheme });
+```
+
+## SpreadsheetEngine Methods
+
+The returned `SpreadsheetEngine` instance provides the full core API:
+
+| Method | Description |
+|---|---|
+| `setTheme(theme)` | Switch theme |
+| `getSelection()` | Current selection |
+| `selectCell(row, col)` | Programmatically select a cell |
+| `getCell(row, col)` | Read cell data |
+| `setCell(row, col, value)` | Write a cell value |
+| `scrollTo(x, y)` | Scroll to position |
+| `requestRender()` | Force re-render |
+| `installPlugin(plugin)` | Install a plugin |
+| `removePlugin(name)` | Remove a plugin |
+| `print()` | Print layout |
+| `on(event, handler)` | Subscribe to events |
+| `off(event, handler)` | Unsubscribe |
+| `destroy()` | Destroy engine and release resources |
+
+## Events
+
+Subscribe to events via the engine's event bus:
+
+```js
+const engine = Spreadsheet.create('#grid', config);
+
+engine.on('cellChange', (event) => {
+  console.log(`Cell [${event.row},${event.col}]: ${event.oldValue} → ${event.value}`);
+});
+
+engine.on('selectionChange', (event) => {
+  console.log('Selection:', event);
+});
+
+engine.on('ready', () => {
+  console.log('Table ready');
+});
+```
+
+## Deferred Mount
+
+Set `autoMount: false` to create the engine without mounting, then mount manually:
+
+```js
+const engine = Spreadsheet.create('#grid', {
+  columns: cols,
+  data: rows,
+  autoMount: false,
+});
+
+// Mount later
+engine.mount(document.getElementById('grid'));
+```
+
+## Re-exported Types
+
+When using the ESM build, import types directly:
+
+```ts
+import type {
+  SpreadsheetEngineConfig,
+  ColumnDef,
+  CellData,
+  CellValue,
+  Selection,
+  CellAddress,
+} from '@witqq/spreadsheet-widget';
+```

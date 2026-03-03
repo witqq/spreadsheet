@@ -1,0 +1,102 @@
+---
+title: Selection & Navigation
+description: Mouse and keyboard selection, range selection, and programmatic navigation in Spreadsheet.
+---
+
+import { SelectionDemo } from '../../../components/demos/SelectionDemo';
+import { KeyboardNavDemo } from '../../../components/demos/KeyboardNavDemo';
+import selectionSource from '../../../components/demos/SelectionDemo.tsx?raw';
+import keyboardNavSource from '../../../components/demos/KeyboardNavDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+Spreadsheet provides full spreadsheet-style selection with mouse and keyboard. Click a cell to select it, Shift+click to extend a range, and Ctrl+click to add a disjoint range. Row and column selection is supported by clicking row numbers or column headers. Select all cells with Ctrl+A or by clicking the corner cell.
+
+<SelectionDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={selectionSource} lang="tsx" title="SelectionDemo.tsx" />
+</details>
+
+## Keyboard Navigation
+
+`KeyboardNavigator` handles all keyboard shortcuts:
+
+| Shortcut | Action |
+|---|---|
+| Arrow keys | Move active cell |
+| Shift+Arrow | Extend selection |
+| Tab | Move to next cell |
+| Enter | Move down |
+| Home / End | First / last column |
+| Ctrl+Home / Ctrl+End | First / last cell in grid |
+| PageUp / PageDown | Scroll by viewport height |
+
+<KeyboardNavDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={keyboardNavSource} lang="tsx" title="KeyboardNavDemo.tsx" />
+</details>
+
+## Usage with React
+
+```tsx
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+
+function App() {
+  return (
+    <Spreadsheet
+      columns={columns}
+      data={data}
+      onSelectionChange={(selection) => {
+        console.log('Active cell:', selection.activeCell);
+        console.log('Ranges:', selection.ranges);
+      }}
+    />
+  );
+}
+```
+
+## Programmatic Selection
+
+Access `SelectionManager` through the table ref to control selection from code:
+
+```tsx
+import { useRef } from 'react';
+import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+
+function App() {
+  const ref = useRef<SpreadsheetRef>(null);
+
+  const handleSelectCell = () => {
+    ref.current?.selectCell(0, 0);
+  };
+
+  const handleGetSelection = () => {
+    const sel = ref.current?.getSelection();
+    console.log(sel);
+  };
+
+  return (
+    <>
+      <button onClick={handleSelectCell}>Select A1</button>
+      <button onClick={handleGetSelection}>Get Selection</button>
+      <Spreadsheet ref={ref} columns={columns} data={data} />
+    </>
+  );
+}
+```
+
+## API Reference
+
+### SelectionManager
+
+| Method | Signature | Description |
+|---|---|---|
+| `selectCell` | `(row: number, col: number) => void` | Set active cell |
+| `selectRow` | `(row: number) => void` | Select entire row |
+| `selectColumn` | `(col: number) => void` | Select entire column |
+| `selectAll` | `() => void` | Select all cells |
+| `getSelection` | `() => Selection` | Get current selection state |
+| `isSelected` | `(row: number, col: number) => boolean` | Check if cell is in selection |

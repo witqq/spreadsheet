@@ -1,0 +1,110 @@
+---
+title: Cell Validation
+description: Column and cell-level validation rules with required, range, regex, and custom validators.
+---
+
+import { ValidationDemo } from '../../../components/demos/ValidationDemo';
+import validationSource from '../../../components/demos/ValidationDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+`ValidationEngine` provides four rule types for validating cell values. Rules can be set at the column level (apply to all cells in the column) or at the individual cell level. When both exist, they are combined and the first failure is returned. Invalid cells display error tooltips on hover via `TooltipManager`.
+
+<ValidationDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={validationSource} lang="tsx" title="ValidationDemo.tsx" />
+</details>
+
+## Rule Types
+
+| Type | Description | Example |
+|---|---|---|
+| `required` | Cell must have a non-empty value | Required field |
+| `range` | Numeric value must be within min/max | Price between 0 and 10000 |
+| `regex` | Value must match a regular expression | Email format |
+| `custom` | Custom validation function | Cross-field validation |
+
+Each rule has a `severity` level: `error`, `warning`, or `info`.
+
+## Table with Validation
+
+```tsx
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+
+const columns: ColumnDef[] = [
+  {
+    key: 'name',
+    title: 'Name',
+    editable: true,
+    validation: [
+      { type: 'required', message: 'Name is required', severity: 'error' },
+    ],
+  },
+  {
+    key: 'email',
+    title: 'Email',
+    editable: true,
+    validation: [
+      { type: 'required', message: 'Email is required', severity: 'error' },
+      { type: 'regex', pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Invalid email', severity: 'error' },
+    ],
+  },
+  {
+    key: 'age',
+    title: 'Age',
+    type: 'number',
+    editable: true,
+    validation: [
+      { type: 'range', min: 0, max: 150, message: 'Age must be 0-150', severity: 'error' },
+    ],
+  },
+];
+
+function App() {
+  return <Spreadsheet columns={columns} data={data} editable={true} />;
+}
+```
+
+## Programmatic Validation
+
+```tsx
+const ve = ref.current?.getInstance().getValidationEngine();
+
+// Set column-level rules
+ve.setColumnRules(1, [
+  { type: 'required', message: 'Required', severity: 'error' },
+]);
+
+// Set cell-level rules
+ve.setCellRules(0, 2, [
+  { type: 'custom', validate: (value) => value > 0, message: 'Must be positive', severity: 'warning' },
+]);
+
+// Validate a specific cell
+const result = ve.validateCell(0, 1);
+// { valid: false, message: 'Required', severity: 'error' }
+```
+
+## API Reference
+
+### ValidationEngine
+
+| Method | Signature | Description |
+|---|---|---|
+| `setColumnRules` | `(col: number, rules: SpreadsheetValidationRule[]) => void` | Set column validation |
+| `setCellRules` | `(row: number, col: number, rules: SpreadsheetValidationRule[]) => void` | Set cell validation |
+| `validateCell` | `(row: number, col: number) => ValidationResult` | Validate single cell |
+| `validate` | `(row: number, col: number, value: CellValue) => ValidationResult` | Validate value against rules |
+
+### SpreadsheetValidationRule
+
+```typescript
+type SpreadsheetValidationRule =
+  | { type: 'required'; message: string; severity: Severity }
+  | { type: 'range'; min?: number; max?: number; message: string; severity: Severity }
+  | { type: 'regex'; pattern: RegExp; message: string; severity: Severity }
+  | { type: 'custom'; validate: (value: unknown) => boolean; message: string; severity: Severity };
+
+type Severity = 'error' | 'warning' | 'info';
+```

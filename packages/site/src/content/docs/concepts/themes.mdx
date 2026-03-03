@@ -1,0 +1,164 @@
+---
+title: Themes
+description: Theming system, built-in themes, and custom theme creation
+---
+
+import { ThemeSwitcherDemo } from '../../../components/demos/ThemeSwitcherDemo';
+import themeSwitcherSource from '../../../components/demos/ThemeSwitcherDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+# Themes
+
+@witqq/spreadsheet has a comprehensive theming system that controls colors, fonts, dimensions, and borders across all visual components.
+
+<ThemeSwitcherDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={themeSwitcherSource} lang="tsx" title="ThemeSwitcherDemo.tsx" />
+</details>
+
+## SpreadsheetTheme Interface
+
+```ts
+interface SpreadsheetTheme {
+  name: string;                        // Theme identifier
+  colors: {
+    gridLine: string;                  // Grid line color
+    background: string;                // Main grid background
+    headerBackground: string;          // Column header background
+    headerText: string;                // Column header text color
+    headerBorder: string;              // Column header border color
+    selectionFill: string;             // Selected cell range fill
+    selectionBorder: string;           // Selected range border
+    activeCellBorder: string;          // Active (focused) cell border
+    fillHandle: string;                // Autofill drag handle color
+    cellText: string;                  // Default cell text color
+    cellBorder: string;                // Cell border color
+    cellEditBackground: string;        // Inline editor background
+    alternateRowBackground: string;    // Odd/even row striping
+    hoverRowBackground: string;        // Mouse hover row highlight
+    frozenSeparator: string;           // Border between frozen and scrollable regions
+    scrollbarTrack: string;            // Scrollbar track background
+    scrollbarThumb: string;            // Scrollbar thumb color
+    scrollbarThumbHover: string;       // Scrollbar thumb hover color
+    errorBackground: string;           // Validation error cell background
+    warningBackground: string;         // Warning cell background
+    changedIndicator: string;          // Change tracking indicator color
+    savedIndicator: string;            // Saved status indicator color
+    cellPlaceholder: string;           // Placeholder text color
+  };
+  fonts: {
+    cell: string;                      // Font for data cells (e.g., '14px Inter')
+    header: string;                    // Font for column headers (e.g., 'bold 14px Inter')
+    cellSize: number;                  // Cell font size in pixels
+    headerSize: number;                // Header font size in pixels
+  };
+  dimensions: {
+    rowHeight: number;                 // Default row height in pixels
+    headerHeight: number;              // Header row height in pixels
+    minColumnWidth: number;            // Minimum column width
+    scrollbarWidth: number;            // Scrollbar width
+    cellPadding: number;               // Horizontal padding inside cells
+    borderWidth: number;               // Default border width
+    rowNumberWidth: number;            // Width of row number column
+  };
+  borders: {
+    gridLineWidth: number;             // Grid line width in pixels
+    selectionWidth: number;            // Selection border width
+    activeCellWidth: number;           // Active cell border width
+    frozenPaneWidth: number;           // Frozen pane divider width
+  };
+}
+```
+
+## Built-in Themes
+
+Two themes are provided out of the box:
+
+### Light Theme
+
+```ts
+import { lightTheme } from '@witqq/spreadsheet';
+
+// Default theme — white background, dark text, subtle grid lines
+<Spreadsheet columns={columns} data={data} theme={lightTheme} />
+```
+
+### Dark Theme
+
+```ts
+import { darkTheme } from '@witqq/spreadsheet';
+
+// Dark background, light text, muted grid lines
+<Spreadsheet columns={columns} data={data} theme={darkTheme} />
+```
+
+## Custom Theme
+
+Create a custom theme by spreading a built-in theme and overriding specific tokens:
+
+```ts
+import { lightTheme } from '@witqq/spreadsheet';
+import type { SpreadsheetTheme } from '@witqq/spreadsheet';
+
+const brandTheme: SpreadsheetTheme = {
+  ...lightTheme,
+  colors: {
+    ...lightTheme.colors,
+    headerBackground: '#1a365d',
+    headerText: '#ffffff',
+    selectionBackground: 'rgba(66, 153, 225, 0.15)',
+    selectionBorder: '#3182ce',
+    activeCellBorder: '#2b6cb0',
+  },
+  fonts: {
+    cell: '13px "IBM Plex Sans", sans-serif',
+    header: 'bold 13px "IBM Plex Sans", sans-serif',
+  },
+  dimensions: {
+    ...lightTheme.dimensions,
+    rowHeight: 36,
+    headerHeight: 40,
+  },
+};
+```
+
+## Runtime Theme Switching
+
+Use `setTheme()` on the engine instance to switch themes at runtime without re-mounting the component:
+
+```tsx
+const tableRef = useRef<SpreadsheetRef>(null);
+
+const toggleDarkMode = () => {
+  const engine = tableRef.current?.getInstance();
+  engine?.setTheme(isDark ? lightTheme : darkTheme);
+  setIsDark(!isDark);
+};
+```
+
+The `setTheme()` call propagates the new theme to all subsystems:
+
+- **Canvas layers** — Immediate repaint with new colors and fonts
+- **InlineEditor** — Updates textarea styling (background, text color, font)
+- **FilterPanel** — Updates DOM overlay styling
+- **ContextMenu** — Updates menu item colors and hover states
+- **TooltipManager** — Updates tooltip background and text colors
+
+A `themeChange` event is emitted on the EventBus after the theme is applied, allowing plugins and external code to react:
+
+```ts
+engine.on('themeChange', ({ theme }) => {
+  console.log('Theme changed to:', theme.colors.background);
+});
+```
+
+## Theme Design Guidelines
+
+When creating custom themes, keep these in mind:
+
+- **Contrast**: Ensure at least 4.5:1 contrast ratio between text and background for WCAG AA compliance.
+- **Selection visibility**: The `selectionBackground` should be visible against both `cellBackground` and `alternateRowBackground`.
+- **Frozen pane border**: Use a distinct color for `frozenPaneBorder` to clearly separate frozen and scrollable regions.
+- **Grid lines**: Subtle grid lines (low contrast) reduce visual noise. Use `showGridLines: false` in config to hide them entirely.

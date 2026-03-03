@@ -1,0 +1,129 @@
+---
+title: Context Menu
+description: Right-click context menus with keyboard navigation, region-aware items, and custom actions.
+---
+
+import { ContextMenuDemo } from '../../../components/demos/ContextMenuDemo';
+import contextMenuSource from '../../../components/demos/ContextMenuDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+`ContextMenuManager` provides a right-click context menu rendered as a DOM overlay. The menu supports keyboard navigation (arrow keys to move, Enter to select, Escape to close) and adapts its items based on click context — cell, header, row-number, or corner.
+
+<ContextMenuDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={contextMenuSource} lang="tsx" title="ContextMenuDemo.tsx" />
+</details>
+
+## Registering Custom Items
+
+Add custom items to the context menu through the engine API:
+
+```tsx
+import { useRef, useEffect } from 'react';
+import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+
+function App() {
+  const ref = useRef<SpreadsheetRef>(null);
+
+  useEffect(() => {
+    const cm = ref.current?.getInstance().getContextMenuManager();
+
+    cm?.registerItem({
+      id: 'insert-row-above',
+      label: 'Insert Row Above',
+      shortcut: 'Ctrl+Shift+I',
+      contexts: ['cell', 'row-number'],
+      action: (ctx) => {
+        console.log('Insert row above', ctx.row);
+      },
+    });
+
+    cm?.registerItem({
+      id: 'format-column',
+      label: 'Format Column',
+      icon: '🎨',
+      contexts: ['header'],
+      action: (ctx) => {
+        console.log('Format column', ctx.col);
+      },
+      isDisabled: (ctx) => ctx.col === 0,
+    });
+
+    return () => {
+      cm?.unregisterItem('insert-row-above');
+      cm?.unregisterItem('format-column');
+    };
+  }, []);
+
+  return <Spreadsheet ref={ref} columns={columns} data={data} />;
+}
+```
+
+## Context Regions
+
+Items appear based on their `contexts` array:
+
+| Context | Trigger Area | Typical Actions |
+|---|---|---|
+| `cell` | Any data cell | Copy, paste, insert, delete |
+| `header` | Column header | Sort, filter, resize, format |
+| `row-number` | Row number gutter | Insert row, delete row |
+| `corner` | Top-left corner cell | Select all, clear all |
+
+## API Reference
+
+### ContextMenuManager
+
+| Method | Signature | Description |
+|---|---|---|
+| `registerItem` | `(item: ContextMenuItem) => void` | Add menu item |
+| `unregisterItem` | `(id: string) => void` | Remove menu item |
+| `close` | `() => void` | Programmatically close menu |
+
+### ContextMenuItem
+
+```typescript
+interface ContextMenuItem {
+  id: string;
+  label: string;
+  icon?: string;
+  shortcut?: string;
+  contexts: Array<'cell' | 'header' | 'row-number' | 'corner'>;
+  action: (ctx: MenuContext) => void;
+  isDisabled?: (ctx: MenuContext) => boolean;
+  isVisible?: (ctx: MenuContext) => boolean;
+}
+```
+
+## Plugin Integration
+
+When using the context menu as a plugin, use `createContextMenuPlugin` and its helper functions:
+
+```typescript
+import { createContextMenuPlugin, createDefaultMenuItems } from '@witqq/spreadsheet-plugins';
+
+const plugin = createContextMenuPlugin();
+engine.installPlugin(plugin);
+
+// Get the default items (copy, paste, insert row, delete row, etc.)
+const defaultItems = createDefaultMenuItems();
+```
+
+### registerMenuItem / unregisterMenuItem
+
+Register or unregister items via the plugin API:
+
+```typescript
+import { registerMenuItem, unregisterMenuItem } from '@witqq/spreadsheet-plugins';
+
+registerMenuItem(pluginApi, {
+  id: 'custom-action',
+  label: 'Custom Action',
+  contexts: ['cell'],
+  action: (ctx) => console.log('Custom action on', ctx.row, ctx.col),
+});
+
+unregisterMenuItem(pluginApi, 'custom-action');
+```

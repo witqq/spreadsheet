@@ -1,0 +1,103 @@
+---
+title: Drag-to-Fill
+description: Autofill patterns with fill handle, pattern detection, and merge-aware extension.
+---
+
+import { AutofillDemo } from '../../../components/demos/AutofillDemo';
+import autofillSource from '../../../components/demos/AutofillDemo.tsx?raw';
+import { Code } from '@astrojs/starlight/components';
+
+Spreadsheet provides a drag-to-fill feature through `AutofillManager`. A 7×7px fill handle appears at the bottom-right corner of the current selection. Drag it down, up, right, or left to fill adjacent cells with detected patterns. The autofill system is merge-aware and skips hidden cells within merged regions.
+
+<AutofillDemo client:visible />
+
+<details>
+<summary>View source code</summary>
+<Code code={autofillSource} lang="tsx" title="AutofillDemo.tsx" />
+</details>
+
+## Pattern Detection
+
+`PatternDetector` analyzes selected cell values and detects four pattern types:
+
+| Pattern | Example Source | Fill Result |
+|---|---|---|
+| `number-sequence` | 1, 2, 3 | 4, 5, 6, ... |
+| `number-increment` | 10, 20, 30 | 40, 50, 60, ... |
+| `date-sequence` | Jan 1, Jan 2, Jan 3 | Jan 4, Jan 5, ... |
+| `text-repeat` | "Yes", "No" | "Yes", "No", "Yes", ... |
+
+When no pattern is detected, the selected values are repeated cyclically.
+
+## Editable Table with Autofill
+
+Autofill works automatically on editable tables:
+
+```tsx
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+
+const columns: ColumnDef[] = [
+  { key: 'index', title: '#', type: 'number', editable: true },
+  { key: 'name', title: 'Name', editable: true },
+];
+
+const data = [
+  { index: 1, name: 'Alice' },
+  { index: 2, name: 'Bob' },
+  { index: 3, name: 'Charlie' },
+];
+
+function App() {
+  return (
+    <Spreadsheet
+      columns={columns}
+      data={data}
+      editable={true}
+      onAutofillComplete={(event) => {
+        console.log('Filled cells');
+      }}
+    />
+  );
+}
+```
+
+Select cells containing 1, 2, 3, then drag the fill handle down to generate 4, 5, 6, etc.
+
+## API Reference
+
+### AutofillManager
+
+Manages fill handle rendering, drag interaction, and fill execution.
+
+### Pattern Detection Functions
+
+Standalone functions exported from `@witqq/spreadsheet`:
+
+```ts
+import { detectPattern, extendPattern } from '@witqq/spreadsheet';
+```
+
+| Function | Signature | Description |
+|---|---|---|
+| `detectPattern` | `(values: CellValue[]) => DetectedPattern` | Analyze values for pattern |
+| `extendPattern` | `(pattern: DetectedPattern, count: number) => CellValue[]` | Generate next values |
+
+### DetectedPattern
+
+```typescript
+interface DetectedPattern {
+  type: 'number-sequence' | 'number-increment' | 'date-sequence' | 'text-repeat';
+  values: CellValue[];
+  step?: number;          // Increment for number sequences
+}
+```
+
+`detectPattern` inspects source values and returns the best-fit pattern. `extendPattern` generates `count` new values by extrapolating the pattern.
+
+### Events
+
+| Event | Payload | Description |
+|---|---|---|
+| `autofillStart` | `{ anchor, range }` | Drag started from fill handle |
+| `autofillPreview` | `{ range, values }` | Preview of values during drag |
+| `autofillComplete` | `{ filledCells }` | Fill operation completed |

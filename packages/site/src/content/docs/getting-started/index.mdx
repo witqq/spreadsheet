@@ -1,0 +1,58 @@
+---
+title: Introduction
+description: High-performance canvas-based spreadsheet engine for the web
+---
+
+# @witqq/spreadsheet
+
+A high-performance, canvas-based spreadsheet engine built with TypeScript. Renders 100K+ rows at 60 FPS with zero external dependencies in the core package.
+
+## What is @witqq/spreadsheet?
+
+@witqq/spreadsheet is a spreadsheet component that uses Canvas 2D for rendering instead of the DOM. This eliminates the DOM node ceiling that limits traditional table libraries and enables smooth scrolling, fast cell rendering, and consistent performance regardless of dataset size.
+
+The engine is framework-agnostic — the core package is pure TypeScript with no dependencies. An official React wrapper is provided, and wrappers for other frameworks can be built on top of the core.
+
+## Key Features
+
+- **Canvas 2D rendering** — 60 FPS scrolling and rendering at any scale. No DOM nodes per cell.
+- **Zero dependencies** — The `@witqq/spreadsheet` package has no external dependencies. Under 500KB total.
+- **Plugin system** — Extend with official plugins for formulas, Excel I/O, conditional formatting, and context menus.
+- **Framework-agnostic core** — Pure TypeScript engine works anywhere. Official React wrapper included.
+- **Full editing** — Inline editing, undo/redo (100 steps), clipboard with Excel/Sheets interop.
+- **Sorting & filtering** — Multi-column stable sort, 14 filter operators, header click integration.
+- **Frozen panes** — Freeze rows and columns with 4-region viewport rendering.
+- **Merged cells** — Spatial index for O(1) merge lookup, anchor/hidden cell support.
+- **Cell types** — String, number, boolean, date, select, formula, link, image, progress bar, rating, badge, and custom types.
+- **Validation** — Required, range, regex, and custom function validators with error tooltips.
+- **Autofill** — Drag-to-fill with pattern detection for numbers, dates, and text sequences.
+- **Theming** — Light and dark themes built-in. Full runtime theme switching.
+- **WCAG 2.1 AA** — `role=grid`, `aria-rowcount/colcount`, `aria-live` announcements for selection, sort, filter, and validation.
+- **Print support** — `@media print` CSS with DOM table generation from canvas data.
+
+## Architecture
+
+@witqq/spreadsheet is organized as a monorepo with three main packages:
+
+| Package | Description |
+|---------|-------------|
+| `@witqq/spreadsheet` | Canvas engine — pure TypeScript, zero dependencies |
+| `@witqq/spreadsheet-react` | React wrapper — `Spreadsheet<TRow>` component with callbacks and ref API |
+| `@witqq/spreadsheet-plugins` | Official plugins — formula engine, conditional formatting, Excel I/O, context menu |
+
+The core engine (`SpreadsheetEngine`) orchestrates 20+ subsystems: CellStore, DataView, EventBus, SelectionManager, KeyboardNavigator, InlineEditor, CommandManager, ClipboardManager, RenderPipeline, and more. Each subsystem is independent and communicates through the typed EventBus.
+
+## License
+
+@witqq/spreadsheet is licensed under BSL 1.1 (Business Source License).
+
+- **Free** for non-commercial and evaluation use
+- **Paid license** required for commercial use
+- Converts to Apache 2.0 on the Change Date (2030-03-01)
+
+## Next Steps
+
+- [Installation](/getting-started/installation/) — Install packages via npm
+- [Quick Start](/getting-started/quick-start/) — Build your first table in 5 minutes
+- [Configuration](/getting-started/configuration/) — All available options
+- [Architecture](/concepts/architecture/) — How the engine works internally
