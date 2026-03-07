@@ -34,6 +34,7 @@ import { SelectionOverlayLayer } from './layers/selection-overlay-layer';
 import { EmptyStateLayer } from './layers/empty-state-layer';
 import { TextMeasureCache } from './text-measure-cache';
 import { CellTypeRegistry } from '../types/cell-type-registry';
+import type { ResolvedLocale } from '../locale/resolve-locale';
 
 export interface GridRenderConfig {
   columns: ColumnDef[];
@@ -57,6 +58,7 @@ export class GridRenderer {
   private readonly rowCount: number;
   private readonly textMeasureCache: TextMeasureCache;
   private readonly headerLayer: HeaderLayer;
+  private readonly emptyStateLayer: EmptyStateLayer;
   private frozenConfig: FrozenPaneConfig | undefined;
   private gridLinesLayer: GridLinesLayer | undefined;
   private selectionOverlayLayer: SelectionOverlayLayer | undefined;
@@ -76,10 +78,16 @@ export class GridRenderer {
     this.pipeline = new RenderPipeline(this.geometry, config.theme);
     this.pipeline.addLayer(new BackgroundLayer());
     this.pipeline.addLayer(
-      new CellTextLayer(config.cellStore, config.dataView, this.textMeasureCache, config.cellTypeRegistry),
+      new CellTextLayer(
+        config.cellStore,
+        config.dataView,
+        this.textMeasureCache,
+        config.cellTypeRegistry,
+      ),
     );
     this.pipeline.addLayer(new CellStatusLayer(config.cellStore, config.dataView));
-    this.pipeline.addLayer(new EmptyStateLayer());
+    this.emptyStateLayer = new EmptyStateLayer();
+    this.pipeline.addLayer(this.emptyStateLayer);
     // GridLines renders after cell content so it's always on top of plugin fills
     if (config.showGridLines) {
       this.gridLinesLayer = new GridLinesLayer(config.dataView);
@@ -93,7 +101,10 @@ export class GridRenderer {
     }
     // Selection overlay is always the very last layer
     if (config.selectionManager) {
-      this.selectionOverlayLayer = new SelectionOverlayLayer(config.selectionManager, config.dataView);
+      this.selectionOverlayLayer = new SelectionOverlayLayer(
+        config.selectionManager,
+        config.dataView,
+      );
       this.pipeline.addLayer(this.selectionOverlayLayer);
     }
   }
@@ -140,7 +151,8 @@ export class GridRenderer {
 
   /** Get a render layer by constructor type. */
   getLayer<T extends import('./render-layer').RenderLayer>(
-    layerClass: new (...args: unknown[]) => T,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    layerClass: abstract new (...args: any[]) => T,
   ): T | undefined {
     return this.pipeline.getLayer(layerClass);
   }
@@ -181,6 +193,11 @@ export class GridRenderer {
     this.pipeline.setTheme(theme);
   }
 
+  /** Update the locale for runtime locale switching. */
+  setLocale(locale: ResolvedLocale): void {
+    this.emptyStateLayer.setLocale(locale);
+  }
+
   /** Render the grid onto the given canvas context with viewport range. */
   render(
     ctx: CanvasRenderingContext2D,
@@ -191,7 +208,16 @@ export class GridRenderer {
     scrollY: number,
     renderMode: RenderMode = 'full',
   ): void {
-    this.pipeline.render(ctx, viewport, canvasWidth, canvasHeight, scrollX, scrollY, renderMode, this.frozenConfig);
+    this.pipeline.render(
+      ctx,
+      viewport,
+      canvasWidth,
+      canvasHeight,
+      scrollX,
+      scrollY,
+      renderMode,
+      this.frozenConfig,
+    );
   }
 
   /** Partial render: only re-draw the specified dirty rectangles. */
@@ -205,6 +231,16 @@ export class GridRenderer {
     dirtyRects: DirtyRect[],
     renderMode: RenderMode = 'full',
   ): void {
-    this.pipeline.renderPartial(ctx, viewport, canvasWidth, canvasHeight, scrollX, scrollY, dirtyRects, renderMode, this.frozenConfig);
+    this.pipeline.renderPartial(
+      ctx,
+      viewport,
+      canvasWidth,
+      canvasHeight,
+      scrollX,
+      scrollY,
+      dirtyRects,
+      renderMode,
+      this.frozenConfig,
+    );
   }
 }

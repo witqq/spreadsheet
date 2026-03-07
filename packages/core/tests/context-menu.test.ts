@@ -480,4 +480,516 @@ describe('ContextMenuManager', () => {
       expect(children.length).toBe(3);
     });
   });
+
+  describe('submenu support', () => {
+    it('should render chevron indicator for items with submenu', () => {
+      const item: ContextMenuItem = {
+        id: 'parent',
+        label: 'Parent',
+        contexts: ['cell'],
+        submenu: [
+          { id: 'child-1', label: 'Child 1', contexts: ['cell'], action: vi.fn() },
+          { id: 'child-2', label: 'Child 2', contexts: ['cell'], action: vi.fn() },
+        ],
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+      expect(setup.manager.isOpen).toBe(true);
+
+      const menuItem = setup.container.querySelector('[data-index="0"]') as HTMLElement;
+      const chevron = menuItem.querySelector('[data-chevron]') as HTMLElement;
+      expect(chevron).toBeTruthy();
+      expect(chevron.textContent).toBe('▸');
+    });
+
+    it('should not render chevron for items without submenu', () => {
+      const item: ContextMenuItem = {
+        id: 'flat',
+        label: 'Flat',
+        contexts: ['cell'],
+        action: vi.fn(),
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      const menuItem = setup.container.querySelector('[data-index="0"]') as HTMLElement;
+      const chevron = menuItem.querySelector('[data-chevron]');
+      expect(chevron).toBeNull();
+    });
+
+    it('should open submenu on click of parent item', () => {
+      const childAction = vi.fn();
+      const item: ContextMenuItem = {
+        id: 'parent',
+        label: 'Parent',
+        contexts: ['cell'],
+        submenu: [
+          { id: 'child-1', label: 'Child 1', contexts: ['cell'], action: childAction },
+        ],
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      // Click on the parent item
+      const parentItem = setup.container.querySelector('[data-index="0"]') as HTMLElement;
+      parentItem.click();
+
+      // Submenu should be open — a second menu panel should exist
+      const panels = setup.container.querySelectorAll('[data-menu-depth]');
+      expect(panels.length).toBe(2);
+      expect(panels[1].getAttribute('data-menu-depth')).toBe('1');
+
+      // Submenu should contain the child item
+      const childItems = panels[1].querySelectorAll('[data-index]');
+      expect(childItems.length).toBe(1);
+      expect(childItems[0].textContent).toContain('Child 1');
+    });
+
+    it('should open submenu on hover with delay', () => {
+      vi.useFakeTimers();
+
+      const item: ContextMenuItem = {
+        id: 'parent',
+        label: 'Parent',
+        contexts: ['cell'],
+        submenu: [
+          { id: 'child-1', label: 'Child 1', contexts: ['cell'], action: vi.fn() },
+        ],
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      const parentItem = setup.container.querySelector('[data-index="0"]') as HTMLElement;
+
+      // Trigger mouseenter
+      parentItem.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+
+      // Before delay: no submenu
+      let panels = setup.container.querySelectorAll('[data-menu-depth]');
+      expect(panels.length).toBe(1);
+
+      // After delay: submenu opens
+      vi.advanceTimersByTime(200);
+      panels = setup.container.querySelectorAll('[data-menu-depth]');
+      expect(panels.length).toBe(2);
+
+      vi.useRealTimers();
+    });
+
+    it('should close submenu on ArrowLeft', () => {
+      const item: ContextMenuItem = {
+        id: 'parent',
+        label: 'Parent',
+        contexts: ['cell'],
+        submenu: [
+          { id: 'child-1', label: 'Child 1', contexts: ['cell'], action: vi.fn() },
+        ],
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      const rootMenu = setup.container.querySelector('[tabindex="-1"]') as HTMLElement;
+
+      // ArrowDown to focus parent item, ArrowRight to open submenu
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      expect(setup.container.querySelectorAll('[data-menu-depth]').length).toBe(2);
+
+      // ArrowLeft to close submenu
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+      expect(setup.container.querySelectorAll('[data-menu-depth]').length).toBe(1);
+      expect(setup.manager.isOpen).toBe(true);
+    });
+
+    it('should open submenu on ArrowRight when focused on parent item', () => {
+      const item: ContextMenuItem = {
+        id: 'parent',
+        label: 'Parent',
+        contexts: ['cell'],
+        submenu: [
+          { id: 'child-1', label: 'Child 1', contexts: ['cell'], action: vi.fn() },
+          { id: 'child-2', label: 'Child 2', contexts: ['cell'], action: vi.fn() },
+        ],
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      const rootMenu = setup.container.querySelector('[tabindex="-1"]') as HTMLElement;
+
+      // ArrowDown to focus item
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      // ArrowRight to open submenu
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+
+      const panels = setup.container.querySelectorAll('[data-menu-depth]');
+      expect(panels.length).toBe(2);
+
+      // First child should be focused (has a background color set)
+      const childItem = panels[1].querySelector('[data-index="0"]') as HTMLElement;
+      expect(childItem.style.backgroundColor).not.toBe('');
+    });
+
+    it('should execute submenu item action on Enter', () => {
+      const childAction = vi.fn();
+      const item: ContextMenuItem = {
+        id: 'parent',
+        label: 'Parent',
+        contexts: ['cell'],
+        submenu: [
+          { id: 'child-1', label: 'Child 1', contexts: ['cell'], action: childAction },
+        ],
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      const rootMenu = setup.container.querySelector('[tabindex="-1"]') as HTMLElement;
+
+      // Navigate to submenu: ArrowDown → ArrowRight → Enter
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(childAction).toHaveBeenCalledTimes(1);
+      expect(setup.manager.isOpen).toBe(false);
+    });
+
+    it('should execute submenu item action on click', () => {
+      const childAction = vi.fn();
+      const item: ContextMenuItem = {
+        id: 'parent',
+        label: 'Parent',
+        contexts: ['cell'],
+        submenu: [
+          { id: 'child-1', label: 'Child 1', contexts: ['cell'], action: childAction },
+        ],
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      // Open submenu by clicking parent
+      const parentItem = setup.container.querySelector('[data-index="0"]') as HTMLElement;
+      parentItem.click();
+
+      // Click on child item in submenu
+      const submenuPanel = setup.container.querySelectorAll('[data-menu-depth]')[1];
+      const childItem = submenuPanel.querySelector('[data-index="0"]') as HTMLElement;
+      childItem.click();
+
+      expect(childAction).toHaveBeenCalledTimes(1);
+      expect(setup.manager.isOpen).toBe(false);
+    });
+
+    it('should support nested submenus (recursive)', () => {
+      const leafAction = vi.fn();
+      const item: ContextMenuItem = {
+        id: 'l1',
+        label: 'Level 1',
+        contexts: ['cell'],
+        submenu: [
+          {
+            id: 'l2',
+            label: 'Level 2',
+            contexts: ['cell'],
+            submenu: [
+              { id: 'l3', label: 'Level 3', contexts: ['cell'], action: leafAction },
+            ],
+          },
+        ],
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      const rootMenu = setup.container.querySelector('[tabindex="-1"]') as HTMLElement;
+
+      // Navigate: down → right (L2) → right (L3)
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+
+      // L2 submenu should be open
+      expect(setup.container.querySelectorAll('[data-menu-depth]').length).toBe(2);
+
+      // Navigate into L2's submenu (ArrowDown to focus L2 item, then ArrowRight)
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      expect(setup.container.querySelectorAll('[data-menu-depth]').length).toBe(3);
+
+      // Execute L3 item
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(leafAction).toHaveBeenCalledTimes(1);
+      expect(setup.manager.isOpen).toBe(false);
+    });
+
+    it('should close only deepest submenu on Escape (not entire menu)', () => {
+      const item: ContextMenuItem = {
+        id: 'parent',
+        label: 'Parent',
+        contexts: ['cell'],
+        submenu: [
+          { id: 'child', label: 'Child', contexts: ['cell'], action: vi.fn() },
+        ],
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      const rootMenu = setup.container.querySelector('[tabindex="-1"]') as HTMLElement;
+
+      // Open submenu
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      expect(setup.container.querySelectorAll('[data-menu-depth]').length).toBe(2);
+
+      // Escape closes submenu but menu stays open
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(setup.container.querySelectorAll('[data-menu-depth]').length).toBe(1);
+      expect(setup.manager.isOpen).toBe(true);
+
+      // Another Escape closes the entire menu
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(setup.manager.isOpen).toBe(false);
+    });
+
+    it('should navigate within submenu using ArrowUp/ArrowDown', () => {
+      const item: ContextMenuItem = {
+        id: 'parent',
+        label: 'Parent',
+        contexts: ['cell'],
+        submenu: [
+          { id: 'c1', label: 'Child 1', contexts: ['cell'], action: vi.fn() },
+          { id: 'c2', label: 'Child 2', contexts: ['cell'], action: vi.fn() },
+          { id: 'c3', label: 'Child 3', contexts: ['cell'], action: vi.fn() },
+        ],
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      const rootMenu = setup.container.querySelector('[tabindex="-1"]') as HTMLElement;
+
+      // Open submenu
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+
+      // First child focused (has background highlight)
+      const submenuPanel = setup.container.querySelectorAll('[data-menu-depth]')[1];
+      expect((submenuPanel.querySelector('[data-index="0"]') as HTMLElement).style.backgroundColor).not.toBe('');
+
+      // ArrowDown to focus second child
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      expect((submenuPanel.querySelector('[data-index="1"]') as HTMLElement).style.backgroundColor).not.toBe('');
+      expect((submenuPanel.querySelector('[data-index="0"]') as HTMLElement).style.backgroundColor).toBe('');
+    });
+  });
+
+  describe('empty menu prevention', () => {
+    it('should not open menu when all items are invisible', () => {
+      const item: ContextMenuItem = {
+        id: 'hidden',
+        label: 'Hidden',
+        contexts: ['cell'],
+        action: vi.fn(),
+        isVisible: () => false,
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+      expect(setup.manager.isOpen).toBe(false);
+    });
+
+    it('should hide parent item when all submenu children are invisible', () => {
+      const item: ContextMenuItem = {
+        id: 'parent',
+        label: 'Parent with hidden children',
+        contexts: ['cell'],
+        submenu: [
+          { id: 'c1', label: 'C1', contexts: ['cell'], action: vi.fn(), isVisible: () => false },
+          { id: 'c2', label: 'C2', contexts: ['cell'], action: vi.fn(), isVisible: () => false },
+        ],
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      // Menu should not open because the only item has no visible children
+      expect(setup.manager.isOpen).toBe(false);
+    });
+
+    it('should show parent item when at least one submenu child is visible', () => {
+      const item: ContextMenuItem = {
+        id: 'parent',
+        label: 'Parent',
+        contexts: ['cell'],
+        submenu: [
+          { id: 'c1', label: 'Hidden', contexts: ['cell'], action: vi.fn(), isVisible: () => false },
+          { id: 'c2', label: 'Visible', contexts: ['cell'], action: vi.fn() },
+        ],
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      expect(setup.manager.isOpen).toBe(true);
+      const menuItems = setup.container.querySelectorAll('[data-index]');
+      expect(menuItems.length).toBe(1);
+      expect(menuItems[0].textContent).toContain('Parent');
+    });
+
+    it('should recursively check visibility for nested submenus', () => {
+      const item: ContextMenuItem = {
+        id: 'l1',
+        label: 'Level 1',
+        contexts: ['cell'],
+        submenu: [
+          {
+            id: 'l2',
+            label: 'Level 2',
+            contexts: ['cell'],
+            submenu: [
+              { id: 'l3', label: 'L3', contexts: ['cell'], action: vi.fn(), isVisible: () => false },
+            ],
+          },
+        ],
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      // L3 is hidden → L2 has no visible children → L1 has no visible children → menu doesn't open
+      expect(setup.manager.isOpen).toBe(false);
+    });
+
+    it('should filter invisible children when opening submenu', () => {
+      const visibleAction = vi.fn();
+      const item: ContextMenuItem = {
+        id: 'parent',
+        label: 'Parent',
+        contexts: ['cell'],
+        submenu: [
+          { id: 'hidden', label: 'Hidden', contexts: ['cell'], action: vi.fn(), isVisible: () => false },
+          { id: 'visible', label: 'Visible', contexts: ['cell'], action: visibleAction },
+        ],
+      };
+
+      setup.manager.registerItem(item);
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+      expect(setup.manager.isOpen).toBe(true);
+
+      // Open submenu
+      const parentItem = setup.container.querySelector('[data-index="0"]') as HTMLElement;
+      parentItem.click();
+
+      const submenuPanel = setup.container.querySelectorAll('[data-menu-depth]')[1];
+      const childItems = submenuPanel.querySelectorAll('[data-index]');
+      // Only the visible child should be shown
+      expect(childItems.length).toBe(1);
+      expect(childItems[0].textContent).toContain('Visible');
+    });
+  });
+
+  describe('submenu with mixed items', () => {
+    it('should show both flat items and submenu items together', () => {
+      const flatAction = vi.fn();
+      setup.manager.registerItem({
+        id: 'flat',
+        label: 'Flat Item',
+        contexts: ['cell'],
+        action: flatAction,
+      });
+      setup.manager.registerItem({
+        id: 'parent',
+        label: 'Parent Item',
+        contexts: ['cell'],
+        submenu: [
+          { id: 'child', label: 'Child', contexts: ['cell'], action: vi.fn() },
+        ],
+      });
+
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+      expect(setup.manager.isOpen).toBe(true);
+
+      const menuItems = setup.container.querySelectorAll('[data-index]');
+      expect(menuItems.length).toBe(2);
+
+      // First item is flat (no chevron)
+      expect(menuItems[0].querySelector('[data-chevron]')).toBeNull();
+      // Second item has chevron
+      expect(menuItems[1].querySelector('[data-chevron]')).toBeTruthy();
+    });
+
+    it('should execute flat item action while submenu items open submenu', () => {
+      const flatAction = vi.fn();
+      setup.manager.registerItem({
+        id: 'flat',
+        label: 'Flat',
+        contexts: ['cell'],
+        action: flatAction,
+      });
+      setup.manager.registerItem({
+        id: 'parent',
+        label: 'Parent',
+        contexts: ['cell'],
+        submenu: [
+          { id: 'child', label: 'Child', contexts: ['cell'], action: vi.fn() },
+        ],
+      });
+
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      // Click flat item → executes action, closes menu
+      const flatItem = setup.container.querySelector('[data-index="0"]') as HTMLElement;
+      flatItem.click();
+      expect(flatAction).toHaveBeenCalledTimes(1);
+      expect(setup.manager.isOpen).toBe(false);
+
+      // Re-open and click parent → opens submenu, menu stays open
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+      const parentItem = setup.container.querySelectorAll('[data-index]')[1] as HTMLElement;
+      parentItem.click();
+      expect(setup.manager.isOpen).toBe(true);
+      expect(setup.container.querySelectorAll('[data-menu-depth]').length).toBe(2);
+    });
+
+    it('should not crash on ArrowRight when focused item has no submenu', () => {
+      setup.manager.registerItem({
+        id: 'flat',
+        label: 'Flat',
+        contexts: ['cell'],
+        action: vi.fn(),
+      });
+
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      const rootMenu = setup.container.querySelector('[tabindex="-1"]') as HTMLElement;
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      // ArrowRight on a flat item should be a no-op
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      expect(setup.manager.isOpen).toBe(true);
+      expect(setup.container.querySelectorAll('[data-menu-depth]').length).toBe(1);
+    });
+
+    it('should not crash on ArrowLeft at root level', () => {
+      setup.manager.registerItem({
+        id: 'flat',
+        label: 'Flat',
+        contexts: ['cell'],
+        action: vi.fn(),
+      });
+
+      setup.eventBus.emit('gridContextMenu', createGridMouseEvent('cell', 0, 0));
+
+      const rootMenu = setup.container.querySelector('[tabindex="-1"]') as HTMLElement;
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      // ArrowLeft at root should be a no-op
+      rootMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+      expect(setup.manager.isOpen).toBe(true);
+    });
+  });
 });

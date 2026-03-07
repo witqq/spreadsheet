@@ -26,7 +26,17 @@ export class SelectionOverlayLayer implements RenderLayer {
   }
 
   render(rc: RenderContext): void {
-    const { ctx, geometry, theme, viewport, scrollX, scrollY, canvasWidth, canvasHeight, mergeManager } = rc;
+    const {
+      ctx,
+      geometry,
+      theme,
+      viewport,
+      scrollX,
+      scrollY,
+      canvasWidth,
+      canvasHeight,
+      mergeManager,
+    } = rc;
     const selection = this.selectionManager.getSelection();
 
     if (selection.ranges.length === 0) return;
@@ -71,16 +81,15 @@ export class SelectionOverlayLayer implements RenderLayer {
       const bx1 = colRects[fullStartCol].x - scrollX;
       const bx2 = colRects[fullEndCol].x + colRects[fullEndCol].width - scrollX;
       const by1 = headerHeight + geometry.getRowY(range.startRow) - scrollY;
-      const by2 = headerHeight + geometry.getRowY(range.endRow) + geometry.getRowHeight(range.endRow) - scrollY;
+      const by2 =
+        headerHeight +
+        geometry.getRowY(range.endRow) +
+        geometry.getRowHeight(range.endRow) -
+        scrollY;
 
       ctx.strokeStyle = theme.colors.selectionBorder;
       ctx.lineWidth = theme.borders.selectionWidth;
-      ctx.strokeRect(
-        bx1 + 0.5,
-        by1 + 0.5,
-        bx2 - bx1 - 1,
-        by2 - by1 - 1,
-      );
+      ctx.strokeRect(bx1 + 0.5, by1 + 0.5, bx2 - bx1 - 1, by2 - by1 - 1);
     }
 
     // Draw active cell border — wraps full merged region if merged
@@ -106,9 +115,12 @@ export class SelectionOverlayLayer implements RenderLayer {
     }
 
     if (
-      acEndRow >= viewport.startRow && acStartRow <= viewport.endRow &&
-      acEndCol >= viewport.startCol && acStartCol <= viewport.endCol &&
-      acStartCol < colRects.length && acEndCol < colRects.length
+      acEndRow >= viewport.startRow &&
+      acStartRow <= viewport.endRow &&
+      acEndCol >= viewport.startCol &&
+      acStartCol <= viewport.endCol &&
+      acStartCol < colRects.length &&
+      acEndCol < colRects.length
     ) {
       const acX = colRects[acStartCol].x - scrollX;
       const acY = headerHeight + geometry.getRowY(acStartRow) - scrollY;
@@ -124,12 +136,7 @@ export class SelectionOverlayLayer implements RenderLayer {
 
       ctx.strokeStyle = theme.colors.activeCellBorder;
       ctx.lineWidth = theme.borders.activeCellWidth;
-      ctx.strokeRect(
-        acX + 0.5,
-        acY + 0.5,
-        acW - 1,
-        acH - 1,
-      );
+      ctx.strokeRect(acX + 0.5, acY + 0.5, acW - 1, acH - 1);
     }
 
     ctx.restore();

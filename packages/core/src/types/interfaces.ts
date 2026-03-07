@@ -44,6 +44,7 @@ export type CellType =
   | 'number'
   | 'boolean'
   | 'date'
+  | 'datetime'
   | 'select'
   | 'dynamicSelect'
   | 'formula'
@@ -157,6 +158,8 @@ export interface ColumnDef {
   readonly resizable?: boolean;
   /** Hide this column from display and print. */
   readonly hidden?: boolean;
+  /** Enable text wrapping for cells in this column. */
+  readonly wrapText?: boolean;
   /** Validation rules applied to all cells in this column. */
   readonly validation?: import('../validation/validation-engine').SpreadsheetValidationRule[];
 }
@@ -180,8 +183,8 @@ export interface Selection {
 export interface MergedRegion {
   readonly startRow: number;
   readonly startCol: number;
-  readonly endRow: number;   // inclusive
-  readonly endCol: number;   // inclusive
+  readonly endRow: number; // inclusive
+  readonly endCol: number; // inclusive
 }
 
 // --- Validation Types ---

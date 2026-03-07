@@ -8,7 +8,11 @@ const data = generateEmployees(100);
 export function FrozenPanesDemo() {
   const { witTheme } = useSiteTheme();
   return (
-    <DemoWrapper title="Live Demo" description="Scroll to see row 1 and first 2 columns stay frozen in place." height={440}>
+    <DemoWrapper
+      title="Live Demo"
+      description="Scroll to see row 1 and first 2 columns stay frozen in place."
+      height={440}
+    >
       <Spreadsheet
         theme={witTheme}
         columns={employeeColumns}

@@ -13,6 +13,7 @@
  */
 
 import type { CellStore } from '../model/cell-store';
+import type { ResolvedLocale } from '../locale/resolve-locale';
 
 /** Aggregate function types for group headers. */
 export type AggregateFunction = 'sum' | 'count' | 'average' | 'min' | 'max' | 'none';
@@ -53,10 +54,16 @@ export class RowGroupManager {
   private childToParent: Map<number, number> = new Map();
   private aggregates: ColumnAggregate[] = [];
   private cellStore: CellStore | null = null;
+  private locale: ResolvedLocale | null = null;
 
   /** Set the CellStore reference for aggregate computation. */
   setCellStore(cellStore: CellStore): void {
     this.cellStore = cellStore;
+  }
+
+  /** Set locale for aggregate labels. */
+  setLocale(locale: ResolvedLocale): void {
+    this.locale = locale;
   }
 
   /** Configure aggregate functions for columns. */
@@ -79,7 +86,7 @@ export class RowGroupManager {
         if (this.childToParent.has(child)) {
           throw new Error(
             `Row ${child} is already a child of group ${this.childToParent.get(child)}, ` +
-            `cannot also be a child of group ${def.headerRow}`,
+              `cannot also be a child of group ${def.headerRow}`,
           );
         }
       }
@@ -280,23 +287,23 @@ export class RowGroupManager {
       switch (agg.fn) {
         case 'sum':
           value = values.reduce((s, v) => s + v, 0);
-          label = `Sum: ${value}`;
+          label = `${this.locale?.grouping?.sum ?? 'Sum'}: ${value}`;
           break;
         case 'count':
           value = leafRows.length;
-          label = `Count: ${value}`;
+          label = `${this.locale?.grouping?.count ?? 'Count'}: ${value}`;
           break;
         case 'average':
           value = values.length > 0 ? values.reduce((s, v) => s + v, 0) / values.length : 0;
-          label = `Avg: ${Math.round(value * 100) / 100}`;
+          label = `${this.locale?.grouping?.avg ?? 'Avg'}: ${Math.round(value * 100) / 100}`;
           break;
         case 'min':
           value = values.length > 0 ? Math.min(...values) : 0;
-          label = `Min: ${value}`;
+          label = `${this.locale?.grouping?.min ?? 'Min'}: ${value}`;
           break;
         case 'max':
           value = values.length > 0 ? Math.max(...values) : 0;
-          label = `Max: ${value}`;
+          label = `${this.locale?.grouping?.max ?? 'Max'}: ${value}`;
           break;
       }
 

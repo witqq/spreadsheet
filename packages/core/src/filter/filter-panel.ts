@@ -13,6 +13,7 @@ import type { LayoutEngine } from '../renderer/layout-engine';
 import type { ScrollManager } from '../renderer/scroll-manager';
 import type { SpreadsheetTheme } from '../themes/theme-types';
 import type { FilterOperator } from './filter-engine';
+import type { ResolvedLocale } from '../locale/resolve-locale';
 
 export interface FilterPanelConfig {
   container: HTMLElement;
@@ -47,6 +48,7 @@ export class FilterPanel {
   private _currentCol = -1;
   private outsideClickHandler: ((e: MouseEvent) => void) | null = null;
   private escapeHandler: ((e: KeyboardEvent) => void) | null = null;
+  private locale: ResolvedLocale | null = null;
 
   constructor(config: FilterPanelConfig) {
     this.config = config;
@@ -63,6 +65,31 @@ export class FilterPanel {
   /** Update theme for runtime theme switching. */
   setTheme(theme: SpreadsheetTheme): void {
     this.config = { ...this.config, theme };
+  }
+
+  /** Update locale for runtime locale switching. */
+  setLocale(locale: ResolvedLocale): void {
+    this.locale = locale;
+  }
+
+  /** Get localized operator labels. */
+  private getOperatorOptions(): { value: FilterOperator; label: string }[] {
+    const f = this.locale?.filter;
+    if (!f) return OPERATOR_OPTIONS;
+    return [
+      { value: 'equals', label: f.equals ?? 'Equals' },
+      { value: 'notEquals', label: f.notEquals ?? 'Not equals' },
+      { value: 'contains', label: f.contains ?? 'Contains' },
+      { value: 'startsWith', label: f.startsWith ?? 'Starts with' },
+      { value: 'endsWith', label: f.endsWith ?? 'Ends with' },
+      { value: 'greaterThan', label: f.greaterThan ?? 'Greater than' },
+      { value: 'lessThan', label: f.lessThan ?? 'Less than' },
+      { value: 'greaterThanOrEqual', label: f.greaterOrEqual ?? 'Greater or equal' },
+      { value: 'lessThanOrEqual', label: f.lessOrEqual ?? 'Less or equal' },
+      { value: 'between', label: f.between ?? 'Between' },
+      { value: 'isEmpty', label: f.isEmpty ?? 'Is empty' },
+      { value: 'isNotEmpty', label: f.isNotEmpty ?? 'Is not empty' },
+    ];
   }
 
   /** Open the filter panel for a specific column. */
@@ -138,7 +165,7 @@ export class FilterPanel {
     // Operator select
     const select = document.createElement('select');
     select.className = 'wit-filter-operator';
-    for (const opt of OPERATOR_OPTIONS) {
+    for (const opt of this.getOperatorOptions()) {
       const option = document.createElement('option');
       option.value = opt.value;
       option.textContent = opt.label;
@@ -150,14 +177,14 @@ export class FilterPanel {
     const valueInput = document.createElement('input');
     valueInput.type = 'text';
     valueInput.className = 'wit-filter-value';
-    valueInput.placeholder = 'Filter value...';
+    valueInput.placeholder = this.locale?.filter?.valuePlaceholder ?? 'Filter value...';
     if (currentValue != null) valueInput.value = currentValue;
 
     // Second value input (for between)
     const valueToInput = document.createElement('input');
     valueToInput.type = 'text';
     valueToInput.className = 'wit-filter-value-to';
-    valueToInput.placeholder = 'To value...';
+    valueToInput.placeholder = this.locale?.filter?.toValuePlaceholder ?? 'To value...';
     valueToInput.style.display = 'none';
 
     // Toggle visibility based on operator
@@ -182,7 +209,7 @@ export class FilterPanel {
 
     const applyBtn = document.createElement('button');
     applyBtn.className = 'wit-filter-apply';
-    applyBtn.textContent = 'Apply';
+    applyBtn.textContent = this.locale?.filter?.apply ?? 'Apply';
     applyBtn.addEventListener('click', () => {
       const op = select.value as FilterOperator;
       const val = valueInput.value;
@@ -193,7 +220,7 @@ export class FilterPanel {
 
     const clearBtn = document.createElement('button');
     clearBtn.className = 'wit-filter-clear';
-    clearBtn.textContent = 'Clear';
+    clearBtn.textContent = this.locale?.filter?.clear ?? 'Clear';
     clearBtn.addEventListener('click', () => {
       this.config.onClear(this._currentCol);
       this.close();

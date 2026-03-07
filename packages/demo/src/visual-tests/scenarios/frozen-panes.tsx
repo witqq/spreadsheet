@@ -17,7 +17,13 @@ const data = generateRows(50);
 export function FrozenPanes() {
   return (
     <ScenarioContainer width={500} height={400}>
-      <Spreadsheet columns={columns} data={data} frozenRows={2} frozenColumns={1} style={tableStyle} />
+      <Spreadsheet
+        columns={columns}
+        data={data}
+        frozenRows={2}
+        frozenColumns={1}
+        style={tableStyle}
+      />
     </ScenarioContainer>
   );
 }

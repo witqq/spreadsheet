@@ -7,7 +7,11 @@ import { generateEmployees, employeeColumns } from './generate-data';
 import { useSiteTheme } from './useSiteTheme';
 
 const data = generateEmployees(100);
-const filterableColumns = employeeColumns.map(col => ({ ...col, filterable: true, sortable: true }));
+const filterableColumns = employeeColumns.map((col) => ({
+  ...col,
+  filterable: true,
+  sortable: true,
+}));
 
 export function FilteringDemo() {
   const { witTheme } = useSiteTheme();
@@ -19,9 +23,21 @@ export function FilteringDemo() {
   };
 
   return (
-    <DemoWrapper title="Live Demo" description="Right-click a column header or click filter icons to apply filters. Combine with sorting." height={440}>
+    <DemoWrapper
+      title="Live Demo"
+      description="Right-click a column header or click filter icons to apply filters. Combine with sorting."
+      height={440}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: '#64748b', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+        <div
+          style={{
+            padding: '0.5rem 0.75rem',
+            fontSize: '0.8rem',
+            color: '#64748b',
+            borderBottom: '1px solid #e2e8f0',
+            flexShrink: 0,
+          }}
+        >
           {filterInfo}
         </div>
         <div style={{ flex: 1 }}>

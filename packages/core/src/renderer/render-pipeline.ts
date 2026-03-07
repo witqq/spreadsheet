@@ -70,7 +70,8 @@ export class RenderPipeline {
     }
   }
 
-  getLayer<T extends RenderLayer>(layerClass: new (...args: unknown[]) => T): T | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getLayer<T extends RenderLayer>(layerClass: abstract new (...args: any[]) => T): T | undefined {
     const entry = this.layers.find((l) => l instanceof layerClass);
     return entry as T | undefined;
   }
@@ -111,8 +112,8 @@ export class RenderPipeline {
   ): void {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-    const hasFrozen = frozenConfig &&
-      (frozenConfig.frozenRows > 0 || frozenConfig.frozenColumns > 0);
+    const hasFrozen =
+      frozenConfig && (frozenConfig.frozenRows > 0 || frozenConfig.frozenColumns > 0);
 
     if (!hasFrozen) {
       for (const layer of this.layers) {
@@ -237,7 +238,7 @@ export class RenderPipeline {
     }
 
     // Save caches for rendered regions and restore cached regions that were skipped
-    const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
 
     // Corner region caching
     if (frozenRows > 0 && frozenColumns > 0) {
@@ -252,7 +253,14 @@ export class RenderPipeline {
     if (frozenRows > 0) {
       const frRowW = canvasWidth - rnWidth - frW;
       if ((scrollXChanged || !this.frozenRowCache) && frRowW > 0 && frH > 0) {
-        this.frozenRowCache = this.captureRegion(ctx, rnWidth + frW, headerHeight, frRowW, frH, dpr);
+        this.frozenRowCache = this.captureRegion(
+          ctx,
+          rnWidth + frW,
+          headerHeight,
+          frRowW,
+          frH,
+          dpr,
+        );
       } else if (this.frozenRowCache) {
         this.restoreRegion(ctx, this.frozenRowCache, rnWidth + frW, headerHeight, dpr);
       }
@@ -262,7 +270,14 @@ export class RenderPipeline {
     if (frozenColumns > 0) {
       const frColH = canvasHeight - headerHeight - frH;
       if ((scrollYChanged || !this.frozenColCache) && frW > 0 && frColH > 0) {
-        this.frozenColCache = this.captureRegion(ctx, rnWidth, headerHeight + frH, frW, frColH, dpr);
+        this.frozenColCache = this.captureRegion(
+          ctx,
+          rnWidth,
+          headerHeight + frH,
+          frW,
+          frColH,
+          dpr,
+        );
       } else if (this.frozenColCache) {
         this.restoreRegion(ctx, this.frozenColCache, rnWidth, headerHeight + frH, dpr);
       }
@@ -413,7 +428,16 @@ export class RenderPipeline {
     frozenConfig?: FrozenPaneConfig,
   ): void {
     if (frozenConfig && (frozenConfig.frozenRows > 0 || frozenConfig.frozenColumns > 0)) {
-      this.render(ctx, viewport, canvasWidth, canvasHeight, scrollX, scrollY, renderMode, frozenConfig);
+      this.render(
+        ctx,
+        viewport,
+        canvasWidth,
+        canvasHeight,
+        scrollX,
+        scrollY,
+        renderMode,
+        frozenConfig,
+      );
       return;
     }
 
@@ -452,7 +476,10 @@ export class RenderPipeline {
   /** Capture a region of the canvas as ImageData for caching. */
   private captureRegion(
     ctx: CanvasRenderingContext2D,
-    x: number, y: number, w: number, h: number,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
     dpr: number,
   ): ImageData | null {
     try {
@@ -466,7 +493,8 @@ export class RenderPipeline {
   private restoreRegion(
     ctx: CanvasRenderingContext2D,
     imageData: ImageData,
-    x: number, y: number,
+    x: number,
+    y: number,
     dpr: number,
   ): void {
     ctx.putImageData(imageData, x * dpr, y * dpr);

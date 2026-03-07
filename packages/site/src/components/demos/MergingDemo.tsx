@@ -22,7 +22,11 @@ export function MergingDemo() {
   }, []);
 
   return (
-    <DemoWrapper title="Live Demo" description="Three merged regions shown: vertical (rows 1-3 in Department), horizontal (row 5 across Name-Salary), and vertical (rows 8-10 in ID)." height={440}>
+    <DemoWrapper
+      title="Live Demo"
+      description="Three merged regions shown: vertical (rows 1-3 in Department), horizontal (row 5 across Name-Salary), and vertical (rows 8-10 in ID)."
+      height={440}
+    >
       <Spreadsheet
         theme={witTheme}
         ref={tableRef}

@@ -2,7 +2,11 @@
 // Copyright (c) 2025 witqq contributors
 
 export { Spreadsheet } from './components/Spreadsheet';
-export type { SpreadsheetProps, SpreadsheetRef, SpreadsheetCallbacks } from './components/Spreadsheet';
+export type {
+  SpreadsheetProps,
+  SpreadsheetRef,
+  SpreadsheetCallbacks,
+} from './components/Spreadsheet';
 
 // Re-export core types for convenience
 export type {

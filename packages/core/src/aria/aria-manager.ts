@@ -20,6 +20,7 @@ import type {
   FilterChangeEvent,
   CellValidationEvent,
 } from '../events/event-types';
+import type { ResolvedLocale } from '../locale/resolve-locale';
 
 export interface AriaManagerConfig {
   container: HTMLElement;
@@ -40,6 +41,7 @@ export class AriaManager {
   private readonly columns: ColumnDef[];
   private readonly rowCount: number;
   private liveRegion: HTMLElement | null = null;
+  private locale: ResolvedLocale | null = null;
 
   constructor(config: AriaManagerConfig) {
     this.container = config.container;
@@ -49,6 +51,11 @@ export class AriaManager {
     this.dataView = config.dataView;
     this.columns = config.columns;
     this.rowCount = config.rowCount;
+  }
+
+  /** Set locale for accessibility announcements. */
+  setLocale(locale: ResolvedLocale): void {
+    this.locale = locale;
   }
 
   attach(): void {
@@ -132,34 +139,40 @@ export class AriaManager {
     const colDef = visibleCols[col];
     const colName = colDef?.title ?? `Column ${col + 1}`;
     const value = cell?.value ?? '';
-    const displayValue = value === '' ? 'empty' : String(value);
+    const emptyLabel = this.locale?.aria?.cellEmpty ?? 'empty';
+    const displayValue = value === '' ? emptyLabel : String(value);
 
-    this.announce(`${colName}, Row ${row + 1}: ${displayValue}`);
+    const tpl = this.locale?.aria?.cellAnnouncement ?? '{column}, Row {row}: {value}';
+    this.announce(tpl.replace('{column}', colName).replace('{row}', String(row + 1)).replace('{value}', displayValue));
   };
 
   private handleSortChange = (event: SortChangeEvent): void => {
     if (event.sortColumns.length === 0) {
-      this.announce('Sort cleared');
+      this.announce(this.locale?.aria?.sortCleared ?? 'Sort cleared');
       return;
     }
 
+    const ascLabel = this.locale?.aria?.sortAscending ?? 'ascending';
+    const descLabel = this.locale?.aria?.sortDescending ?? 'descending';
     const descriptions = event.sortColumns.map((sc) => {
       const visibleCols = this.columns.filter((c) => !c.hidden);
       const colDef = visibleCols[sc.col];
       const colName = colDef?.title ?? `Column ${sc.col + 1}`;
-      const dir = sc.direction === 'asc' ? 'ascending' : 'descending';
+      const dir = sc.direction === 'asc' ? ascLabel : descLabel;
       return `${colName} ${dir}`;
     });
 
-    this.announce(`Sorted by ${descriptions.join(', then ')}`);
+    const tpl = this.locale?.aria?.sortedBy ?? 'Sorted by {columns}';
+    this.announce(tpl.replace('{columns}', descriptions.join(', then ')));
   };
 
   private handleFilterChange = (event: FilterChangeEvent): void => {
     const { visibleRowCount, totalRowCount } = event;
     if (visibleRowCount === totalRowCount) {
-      this.announce('Filter cleared, showing all rows');
+      this.announce(this.locale?.aria?.filterCleared ?? 'Filter cleared, showing all rows');
     } else {
-      this.announce(`Filtered: ${visibleRowCount} of ${totalRowCount} rows visible`);
+      const tpl = this.locale?.aria?.filterActive ?? 'Filtered: {visible} of {total} rows visible';
+      this.announce(tpl.replace('{visible}', String(visibleRowCount)).replace('{total}', String(totalRowCount)));
     }
   };
 

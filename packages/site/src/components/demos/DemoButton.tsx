@@ -29,7 +29,10 @@ const base: CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-const variants: Record<DemoButtonVariant, { normal: CSSProperties; hover: CSSProperties; active?: CSSProperties }> = {
+const variants: Record<
+  DemoButtonVariant,
+  { normal: CSSProperties; hover: CSSProperties; active?: CSSProperties }
+> = {
   default: {
     normal: {},
     hover: { background: 'var(--sl-color-gray-5)' },
@@ -57,7 +60,14 @@ const variants: Record<DemoButtonVariant, { normal: CSSProperties; hover: CSSPro
   },
 };
 
-export function DemoButton({ children, onClick, variant = 'default', active = false, disabled, style }: DemoButtonProps) {
+export function DemoButton({
+  children,
+  onClick,
+  variant = 'default',
+  active = false,
+  disabled,
+  style,
+}: DemoButtonProps) {
   const v = variants[variant];
   const merged: CSSProperties = {
     ...base,

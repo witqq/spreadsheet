@@ -82,7 +82,7 @@ export class UnmergeCellsCommand implements Command {
 
   constructor(
     private readonly mergeManager: MergeManager,
-    private readonly cellStore: CellStore,
+    _cellStore: CellStore,
     private readonly region: MergedRegion,
   ) {
     this.description = `Unmerge cells (${region.startRow},${region.startCol})-(${region.endRow},${region.endCol})`;

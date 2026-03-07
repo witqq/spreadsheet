@@ -40,13 +40,20 @@ export function FormulaDemo() {
     const visibleCols = columns;
     for (let row = 0; row < data.length; row++) {
       const r = row + 1; // 1-based cell references
-      const formulas: [number, string][] = [[2, `=A${r}+B${r}`], [3, `=A${r}*B${r}`]];
+      const formulas: [number, string][] = [
+        [2, `=A${r}+B${r}`],
+        [3, `=A${r}*B${r}`],
+      ];
       for (const [col, formula] of formulas) {
         engine.setCell(row, col, formula);
         engine.getEventBus().emit('cellChange', {
-          row, col, value: formula,
+          row,
+          col,
+          value: formula,
           column: visibleCols[col],
-          oldValue: '', newValue: formula, source: 'edit' as const,
+          oldValue: '',
+          newValue: formula,
+          source: 'edit' as const,
         });
       }
     }
@@ -61,14 +68,25 @@ export function FormulaDemo() {
       height={380}
     >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{
-            display: 'inline-block',
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            background: active ? '#22c55e' : '#94a3b8',
-          }} />
+        <div
+          style={{
+            padding: '0.5rem 0.75rem',
+            borderBottom: '1px solid #e2e8f0',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}
+        >
+          <span
+            style={{
+              display: 'inline-block',
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: active ? '#22c55e' : '#94a3b8',
+            }}
+          />
           <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
             {active ? 'Formula Engine Active' : 'Initializing…'}
           </span>

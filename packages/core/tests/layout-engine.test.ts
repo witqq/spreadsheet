@@ -245,4 +245,188 @@ describe('LayoutEngine', () => {
       expect(engine.getCellRect(99_999, 0).y).toBe(32 + 99_999 * 28);
     });
   });
+
+  describe('setRowHeightsBatch', () => {
+    it('updates multiple row heights in one call', () => {
+      const engine = new LayoutEngine(makeConfig([100], 10, { rowHeight: 28 }));
+      const updates = new Map([
+        [2, 56],
+        [5, 84],
+      ]);
+      engine.setRowHeightsBatch(updates);
+
+      expect(engine.getRowHeight(2)).toBe(56);
+      expect(engine.getRowHeight(5)).toBe(84);
+      // Unchanged rows keep default
+      expect(engine.getRowHeight(0)).toBe(28);
+      expect(engine.getRowHeight(3)).toBe(28);
+    });
+
+    it('recomputes cumulative positions correctly', () => {
+      const engine = new LayoutEngine(makeConfig([100], 5, { rowHeight: 28, headerHeight: 0, rowNumberWidth: 0 }));
+      // Default: rows at 0, 28, 56, 84, 112; total = 140
+      expect(engine.contentHeight).toBe(140);
+
+      engine.setRowHeightsBatch(new Map([
+        [1, 40], // +12
+        [3, 50], // +22
+      ]));
+
+      // Row positions: 0, 28, 68, 96, 146; total = 174
+      expect(engine.getRowY(0)).toBe(0);
+      expect(engine.getRowY(1)).toBe(28);
+      expect(engine.getRowY(2)).toBe(68); // 28 + 40
+      expect(engine.getRowY(3)).toBe(96); // 68 + 28
+      expect(engine.getRowY(4)).toBe(146); // 96 + 50
+      expect(engine.contentHeight).toBe(174); // 146 + 28
+    });
+
+    it('handles empty updates map', () => {
+      const engine = new LayoutEngine(makeConfig([100], 5, { rowHeight: 28 }));
+      const heightBefore = engine.contentHeight;
+      engine.setRowHeightsBatch(new Map());
+      expect(engine.contentHeight).toBe(heightBefore);
+    });
+
+    it('ignores out-of-bounds row indices', () => {
+      const engine = new LayoutEngine(makeConfig([100], 5, { rowHeight: 28 }));
+      const heightBefore = engine.contentHeight;
+      engine.setRowHeightsBatch(new Map([
+        [-1, 50],
+        [5, 50],
+        [100, 50],
+      ]));
+      expect(engine.contentHeight).toBe(heightBefore);
+    });
+
+    it('produces same result as individual setRowHeight calls', () => {
+      const e1 = new LayoutEngine(makeConfig([100], 10, { rowHeight: 28, headerHeight: 0, rowNumberWidth: 0 }));
+      const e2 = new LayoutEngine(makeConfig([100], 10, { rowHeight: 28, headerHeight: 0, rowNumberWidth: 0 }));
+
+      const updates = new Map([
+        [1, 40],
+        [4, 60],
+        [7, 35],
+      ]);
+
+      // Batch
+      e1.setRowHeightsBatch(updates);
+
+      // Individual
+      for (const [row, h] of updates) {
+        e2.setRowHeight(row, h);
+      }
+
+      // Compare all positions and heights
+      for (let r = 0; r < 10; r++) {
+        expect(e1.getRowHeight(r)).toBe(e2.getRowHeight(r));
+        expect(e1.getRowY(r)).toBe(e2.getRowY(r));
+      }
+      expect(e1.contentHeight).toBe(e2.contentHeight);
+    });
+
+    it('getCellRect reflects batch updates', () => {
+      const engine = new LayoutEngine(makeConfig([100], 5, { rowHeight: 28, headerHeight: 32, rowNumberWidth: 50 }));
+      engine.setRowHeightsBatch(new Map([[0, 56]]));
+
+      const rect = engine.getCellRect(1, 0);
+      expect(rect.y).toBe(32 + 56); // headerHeight + row[0] height
+      expect(rect.height).toBe(28); // row[1] unchanged
+    });
+
+    it('getRowAtY works after batch update', () => {
+      const engine = new LayoutEngine(makeConfig([100], 5, { rowHeight: 28, headerHeight: 0, rowNumberWidth: 0 }));
+      engine.setRowHeightsBatch(new Map([[0, 100]]));
+
+      // Row 0: 0..100, Row 1: 100..128
+      expect(engine.getRowAtY(50)).toBe(0);
+      expect(engine.getRowAtY(99)).toBe(0);
+      expect(engine.getRowAtY(100)).toBe(1);
+    });
+  });
+
+  describe('setColumnWidthsBatch', () => {
+    it('should batch update multiple column widths', () => {
+      const engine = new LayoutEngine({
+        columns: [
+          { key: 'a', title: 'A', width: 100 },
+          { key: 'b', title: 'B', width: 100 },
+          { key: 'c', title: 'C', width: 100 },
+        ],
+        rowCount: 1,
+        rowHeight: 28,
+        headerHeight: 32,
+        rowNumberWidth: 50,
+      });
+
+      const updates = new Map<number, number>();
+      updates.set(0, 200);
+      updates.set(2, 150);
+      engine.setColumnWidthsBatch(updates);
+
+      expect(engine.getColumnWidth(0)).toBe(200);
+      expect(engine.getColumnWidth(1)).toBe(100);
+      expect(engine.getColumnWidth(2)).toBe(150);
+      expect(engine.contentWidth).toBe(450);
+    });
+
+    it('should handle empty updates', () => {
+      const engine = new LayoutEngine({
+        columns: [{ key: 'a', title: 'A', width: 100 }],
+        rowCount: 1,
+        rowHeight: 28,
+        headerHeight: 32,
+        rowNumberWidth: 50,
+      });
+
+      engine.setColumnWidthsBatch(new Map());
+      expect(engine.getColumnWidth(0)).toBe(100);
+    });
+
+    it('should skip out-of-range indices', () => {
+      const engine = new LayoutEngine({
+        columns: [{ key: 'a', title: 'A', width: 100 }],
+        rowCount: 1,
+        rowHeight: 28,
+        headerHeight: 32,
+        rowNumberWidth: 50,
+      });
+
+      const updates = new Map<number, number>();
+      updates.set(5, 200);
+      updates.set(-1, 200);
+      engine.setColumnWidthsBatch(updates);
+      expect(engine.getColumnWidth(0)).toBe(100);
+    });
+
+    it('should produce same result as individual setColumnWidth calls', () => {
+      const makeEngine = () =>
+        new LayoutEngine({
+          columns: [
+            { key: 'a', title: 'A', width: 100 },
+            { key: 'b', title: 'B', width: 100 },
+            { key: 'c', title: 'C', width: 100 },
+          ],
+          rowCount: 1,
+          rowHeight: 28,
+          headerHeight: 32,
+          rowNumberWidth: 50,
+        });
+
+      const e1 = makeEngine();
+      e1.setColumnWidth(0, 150);
+      e1.setColumnWidth(2, 200);
+
+      const e2 = makeEngine();
+      const updates = new Map<number, number>();
+      updates.set(0, 150);
+      updates.set(2, 200);
+      e2.setColumnWidthsBatch(updates);
+
+      for (let i = 0; i < 3; i++) {
+        expect(e2.getColumnWidth(i)).toBe(e1.getColumnWidth(i));
+      }
+      expect(e2.contentWidth).toBe(e1.contentWidth);
+    });
+  });
 });

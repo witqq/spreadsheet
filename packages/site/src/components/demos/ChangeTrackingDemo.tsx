@@ -12,7 +12,9 @@ const data = generateEmployees(30);
 export function ChangeTrackingDemo() {
   const { witTheme } = useSiteTheme();
   const tableRef = useRef<SpreadsheetRef>(null);
-  const [status, setStatus] = useState('Edit cells, then click "Simulate Save" to see the status lifecycle.');
+  const [status, setStatus] = useState(
+    'Edit cells, then click "Simulate Save" to see the status lifecycle.',
+  );
 
   useEffect(() => {
     const engine = tableRef.current?.getInstance();
@@ -36,7 +38,7 @@ export function ChangeTrackingDemo() {
     }
     engine.requestRender();
 
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
 
     for (const cell of changed) {
       tracker.setCellStatus(cell.row, cell.col, 'saved');
@@ -44,7 +46,7 @@ export function ChangeTrackingDemo() {
     engine.requestRender();
     setStatus(`Saved ${changed.length} cell(s). Status will clear shortly.`);
 
-    await new Promise(r => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 1500));
     for (const cell of changed) {
       engine.getCellStore().clearMetadata(cell.row, cell.col);
     }
@@ -54,7 +56,11 @@ export function ChangeTrackingDemo() {
   };
 
   return (
-    <DemoWrapper title="Live Demo" description="Edit cells to see 'changed' status (blue border). Click Save to see saving → saved lifecycle." height={440}>
+    <DemoWrapper
+      title="Live Demo"
+      description="Edit cells to see 'changed' status (blue border). Click Save to see saving → saved lifecycle."
+      height={440}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <DemoToolbar>
           <DemoButton onClick={handleSimulateSave}>💾 Simulate Save</DemoButton>

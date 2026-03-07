@@ -33,7 +33,14 @@ export function DemoChangeTracking() {
   }, []);
   return (
     <ScenarioContainer width={480} height={250}>
-      <Spreadsheet ref={ref} columns={columns} data={data} editable showRowNumbers style={tableStyle} />
+      <Spreadsheet
+        ref={ref}
+        columns={columns}
+        data={data}
+        editable
+        showRowNumbers
+        style={tableStyle}
+      />
     </ScenarioContainer>
   );
 }

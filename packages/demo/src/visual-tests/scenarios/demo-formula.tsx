@@ -30,12 +30,20 @@ export function DemoFormula() {
     engine.installPlugin(plugin);
     for (let row = 0; row < data.length; row++) {
       const r = row + 1;
-      const formulas: [number, string][] = [[2, `=A${r}+B${r}`], [3, `=A${r}*B${r}`]];
+      const formulas: [number, string][] = [
+        [2, `=A${r}+B${r}`],
+        [3, `=A${r}*B${r}`],
+      ];
       for (const [col, formula] of formulas) {
         engine.setCell(row, col, formula);
         engine.getEventBus().emit('cellChange', {
-          row, col, value: formula,
-          column: columns[col], oldValue: '', newValue: formula, source: 'edit' as const,
+          row,
+          col,
+          value: formula,
+          column: columns[col],
+          oldValue: '',
+          newValue: formula,
+          source: 'edit' as const,
         });
       }
     }

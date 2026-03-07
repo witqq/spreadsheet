@@ -24,9 +24,13 @@ export function DemoValidation() {
     if (!engine) return;
     const ve = engine.getValidationEngine();
     ve.setColumnRules(0, [{ type: 'required', message: 'Name is required' }]);
-    ve.setColumnRules(1, [{ type: 'regex', pattern: '^[^@]+@[^@]+\\.[^@]+$', message: 'Invalid email format' }]);
+    ve.setColumnRules(1, [
+      { type: 'regex', pattern: '^[^@]+@[^@]+\\.[^@]+$', message: 'Invalid email format' },
+    ]);
     ve.setColumnRules(2, [{ type: 'range', min: 18, max: 65, message: 'Age must be 18-65' }]);
-    ve.setColumnRules(3, [{ type: 'regex', pattern: '^[A-Z]{3}-\\d{3}$', message: 'Format: ABC-123' }]);
+    ve.setColumnRules(3, [
+      { type: 'regex', pattern: '^[A-Z]{3}-\\d{3}$', message: 'Format: ABC-123' },
+    ]);
     for (let row = 0; row < data.length; row++) {
       for (let col = 0; col <= 3; col++) {
         ve.validateCell(row, col);
@@ -36,7 +40,14 @@ export function DemoValidation() {
   }, []);
   return (
     <ScenarioContainer width={630} height={220}>
-      <Spreadsheet ref={ref} columns={columns} data={data} editable showRowNumbers style={tableStyle} />
+      <Spreadsheet
+        ref={ref}
+        columns={columns}
+        data={data}
+        editable
+        showRowNumbers
+        style={tableStyle}
+      />
     </ScenarioContainer>
   );
 }

@@ -10,7 +10,9 @@ const data = generateEmployees(50);
 export function ContextMenuDemo() {
   const { witTheme } = useSiteTheme();
   const tableRef = useRef<SpreadsheetRef>(null);
-  const [lastAction, setLastAction] = useState('Right-click any cell, header, or row number to see the context menu.');
+  const [lastAction, setLastAction] = useState(
+    'Right-click any cell, header, or row number to see the context menu.',
+  );
 
   useEffect(() => {
     const engine = tableRef.current?.getInstance();
@@ -51,9 +53,21 @@ export function ContextMenuDemo() {
   }, []);
 
   return (
-    <DemoWrapper title="Live Demo" description="Right-click cells, headers, row numbers, or the corner to see context-specific menus with custom items." height={440}>
+    <DemoWrapper
+      title="Live Demo"
+      description="Right-click cells, headers, row numbers, or the corner to see context-specific menus with custom items."
+      height={440}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: '#64748b', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+        <div
+          style={{
+            padding: '0.5rem 0.75rem',
+            fontSize: '0.8rem',
+            color: '#64748b',
+            borderBottom: '1px solid #e2e8f0',
+            flexShrink: 0,
+          }}
+        >
           {lastAction}
         </div>
         <div style={{ flex: 1 }}>
