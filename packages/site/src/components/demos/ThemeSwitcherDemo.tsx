@@ -12,10 +12,14 @@ export function ThemeSwitcherDemo() {
   const [isDark, setIsDark] = useState(false);
 
   return (
-    <DemoWrapper title="Live Demo" description="Toggle between light and dark themes. Theme change propagates to all subsystems instantly." height={440}>
+    <DemoWrapper
+      title="Live Demo"
+      description="Toggle between light and dark themes. Theme change propagates to all subsystems instantly."
+      height={440}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <DemoToolbar>
-          <DemoButton onClick={() => setIsDark(d => !d)}>
+          <DemoButton onClick={() => setIsDark((d) => !d)}>
             {isDark ? '☀️ Light Theme' : '🌙 Dark Theme'}
           </DemoButton>
         </DemoToolbar>

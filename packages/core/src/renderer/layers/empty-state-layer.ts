@@ -2,18 +2,25 @@
 // Copyright (c) 2025 witqq contributors
 
 import type { RenderLayer, RenderContext } from '../render-layer';
+import type { ResolvedLocale } from '../../locale/resolve-locale';
 
 /**
  * Renders "No data" text when there are no visible rows (e.g., all filtered out).
  */
 export class EmptyStateLayer implements RenderLayer {
+  private locale: ResolvedLocale | null = null;
+
+  setLocale(locale: ResolvedLocale): void {
+    this.locale = locale;
+  }
+
   render(rc: RenderContext): void {
     const { ctx, geometry, theme, canvasWidth, canvasHeight, viewport } = rc;
 
     // Only show when no visible rows
     if (viewport.endRow >= viewport.startRow) return;
 
-    const text = 'No data';
+    const text = this.locale?.emptyState?.noData ?? 'No data';
     const centerX = canvasWidth / 2;
     const centerY = geometry.headerHeight + (canvasHeight - geometry.headerHeight) / 2;
 

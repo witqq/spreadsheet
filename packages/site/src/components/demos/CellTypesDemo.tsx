@@ -16,11 +16,51 @@ const columns: ColumnDef[] = [
 ];
 
 const data = [
-  { id: 1, text: 'Hello World', amount: 1234.56, active: true, created: '2025-01-15', progress: 85, rating: 5 },
-  { id: 2, text: 'Test Data', amount: -42, active: false, created: '2024-06-01', progress: 45, rating: 3 },
-  { id: 3, text: 'Long text that will be truncated in the cell', amount: 0, active: true, created: '2023-12-25', progress: 10, rating: 1 },
-  { id: 4, text: '', amount: 99999, active: false, created: '2025-03-01', progress: 100, rating: 4 },
-  { id: 5, text: 'Final Row', amount: 500, active: true, created: '2025-02-14', progress: 62, rating: 2 },
+  {
+    id: 1,
+    text: 'Hello World',
+    amount: 1234.56,
+    active: true,
+    created: '2025-01-15',
+    progress: 85,
+    rating: 5,
+  },
+  {
+    id: 2,
+    text: 'Test Data',
+    amount: -42,
+    active: false,
+    created: '2024-06-01',
+    progress: 45,
+    rating: 3,
+  },
+  {
+    id: 3,
+    text: 'Long text that will be truncated in the cell',
+    amount: 0,
+    active: true,
+    created: '2023-12-25',
+    progress: 10,
+    rating: 1,
+  },
+  {
+    id: 4,
+    text: '',
+    amount: 99999,
+    active: false,
+    created: '2025-03-01',
+    progress: 100,
+    rating: 4,
+  },
+  {
+    id: 5,
+    text: 'Final Row',
+    amount: 500,
+    active: true,
+    created: '2025-02-14',
+    progress: 62,
+    rating: 2,
+  },
 ];
 
 export function CellTypesDemo() {
@@ -72,7 +112,11 @@ export function CellTypesDemo() {
   }, []);
 
   return (
-    <DemoWrapper title="Live Demo" description="All cell types in one table: string, number (right-aligned), boolean (checkbox), date, progress bar, and star rating." height={300}>
+    <DemoWrapper
+      title="Live Demo"
+      description="All cell types in one table: string, number (right-aligned), boolean (checkbox), date, progress bar, and star rating."
+      height={300}
+    >
       <Spreadsheet
         theme={witTheme}
         ref={tableRef}

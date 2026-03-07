@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { LayoutEngine } from '../src/renderer/layout-engine';
 import { CellStore } from '../src/model/cell-store';
-import { measureInitTime, FPSCounter } from '../src/benchmark/performance-benchmark';
+import { measureInitTime, FPSCounter, measureMultiRun, measureThroughput, computeStats, BenchmarkRunner } from '../src/benchmark/performance-benchmark';
 
 describe('Performance: 1M row initialization', () => {
   it('LayoutEngine initializes 1M rows in <500ms', () => {
@@ -147,5 +147,69 @@ describe('Performance: benchmark utilities', () => {
     const result = counter.stop();
     expect(result.frameCount).toBe(0);
     expect(result.avgFPS).toBe(0);
+  });
+
+  it('measureMultiRun returns stats with correct run count', () => {
+    const stats = measureMultiRun(() => {
+      let sum = 0;
+      for (let i = 0; i < 10_000; i++) sum += i;
+    }, 5);
+    expect(stats.runs).toHaveLength(5);
+    expect(stats.meanMs).toBeGreaterThan(0);
+    expect(stats.medianMs).toBeGreaterThan(0);
+    expect(stats.minMs).toBeLessThanOrEqual(stats.medianMs);
+    expect(stats.maxMs).toBeGreaterThanOrEqual(stats.medianMs);
+    expect(stats.cv).toBeGreaterThanOrEqual(0);
+  });
+
+  it('computeStats handles empty array', () => {
+    const stats = computeStats([]);
+    expect(stats.meanMs).toBe(0);
+    expect(stats.medianMs).toBe(0);
+    expect(stats.cv).toBe(0);
+    expect(stats.runs).toHaveLength(0);
+  });
+
+  it('computeStats calculates correct median for odd count', () => {
+    const stats = computeStats([10, 20, 30]);
+    expect(stats.medianMs).toBe(20);
+    expect(stats.meanMs).toBe(20);
+    expect(stats.minMs).toBe(10);
+    expect(stats.maxMs).toBe(30);
+  });
+
+  it('computeStats calculates correct median for even count', () => {
+    const stats = computeStats([10, 20, 30, 40]);
+    expect(stats.medianMs).toBe(25);
+  });
+
+  it('measureThroughput returns ops/sec', () => {
+    const result = measureThroughput(() => {
+      Math.sqrt(42);
+    }, 10_000);
+    expect(result.opsPerSec).toBeGreaterThan(0);
+    expect(result.totalMs).toBeGreaterThan(0);
+  });
+
+  it('BenchmarkRunner collects metrics and outputs JSON', () => {
+    const runner = new BenchmarkRunner();
+    runner.record('test-metric', '1K', {
+      medianMs: 10,
+      meanMs: 11,
+      minMs: 8,
+      maxMs: 15,
+      cv: 0.1,
+      runs: [10, 11, 12],
+    });
+
+    const result = runner.toJSON();
+    expect(result.timestamp).toBeTruthy();
+    expect(result.metrics).toHaveLength(1);
+    expect(result.metrics[0].name).toBe('test-metric');
+    expect(result.metrics[0].dataset).toBe('1K');
+    expect(result.metrics[0].stats.medianMs).toBe(10);
+
+    runner.reset();
+    expect(runner.toJSON().metrics).toHaveLength(0);
   });
 });

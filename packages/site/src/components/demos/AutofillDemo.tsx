@@ -26,7 +26,11 @@ const data = [
 export function AutofillDemo() {
   const { witTheme } = useSiteTheme();
   return (
-    <DemoWrapper title="Live Demo" description="Select cells 10, 20, 30 in the Value column, then drag the fill handle (small square at bottom-right of selection) downward. Pattern detection extends the sequence." height={400}>
+    <DemoWrapper
+      title="Live Demo"
+      description="Select cells 10, 20, 30 in the Value column, then drag the fill handle (small square at bottom-right of selection) downward. Pattern detection extends the sequence."
+      height={400}
+    >
       <Spreadsheet
         theme={witTheme}
         columns={columns}

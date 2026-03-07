@@ -36,12 +36,7 @@ export class FillHandleLayer implements RenderLayer {
     const handlePos = this.autofillManager.getHandlePosition();
     if (handlePos) {
       ctx.fillStyle = theme.colors.activeCellBorder;
-      ctx.fillRect(
-        handlePos.x - HALF,
-        handlePos.y - HALF,
-        HANDLE_SIZE,
-        HANDLE_SIZE,
-      );
+      ctx.fillRect(handlePos.x - HALF, handlePos.y - HALF, HANDLE_SIZE, HANDLE_SIZE);
       // White border for contrast
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1;

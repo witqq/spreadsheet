@@ -22,7 +22,12 @@ export class CellEditCommand implements Command {
     this.description = `Edit cell (${row}, ${col})`;
   }
 
-  get affectedCells(): ReadonlyArray<{ row: number; col: number; oldValue: CellValue; newValue: CellValue }> {
+  get affectedCells(): ReadonlyArray<{
+    row: number;
+    col: number;
+    oldValue: CellValue;
+    newValue: CellValue;
+  }> {
     return [{ row: this.row, col: this.col, oldValue: this.oldValue, newValue: this.newValue }];
   }
 

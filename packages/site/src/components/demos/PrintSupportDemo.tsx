@@ -14,7 +14,11 @@ export function PrintSupportDemo() {
   const tableRef = useRef<SpreadsheetRef>(null);
 
   return (
-    <DemoWrapper title="Live Demo" description="Click Print to generate an HTML table from canvas data and open the browser print dialog. Sorted/filtered data is respected." height={440}>
+    <DemoWrapper
+      title="Live Demo"
+      description="Click Print to generate an HTML table from canvas data and open the browser print dialog. Sorted/filtered data is respected."
+      height={440}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <DemoToolbar>
           <DemoButton onClick={() => tableRef.current?.print()}>🖨️ Print Table</DemoButton>

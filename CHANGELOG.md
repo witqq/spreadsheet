@@ -1,0 +1,63 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- Performance benchmark suite with `BenchmarkRunner`, `measureMultiRun`, `computeStats`, `measureThroughput` utilities
+- `npm run benchmark` script for running performance benchmarks
+- Baseline metrics for 6 categories across 1K/10K/100K row datasets
+- `TextMeasureCache.measureEmHeight()` for font em-height measurement
+- `TextMeasureCache.getWrappedLines()` for word-boundary text wrapping with character-level fallback
+- `TextMeasureCache.countWrappedLines()` and `measureWrappedHeight()` for wrapped text height computation
+- `ColumnDef.wrapText` option to enable word-wrap rendering per column
+- Multi-line wrapped text rendering in `CellTextLayer` when `wrapText` is enabled
+- E2E Playwright test for word-wrap visual verification (`tests/e2e/word-wrap.test.ts`)
+- `LINE_HEIGHT_MULTIPLIER` shared constant (1.2) for consistent line-height across text rendering
+- `RowStore` auto/manual height separation: `setAutoHeight()`, `setAutoHeightsBatch()`, `clearAutoHeight()`, `clearAllAutoHeights()`, `isManual()`, `isAuto()`
+- `LayoutEngine.setRowHeightsBatch()` for O(n) batch row height updates (vs O(n²) for individual calls)
+- `CellTypeRenderer.measureHeight()` optional method for custom cell type height measurement
+- `RenderLayer.measureHeights()` optional method for bulk row height measurement by render layers
+- `CellTextLayer.measureHeights()` implementation for measuring wrapped text row heights
+- `SpreadsheetEngine.setAutoRowHeights()` for batch auto-measured height updates with manual-always-wins priority
+- `AutoRowSizeManager` class: orchestrates automatic row height measurement with viewport-first sync strategy and off-screen async measurement via `requestIdleCallback`
+- `SpreadsheetEngineConfig.autoRowHeight` option to enable auto row height (`boolean` or `AutoRowSizeConfig` with `batchSize`, `minRowHeight`, `cellPadding`)
+- `SpreadsheetEngine.getAutoRowSizeManager()` accessor for the auto row size manager instance
+- `AutoRowSizeManager` dirty tracking: `markDirtyRows()`, `markAllDirty()`, `clearDirty()`, `hasDirtyRows`, `isRowDirty()`, `isAllDirty`, `dirtyRowCount`
+- `AutoRowSizeManager.startDirtyMeasurement()` for efficient re-measurement of only dirty rows
+- Scroll compensation in `setAutoRowHeights()`: adjusts scroll position when row heights change above viewport to prevent visual jumping
+- `SpreadsheetEngine.markAutoRowHeightDirty()` and `markAllAutoRowHeightDirty()` public API for triggering dirty re-measurement
+- Auto row height integration with `setCell()`: cell value changes mark the row dirty for re-measurement
+- Auto row height integration with column resize: resizing a wrap-enabled column triggers full re-measurement
+- `ColumnStretchManager` class: distributes available container width across columns with two modes ('all' and 'last')
+- `SpreadsheetEngineConfig.stretchColumns` option: `'all'` distributes extra space evenly among stretchable columns, `'last'` gives remaining space to the last visible column
+- `LayoutEngine.setColumnWidthsBatch()` for efficient batch column width updates (single recomputation pass)
+- Column stretch recalculation on container resize via existing `ResizeObserver`
+- Manual column resize exclusion: manually resized columns are excluded from stretch distribution in 'all' mode
+- Frozen column handling: frozen columns are excluded from stretch distribution
+- `DatePickerOverlay` class: pure-DOM calendar widget for date-type cell editing, positioned below target cell
+- `CellEditor` interface and `CellEditorRegistry` for extensible cell editing with type-based editor resolution
+- `DatePickerEditor` adapter wrapping `DatePickerOverlay` as a `CellEditor` implementation
+- `DateTimeEditor` class: combined date+time picker (calendar + hour/minute spin controls) for `datetime` columns, commits ISO `YYYY-MM-DDTHH:mm` format
+- `'datetime'` added to `CellType` union type
+- `dateTimePicker` section added to `SpreadsheetLocale` interface (hour, minute, now, ariaLabel) with EN and RU translations
+- Date picker opens on double-click, F2, or type-to-edit for columns with `type: 'date'`
+- Calendar month/year navigation, day grid with keyboard navigation (arrows, Enter, Escape, Tab)
+- Date selection commits value in YYYY-MM-DD format via command system (undo/redo supported)
+- Grid scroll and outside click close the date picker
+- Today button for quick date selection
+- ARIA attributes on date picker overlay (role=dialog, aria-label)
+- `ContextMenuItem.submenu` optional field for recursive nested submenus
+- Submenu chevron indicator (`▸`) on items with submenus
+- Submenu opens on hover (200ms delay) or ArrowRight key, closes on ArrowLeft or Escape
+- Nested submenus supported recursively to arbitrary depth
+- Empty menu prevention: parent items with all invisible submenu children are hidden
+- Keyboard navigation within submenus (ArrowUp/Down), Escape closes one level at a time
+- Interactive demo page with sidebar layout showcasing all library features
+- Demo sidebar sections: Display (theme, stretch, auto row height), Data (1M rows, progressive load, streaming), Views (grouping, pivot), Import/Export (Excel, print), Collaboration
+- Demo feature badges showing active engine configuration
+- Demo context menu items with Insert and Format submenus for submenu showcase

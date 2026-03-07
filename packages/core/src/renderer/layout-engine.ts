@@ -283,6 +283,33 @@ export class LayoutEngine {
   }
 
   /**
+   * Batch-update multiple row heights with a single cumulative position recompute.
+   * O(n) where n = total row count (recomputes from the smallest changed index).
+   * Much more efficient than calling setRowHeight() per row.
+   */
+  setRowHeightsBatch(updates: Map<number, number>): void {
+    if (updates.size === 0) return;
+
+    let minChanged = this._rowCount;
+    for (const [rowIndex, height] of updates) {
+      if (rowIndex < 0 || rowIndex >= this._rowCount) continue;
+      this.rowHeights[rowIndex] = height;
+      if (rowIndex < minChanged) minChanged = rowIndex;
+    }
+
+    if (minChanged >= this._rowCount) return;
+
+    // Single recompute from the earliest changed row
+    let yy = this.rowPositions[minChanged];
+    for (let r = minChanged; r < this._rowCount; r++) {
+      this.rowPositions[r] = yy;
+      yy += this.rowHeights[r];
+    }
+    this.rowPositions[this._rowCount] = yy;
+    this._contentHeight = yy;
+  }
+
+  /**
    * Update the width of a single column and recompute cumulative positions.
    * O(n) where n = number of columns after the changed column.
    */
@@ -293,6 +320,32 @@ export class LayoutEngine {
     // Recompute cumulative positions from colIndex onward
     let x = this.colPositions[colIndex];
     for (let i = colIndex; i < this.colWidths.length; i++) {
+      this.colPositions[i] = x;
+      x += this.colWidths[i];
+    }
+    this.colPositions[this.colWidths.length] = x;
+    this._contentWidth = x;
+  }
+
+  /**
+   * Batch update multiple column widths in a single pass.
+   * Only recomputes cumulative positions once from the lowest changed index.
+   */
+  setColumnWidthsBatch(updates: Map<number, number>): void {
+    if (updates.size === 0) return;
+
+    let minIndex = this.colWidths.length;
+    for (const [colIndex, width] of updates) {
+      if (colIndex < 0 || colIndex >= this.colWidths.length) continue;
+      this.colWidths[colIndex] = width;
+      if (colIndex < minIndex) minIndex = colIndex;
+    }
+
+    if (minIndex >= this.colWidths.length) return;
+
+    // Single recomputation from the lowest changed index
+    let x = this.colPositions[minIndex];
+    for (let i = minIndex; i < this.colWidths.length; i++) {
       this.colPositions[i] = x;
       x += this.colWidths[i];
     }

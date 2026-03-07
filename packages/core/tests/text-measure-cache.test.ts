@@ -7,6 +7,18 @@ function createMockCtx(widthFn?: (text: string) => number) {
     font: '',
     measureText: vi.fn().mockImplementation((text: string) => ({
       width: (widthFn ?? defaultWidthFn)(text),
+      actualBoundingBoxAscent: 10,
+      actualBoundingBoxDescent: 3,
+    })),
+  } as unknown as CanvasRenderingContext2D;
+}
+
+function createMockCtxNoMetrics(widthFn?: (text: string) => number) {
+  const defaultWidthFn = (text: string) => text.length * 8;
+  return {
+    font: '',
+    measureText: vi.fn().mockImplementation((text: string) => ({
+      width: (widthFn ?? defaultWidthFn)(text),
     })),
   } as unknown as CanvasRenderingContext2D;
 }
@@ -243,7 +255,13 @@ describe('TextMeasureCache', () => {
       const cache = new TextMeasureCache();
       // Simulate variable width: measure actual substring widths
       const charWidths: Record<string, number> = {
-        W: 14, i: 4, d: 8, e: 8, ' ': 4, t: 6, x: 8,
+        W: 14,
+        i: 4,
+        d: 8,
+        e: 8,
+        ' ': 4,
+        t: 6,
+        x: 8,
         '\u2026': 10,
       };
       const ctx = createMockCtx((text) => {
@@ -260,6 +278,193 @@ describe('TextMeasureCache', () => {
       // So truncate to "Wid…"
       const result = cache.truncateText(ctx, 'Wide text', '13px Arial', 40);
       expect(result).toBe('Wid\u2026');
+    });
+  });
+
+  describe('measureEmHeight', () => {
+    it('uses actualBoundingBoxAscent + actualBoundingBoxDescent when available', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx(); // has ascent=10, descent=3
+      const height = cache.measureEmHeight(ctx, '13px Arial');
+      expect(height).toBe(13); // 10 + 3
+    });
+
+    it('falls back to parsing font size when metrics unavailable', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtxNoMetrics();
+      const height = cache.measureEmHeight(ctx, '16px Monospace');
+      expect(height).toBe(16);
+    });
+
+    it('falls back to 16 when font size cannot be parsed', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtxNoMetrics();
+      const height = cache.measureEmHeight(ctx, 'bold serif');
+      expect(height).toBe(16);
+    });
+
+    it('caches em-height per font', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx();
+      cache.measureEmHeight(ctx, '13px Arial');
+      cache.measureEmHeight(ctx, '13px Arial');
+      // measureText called only once for "Mg"
+      const mgCalls = (ctx.measureText as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (c: string[]) => c[0] === 'Mg',
+      );
+      expect(mgCalls.length).toBe(1);
+    });
+  });
+
+  describe('getWrappedLines', () => {
+    it('returns single line when text fits', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx((t) => t.length * 8);
+      const lines = cache.getWrappedLines(ctx, 'hello', '13px Arial', 100);
+      expect(lines).toEqual(['hello']);
+    });
+
+    it('wraps at word boundaries', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx((t) => t.length * 10);
+      // "hello world" = 110px, maxWidth = 60px
+      // "hello " = 60px fits, "world" starts new line
+      const lines = cache.getWrappedLines(ctx, 'hello world', '13px Arial', 60);
+      expect(lines.length).toBe(2);
+      expect(lines[0]).toContain('hello');
+      expect(lines[1]).toContain('world');
+    });
+
+    it('handles explicit newlines', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx((t) => t.length * 8);
+      const lines = cache.getWrappedLines(ctx, 'line1\nline2\nline3', '13px Arial', 500);
+      expect(lines).toEqual(['line1', 'line2', 'line3']);
+    });
+
+    it('handles empty string', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx();
+      const lines = cache.getWrappedLines(ctx, '', '13px Arial', 100);
+      expect(lines).toEqual(['']);
+    });
+
+    it('uses character-level fallback for single long word', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx((t) => t.length * 10);
+      // "abcdefghij" = 100px, maxWidth = 30px → 3 chars per line
+      const lines = cache.getWrappedLines(ctx, 'abcdefghij', '13px Arial', 30);
+      expect(lines.length).toBeGreaterThan(1);
+      // Each line should be at most 3 chars (30px / 10px)
+      for (const line of lines) {
+        expect(line.length).toBeLessThanOrEqual(3);
+      }
+      // All characters preserved
+      expect(lines.join('')).toBe('abcdefghij');
+    });
+
+    it('handles narrow column (maxWidth very small)', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx((t) => t.length * 10);
+      // maxWidth = 10px → 1 char per line
+      const lines = cache.getWrappedLines(ctx, 'abc', '13px Arial', 10);
+      expect(lines).toEqual(['a', 'b', 'c']);
+    });
+
+    it('handles mixed explicit newlines and wrapping', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx((t) => t.length * 10);
+      // maxWidth = 50px → 5 chars per line
+      const lines = cache.getWrappedLines(ctx, 'hello world\nbye', '13px Arial', 50);
+      expect(lines.length).toBeGreaterThanOrEqual(3); // hello, world, bye
+    });
+
+    it('handles zero maxWidth', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx();
+      const lines = cache.getWrappedLines(ctx, 'hello', '13px Arial', 0);
+      expect(lines).toEqual(['']);
+    });
+
+    it('caches wrapped line results', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx((t) => t.length * 8);
+      const lines1 = cache.getWrappedLines(ctx, 'hello world', '13px Arial', 50);
+      const lines2 = cache.getWrappedLines(ctx, 'hello world', '13px Arial', 50);
+      expect(lines1).toBe(lines2); // same reference (from cache)
+    });
+  });
+
+  describe('countWrappedLines', () => {
+    it('returns 1 for text that fits on one line', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx((t) => t.length * 8);
+      expect(cache.countWrappedLines(ctx, 'hi', '13px Arial', 100)).toBe(1);
+    });
+
+    it('returns correct count for multi-line text', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx((t) => t.length * 10);
+      // "hello world test" → wraps across multiple lines at 50px max
+      const count = cache.countWrappedLines(ctx, 'hello world test', '13px Arial', 50);
+      expect(count).toBeGreaterThan(1);
+    });
+  });
+
+  describe('measureWrappedHeight', () => {
+    it('returns correct height for single line', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx(); // emHeight = 13 (ascent 10 + descent 3)
+      const height = cache.measureWrappedHeight(ctx, 'hello', '13px Arial', 200, 1.2);
+      // 1 line × 13 × 1.2 = 15.6
+      expect(height).toBeCloseTo(15.6, 1);
+    });
+
+    it('returns correct height for multiple lines', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx((t) => t.length * 10); // em = 13
+      // "hello world" with maxWidth 60 → 2 lines
+      const height = cache.measureWrappedHeight(ctx, 'hello world', '13px Arial', 60, 1.2);
+      const lineCount = cache.countWrappedLines(ctx, 'hello world', '13px Arial', 60);
+      expect(height).toBeCloseTo(lineCount * 13 * 1.2, 1);
+    });
+
+    it('includes padding in height', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx();
+      const heightNoPad = cache.measureWrappedHeight(ctx, 'hello', '13px Arial', 200, 1.2);
+      const heightWithPad = cache.measureWrappedHeight(ctx, 'hello', '13px Arial', 200, 1.2, {
+        top: 5,
+        bottom: 5,
+      });
+      expect(heightWithPad).toBe(heightNoPad + 10);
+    });
+
+    it('defaults lineHeight to 1.2', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx();
+      const height = cache.measureWrappedHeight(ctx, 'hello', '13px Arial', 200);
+      expect(height).toBeCloseTo(13 * 1.2, 1);
+    });
+  });
+
+  describe('clear with wrap/em caches', () => {
+    it('clears all caches including wrap and em-height', () => {
+      const cache = new TextMeasureCache();
+      const ctx = createMockCtx((t) => t.length * 8);
+
+      cache.measureText(ctx, 'hello', '13px Arial');
+      cache.measureEmHeight(ctx, '13px Arial');
+      cache.getWrappedLines(ctx, 'hello world', '13px Arial', 50);
+
+      cache.clear();
+      expect(cache.size).toBe(0);
+
+      // After clear, should re-measure
+      const callsBefore = (ctx.measureText as ReturnType<typeof vi.fn>).mock.calls.length;
+      cache.measureEmHeight(ctx, '13px Arial');
+      const callsAfter = (ctx.measureText as ReturnType<typeof vi.fn>).mock.calls.length;
+      expect(callsAfter).toBeGreaterThan(callsBefore);
     });
   });
 });

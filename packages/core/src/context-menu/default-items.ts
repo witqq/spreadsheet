@@ -12,13 +12,15 @@ import { InsertRowCommand, DeleteRowCommand } from '../commands/row-commands';
 import { BatchCellEditCommand } from '../commands/batch-cell-edit-command';
 import type { CellEdit } from '../commands/batch-cell-edit-command';
 import { serializeToTSV } from '../clipboard/clipboard-serializer';
+import type { ResolvedLocale } from '../locale/resolve-locale';
 
-export function createDefaultMenuItems(): ContextMenuItem[] {
+export function createDefaultMenuItems(locale?: ResolvedLocale): ContextMenuItem[] {
+  const cm = locale?.contextMenu;
   return [
     // ─── Clipboard items (all contexts with selection) ───
     {
       id: 'cut',
-      label: 'Cut',
+      label: cm?.cut ?? 'Cut',
       icon: '✂',
       shortcut: 'Ctrl+X',
       contexts: ['cell', 'header', 'row-number'],
@@ -30,7 +32,9 @@ export function createDefaultMenuItems(): ContextMenuItem[] {
         if (data.length === 0) return;
 
         const tsv = serializeToTSV(data);
-        navigator.clipboard.writeText(tsv).catch(() => {/* ignore */});
+        navigator.clipboard.writeText(tsv).catch(() => {
+          /* ignore */
+        });
 
         // Clear source cells
         const sel = engine.getSelectionManager().getSelection();
@@ -60,7 +64,7 @@ export function createDefaultMenuItems(): ContextMenuItem[] {
     },
     {
       id: 'copy',
-      label: 'Copy',
+      label: cm?.copy ?? 'Copy',
       icon: '📋',
       shortcut: 'Ctrl+C',
       separator: true,
@@ -73,52 +77,59 @@ export function createDefaultMenuItems(): ContextMenuItem[] {
         if (data.length === 0) return;
 
         const tsv = serializeToTSV(data);
-        navigator.clipboard.writeText(tsv).catch(() => {/* ignore */});
+        navigator.clipboard.writeText(tsv).catch(() => {
+          /* ignore */
+        });
       },
     },
     {
       id: 'paste',
-      label: 'Paste',
+      label: cm?.paste ?? 'Paste',
       icon: '📥',
       shortcut: 'Ctrl+V',
       separator: true,
       contexts: ['cell'],
       action: (ctx) => {
         const engine = ctx.engine;
-        navigator.clipboard.readText().then((text) => {
-          if (!text) return;
-          const rows = text.split('\n').map((line) => line.split('\t'));
-          const sel = engine.getSelectionManager().getSelection();
-          const startRow = sel.activeCell.row;
-          const startCol = sel.activeCell.col;
-          const dataView = engine.getDataView();
-          const cellStore = engine.getCellStore();
-          const cmdMgr = engine.getCommandManager();
-          const maxRow = engine.getSelectionManager().rowCount - 1;
-          const maxCol = engine.getSelectionManager().colCount - 1;
+        navigator.clipboard
+          .readText()
+          .then((text) => {
+            if (!text) return;
+            const rows = text.split('\n').map((line) => line.split('\t'));
+            const sel = engine.getSelectionManager().getSelection();
+            const startRow = sel.activeCell.row;
+            const startCol = sel.activeCell.col;
+            const dataView = engine.getDataView();
+            const cellStore = engine.getCellStore();
+            const cmdMgr = engine.getCommandManager();
+            const maxRow = engine.getSelectionManager().rowCount - 1;
+            const maxCol = engine.getSelectionManager().colCount - 1;
 
-          const edits: CellEdit[] = [];
-          for (let r = 0; r < rows.length; r++) {
-            const targetRow = startRow + r;
-            if (targetRow > maxRow) break;
-            const physRow = dataView.getPhysicalRow(targetRow);
-            if (physRow < 0) continue;
-            for (let c = 0; c < rows[r].length; c++) {
-              const targetCol = startCol + c;
-              if (targetCol > maxCol) break;
-              const oldCell = cellStore.get(physRow, targetCol);
-              const oldValue = oldCell?.value ?? null;
-              const raw = rows[r][c];
-              const newValue = raw === '' ? null : (isNaN(Number(raw)) ? raw : Number(raw));
-              edits.push({ row: physRow, col: targetCol, oldValue, newValue });
+            const edits: CellEdit[] = [];
+            for (let r = 0; r < rows.length; r++) {
+              const targetRow = startRow + r;
+              if (targetRow > maxRow) break;
+              const physRow = dataView.getPhysicalRow(targetRow);
+              if (physRow < 0) continue;
+              for (let c = 0; c < rows[r].length; c++) {
+                const targetCol = startCol + c;
+                if (targetCol > maxCol) break;
+                const oldCell = cellStore.get(physRow, targetCol);
+                const oldValue = oldCell?.value ?? null;
+                const raw = rows[r][c];
+                const newValue = raw === '' ? null : isNaN(Number(raw)) ? raw : Number(raw);
+                edits.push({ row: physRow, col: targetCol, oldValue, newValue });
+              }
             }
-          }
-          if (edits.length > 0) {
-            const cmd = new BatchCellEditCommand(cellStore, edits);
-            cmdMgr.execute(cmd);
-            engine.render();
-          }
-        }).catch(() => {/* clipboard not available */});
+            if (edits.length > 0) {
+              const cmd = new BatchCellEditCommand(cellStore, edits);
+              cmdMgr.execute(cmd);
+              engine.render();
+            }
+          })
+          .catch(() => {
+            /* clipboard not available */
+          });
       },
       isDisabled: () => {
         return !navigator.clipboard?.readText;
@@ -128,7 +139,7 @@ export function createDefaultMenuItems(): ContextMenuItem[] {
     // ─── Sort items (header context) ───
     {
       id: 'sort-asc',
-      label: 'Sort Ascending',
+      label: cm?.sortAscending ?? 'Sort Ascending',
       icon: '↑',
       contexts: ['header'],
       action: (ctx) => {
@@ -137,7 +148,7 @@ export function createDefaultMenuItems(): ContextMenuItem[] {
     },
     {
       id: 'sort-desc',
-      label: 'Sort Descending',
+      label: cm?.sortDescending ?? 'Sort Descending',
       icon: '↓',
       separator: true,
       contexts: ['header'],
@@ -149,7 +160,7 @@ export function createDefaultMenuItems(): ContextMenuItem[] {
     // ─── Row operations (row-number context) ───
     {
       id: 'insert-row-above',
-      label: 'Insert Row Above',
+      label: cm?.insertRowAbove ?? 'Insert Row Above',
       icon: '⬆',
       contexts: ['row-number'],
       action: (ctx) => {
@@ -168,7 +179,7 @@ export function createDefaultMenuItems(): ContextMenuItem[] {
     },
     {
       id: 'insert-row-below',
-      label: 'Insert Row Below',
+      label: cm?.insertRowBelow ?? 'Insert Row Below',
       icon: '⬇',
       contexts: ['row-number'],
       action: (ctx) => {
@@ -187,7 +198,7 @@ export function createDefaultMenuItems(): ContextMenuItem[] {
     },
     {
       id: 'delete-row',
-      label: 'Delete Row',
+      label: cm?.deleteRow ?? 'Delete Row',
       icon: '🗑',
       contexts: ['row-number'],
       action: (ctx) => {

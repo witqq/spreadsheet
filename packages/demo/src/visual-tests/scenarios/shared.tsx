@@ -11,9 +11,29 @@ export const standardColumns: ColumnDef[] = [
   { key: 'active', title: 'Active', width: 70, type: 'boolean' },
 ];
 
-const firstNames = ['Alice', 'Bob', 'Carol', 'David', 'Eve', 'Frank', 'Grace', 'Henry', 'Ivy', 'Jack'];
+const firstNames = [
+  'Alice',
+  'Bob',
+  'Carol',
+  'David',
+  'Eve',
+  'Frank',
+  'Grace',
+  'Henry',
+  'Ivy',
+  'Jack',
+];
 const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis'];
-const departments = ['Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations', 'Legal', 'Support'];
+const departments = [
+  'Engineering',
+  'Marketing',
+  'Sales',
+  'HR',
+  'Finance',
+  'Operations',
+  'Legal',
+  'Support',
+];
 
 export function generateRows(count: number): Record<string, unknown>[] {
   const rows: Record<string, unknown>[] = [];
@@ -31,17 +51,18 @@ export function generateRows(count: number): Record<string, unknown>[] {
   return rows;
 }
 
-export function ScenarioContainer({ width, height, background, children }: {
+export function ScenarioContainer({
+  width,
+  height,
+  background,
+  children,
+}: {
   width: number;
   height: number;
   background?: string;
   children: ReactNode;
 }) {
-  return (
-    <div style={{ width, height, background }}>
-      {children}
-    </div>
-  );
+  return <div style={{ width, height, background }}>{children}</div>;
 }
 
 export const tableStyle = { width: '100%' as const, height: '100%' as const };

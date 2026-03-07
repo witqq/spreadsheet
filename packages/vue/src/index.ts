@@ -22,8 +22,4 @@ export type {
   SpreadsheetTheme,
 } from '@witqq/spreadsheet';
 
-export {
-  SpreadsheetEngine,
-  lightTheme,
-  darkTheme,
-} from '@witqq/spreadsheet';
+export { SpreadsheetEngine, lightTheme, darkTheme } from '@witqq/spreadsheet';

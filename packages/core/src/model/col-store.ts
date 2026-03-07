@@ -84,10 +84,7 @@ export class ColStore {
   /**
    * Iterate visible column indices in a range (inclusive).
    */
-  *visibleColumnsInRange(
-    startCol: number,
-    endCol: number,
-  ): IterableIterator<number> {
+  *visibleColumnsInRange(startCol: number, endCol: number): IterableIterator<number> {
     const end = Math.min(endCol, this._columns.length - 1);
     for (let i = Math.max(startCol, 0); i <= end; i++) {
       if (!this.hiddenCols.has(i)) {

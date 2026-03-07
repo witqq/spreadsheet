@@ -174,7 +174,7 @@ export class StreamingAdapter {
       row: -1,
       col: -1,
       value: null,
-      column: { key: '_batch', title: '' },
+      column: { key: '_batch', title: '', width: 0 },
       oldValue: null,
       newValue: null,
       source: 'streaming-adapter',

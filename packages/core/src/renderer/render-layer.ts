@@ -39,4 +39,11 @@ export interface RenderContext {
 
 export interface RenderLayer {
   render(rc: RenderContext): void;
+  /**
+   * Optional bulk row height measurement.
+   * Returns a map of row index → desired height for visible rows.
+   * Used by the auto row size manager to collect height requirements
+   * from all render layers.
+   */
+  measureHeights?(rc: RenderContext): Map<number, number>;
 }

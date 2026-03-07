@@ -224,14 +224,20 @@ export class InlineEditor {
 
     if (this.currentMergeRegion) {
       // For merged cells, compute rect spanning the full region
-      const startRect = le.getCellRect(this.currentMergeRegion.startRow, this.currentMergeRegion.startCol);
-      const endRect = le.getCellRect(this.currentMergeRegion.endRow, this.currentMergeRegion.endCol);
+      const startRect = le.getCellRect(
+        this.currentMergeRegion.startRow,
+        this.currentMergeRegion.startCol,
+      );
+      const endRect = le.getCellRect(
+        this.currentMergeRegion.endRow,
+        this.currentMergeRegion.endCol,
+      );
       const scrollXOffset = this.currentCol < frozenCols ? 0 : sm.scrollX;
       const scrollYOffset = this.currentRow < frozenRows ? 0 : sm.scrollY;
       x = startRect.x - scrollXOffset;
       y = startRect.y - scrollYOffset;
-      width = (endRect.x + endRect.width) - startRect.x;
-      height = (endRect.y + endRect.height) - startRect.y;
+      width = endRect.x + endRect.width - startRect.x;
+      height = endRect.y + endRect.height - startRect.y;
     } else {
       // getCellRect returns absolute coordinates (including header/rowNumber offsets)
       const cellRect = le.getCellRect(this.currentRow, this.currentCol);
