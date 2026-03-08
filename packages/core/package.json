@@ -1,6 +1,6 @@
 {
   "name": "@witqq/spreadsheet",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Canvas-based spreadsheet engine \u2014 framework-agnostic core",
   "type": "module",
   "main": "./dist/index.cjs",

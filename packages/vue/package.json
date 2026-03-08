@@ -1,6 +1,6 @@
 {
   "name": "@witqq/spreadsheet-vue",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Vue 3 wrapper for witqq Canvas spreadsheet engine",
   "keywords": [
     "spreadsheet",
@@ -38,7 +38,7 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@witqq/spreadsheet": "*"
+    "@witqq/spreadsheet": "^0.2.1"
   },
   "peerDependencies": {
     "vue": "^3.3.0"

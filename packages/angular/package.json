@@ -1,6 +1,6 @@
 {
   "name": "@witqq/spreadsheet-angular",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Angular wrapper for witqq Canvas spreadsheet engine",
   "keywords": [
     "spreadsheet",
@@ -36,7 +36,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@witqq/spreadsheet": "*"
+    "@witqq/spreadsheet": "^0.2.1"
   },
   "peerDependencies": {
     "@angular/core": ">=17.0.0",
