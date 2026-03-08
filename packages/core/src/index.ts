@@ -68,6 +68,9 @@ export type {
   IconSetName,
   ComparisonOperator,
   CellChange,
+  CellStyleRef,
+  SelectionType,
+  BorderStyle,
 } from './types/interfaces';
 
 // Events

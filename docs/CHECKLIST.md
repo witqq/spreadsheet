@@ -37,6 +37,7 @@ Pre-merge quality gates for @witqq/spreadsheet.
 - [ ] New public APIs have TSDoc comments
 - [ ] Complex algorithms have inline comments explaining "why"
 - [ ] Demo page updated if feature is user-visible
+- [ ] Package README.md updated if public API changed (each `packages/*/README.md`)
 
 ## Review Criteria
 

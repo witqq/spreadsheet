@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Comprehensive API reference in all package READMEs (`packages/*/README.md`) for LLM/agent consumption from node_modules — 325 exports documented across core (220), react (18), vue (19), angular (13), plugins (40), widget (12), server (3)
+- Root README rewritten as LLM navigation hub with package decision tree and API overview
+- Re-exported `CellStyleRef`, `SelectionType`, `BorderStyle` types from `packages/core/src/index.ts`
 - Performance benchmark suite with `BenchmarkRunner`, `measureMultiRun`, `computeStats`, `measureThroughput` utilities
 - `npm run benchmark` script for running performance benchmarks
 - Baseline metrics for 6 categories across 1K/10K/100K row datasets

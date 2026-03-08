@@ -676,6 +676,7 @@ Defaults are applied inline using nullish coalescing (`??`) in the constructor a
 - **Stack**: Astro + Starlight
 - **Content**: `packages/site/src/content/docs/` (47 MDX files)
 - **API reference**: TypeDoc → `docs/api/` (auto-generated HTML)
+- **In-package docs**: Each `packages/*/README.md` contains comprehensive API reference for npm consumers
 
 ## Development
 
