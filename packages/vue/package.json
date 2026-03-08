@@ -1,6 +1,6 @@
 {
   "name": "@witqq/spreadsheet-vue",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Vue 3 wrapper for witqq Canvas spreadsheet engine",
   "keywords": [
     "spreadsheet",
