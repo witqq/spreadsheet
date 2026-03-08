@@ -265,5 +265,95 @@ describe('CellTypeRegistry', () => {
       registry.register('number', customNumber);
       expect(registry.get('number').format(42)).toBe('$42');
     });
+
+    it('registers custom renderer with measureHeight', () => {
+      const registry = new CellTypeRegistry();
+      const customRenderer: CellTypeRenderer = {
+        format: (v) => String(v),
+        align: 'left',
+        measureHeight: (_ctx, _value, width, _theme) => {
+          // Example: simulate height based on text that fills width
+          return width > 100 ? 28 : 56;
+        },
+      };
+      registry.register('custom', customRenderer);
+      const renderer = registry.get('custom');
+      expect(renderer.measureHeight).toBeTypeOf('function');
+
+      const ctx = {} as CanvasRenderingContext2D;
+      const theme = lightTheme;
+      expect(renderer.measureHeight!(ctx, 'test', 200, theme)).toBe(28);
+      expect(renderer.measureHeight!(ctx, 'test', 50, theme)).toBe(56);
+    });
+
+    it('built-in renderers do not have measureHeight', () => {
+      const registry = new CellTypeRegistry();
+      expect(registry.get('string').measureHeight).toBeUndefined();
+      expect(registry.get('number').measureHeight).toBeUndefined();
+      expect(registry.get('boolean').measureHeight).toBeUndefined();
+      expect(registry.get('date').measureHeight).toBeUndefined();
+    });
+  });
+
+  describe('setFormatLocale', () => {
+    it('defaults to en-US format locale', () => {
+      const registry = new CellTypeRegistry();
+      expect(registry.getFormatLocale()).toBe('en-US');
+    });
+
+    it('changes number formatting to specified locale', () => {
+      const registry = new CellTypeRegistry();
+      registry.setFormatLocale('de-DE');
+      expect(registry.getFormatLocale()).toBe('de-DE');
+      const formatted = registry.get('number').format(1234.56);
+      // German locale uses comma for decimal
+      expect(formatted).toContain(',');
+    });
+
+    it('changes date formatting to specified locale', () => {
+      const registry = new CellTypeRegistry();
+      registry.setFormatLocale('ru-RU');
+      const date = new Date(2025, 0, 15);
+      const formatted = registry.get('date').format(date);
+      // Russian date format: DD.MM.YYYY
+      expect(formatted).toContain('15');
+    });
+
+    it('preserves number renderer alignment after locale change', () => {
+      const registry = new CellTypeRegistry();
+      registry.setFormatLocale('fr-FR');
+      expect(registry.get('number').align).toBe('right');
+    });
+
+    it('preserves date renderer alignment after locale change', () => {
+      const registry = new CellTypeRegistry();
+      registry.setFormatLocale('ja-JP');
+      expect(registry.get('date').align).toBe('left');
+    });
+
+    it('handles null/undefined values after locale change', () => {
+      const registry = new CellTypeRegistry();
+      registry.setFormatLocale('ru-RU');
+      expect(registry.get('number').format(null)).toBe('');
+      expect(registry.get('number').format(undefined)).toBe('');
+      expect(registry.get('date').format(null)).toBe('');
+      expect(registry.get('date').format(undefined)).toBe('');
+    });
+
+    it('formats string dates with new locale', () => {
+      const registry = new CellTypeRegistry();
+      registry.setFormatLocale('en-GB');
+      const formatted = registry.get('date').format('2025-01-15');
+      expect(formatted).toContain('15');
+    });
+
+    it('does not affect string and boolean renderers', () => {
+      const registry = new CellTypeRegistry();
+      const strBefore = registry.get('string').format('test');
+      const boolBefore = registry.get('boolean').format(true);
+      registry.setFormatLocale('ja-JP');
+      expect(registry.get('string').format('test')).toBe(strBefore);
+      expect(registry.get('boolean').format(true)).toBe(boolBefore);
+    });
   });
 });

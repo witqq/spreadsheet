@@ -29,7 +29,7 @@ cellStore.clearMetadata(5, 3);
 
 ```ts
 // Load a chunk of data from an array
-cellStore.bulkLoadChunk(data, columnKeys, startRow);
+cellStore.bulkLoadChunk(startRow, data, columnKeys);
 
 // Generate rows with a factory function
 cellStore.bulkGenerate(startRow, count, columnKeys, (index) => ({
@@ -53,12 +53,12 @@ Each stored cell is represented by a `CellData` object:
 
 ```ts
 interface CellData {
-  value: CellValue;            // Raw value: string | number | boolean | Date | null
-  displayValue?: string;       // Formatted text shown in the cell
-  formula?: string;            // Formula string (e.g., "=SUM(A1:A10)")
-  style?: CellStyleRef;        // Reference to a shared style in the StylePool
-  type?: CellType;             // Overrides column-level type
-  metadata?: CellMetadata;     // Status indicators, links, comments
+  readonly value: CellValue;            // Raw value: string | number | boolean | Date | null
+  readonly displayValue?: string;       // Formatted text shown in the cell
+  readonly formula?: string;            // Formula string (e.g., "=SUM(A1:A10)")
+  readonly style?: CellStyleRef;        // Reference to a shared style in the StylePool
+  readonly type?: CellType;             // Overrides column-level type
+  readonly metadata?: CellMetadata;     // Status indicators, links, comments
 }
 ```
 
@@ -71,6 +71,7 @@ The `value` field stores one of:
 | `string` | `"Hello"` | Plain text |
 | `number` | `42`, `3.14` | Numeric values |
 | `boolean` | `true`, `false` | Rendered as checkbox |
+| `Date` | `new Date()` | JavaScript Date object |
 | `null` | `null` | Empty cell |
 
 The `displayValue` is the formatted string used for canvas rendering. For example, a number `1234.5` might have a `displayValue` of `"1,234.50"` depending on formatting. If `displayValue` is not set, `value` is converted to string for rendering.
@@ -119,20 +120,21 @@ The `LayoutEngine` combines RowStore and ColStore to compute cell rectangles:
 
 ```ts
 interface CellRect {
-  x: number;      // Left edge in pixels
-  y: number;      // Top edge in pixels
-  width: number;  // Cell width in pixels
-  height: number; // Cell height in pixels
+  readonly x: number;      // Left edge in pixels
+  readonly y: number;      // Top edge in pixels
+  readonly width: number;  // Cell width in pixels
+  readonly height: number; // Cell height in pixels
 }
 
 // O(1) - direct array lookup
 const rect = layoutEngine.getCellRect(row, col);
 
 // O(log n) - binary search on cumulative array
-const { row, col } = layoutEngine.getCellAt(pixelX, pixelY);
+const row = layoutEngine.getRowAtY(pixelY);
+const col = layoutEngine.getColAtX(pixelX);
 ```
 
-The `getCellAt` method is used by `EventTranslator` for hit-testing — converting mouse click coordinates into cell addresses.
+The `getRowAtY` and `getColAtX` methods are used by `EventTranslator` for hit-testing — converting mouse click coordinates into cell addresses.
 
 ## StylePool
 
@@ -140,9 +142,9 @@ The `StylePool` deduplicates cell styles. When multiple cells share the same sty
 
 ```ts
 // Two cells with identical styles share one object
-const styleId = stylePool.intern({ fontWeight: 'bold', color: '#333' });
-cellA.style = stylePool.get(styleId);
-cellB.style = stylePool.get(styleId); // Same reference as cellA.style
+const styleId = stylePool.intern({ fontWeight: 'bold', textColor: '#333' });
+cellA.style = stylePool.resolve(styleId);
+cellB.style = stylePool.resolve(styleId); // Same reference as cellA.style
 ```
 
 This reduces memory usage significantly in tables where many cells share common formatting.

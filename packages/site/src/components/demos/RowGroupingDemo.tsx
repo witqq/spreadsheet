@@ -32,7 +32,9 @@ const data = [
 export function RowGroupingDemo() {
   const { witTheme } = useSiteTheme();
   const tableRef = useRef<SpreadsheetRef>(null);
-  const [info, setInfo] = useState('3 groups: Electronics (3 items), Clothing (4 items), Food (2 items)');
+  const [info, setInfo] = useState(
+    '3 groups: Electronics (3 items), Clothing (4 items), Food (2 items)',
+  );
 
   useEffect(() => {
     const engine = tableRef.current?.getInstance();
@@ -57,13 +59,18 @@ export function RowGroupingDemo() {
     const engine = tableRef.current?.getInstance();
     if (!engine) return;
     const rgm = engine.getRowGroupManager();
-    if (expand) rgm.expandAll(); else rgm.collapseAll();
+    if (expand) rgm.expandAll();
+    else rgm.collapseAll();
     engine.requestRender();
     setInfo(expand ? 'All groups expanded' : 'All groups collapsed');
   };
 
   return (
-    <DemoWrapper title="Live Demo" description="Click group headers to expand/collapse. Sales and Revenue show sum aggregates for each group." height={440}>
+    <DemoWrapper
+      title="Live Demo"
+      description="Click group headers to expand/collapse. Sales and Revenue show sum aggregates for each group."
+      height={440}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <DemoToolbar>
           <DemoButton onClick={() => handleToggleAll(true)}>➕ Expand All</DemoButton>

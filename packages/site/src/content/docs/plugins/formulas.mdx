@@ -1,6 +1,6 @@
 ---
 title: "Formula Engine"
-description: "Spreadsheet formulas with cell references, 20+ built-in functions, and automatic recalculation."
+description: "Spreadsheet formulas with cell references, 19 built-in functions, and automatic recalculation."
 ---
 
 import { FormulaDemo } from '../../../components/demos/FormulaDemo';
@@ -124,12 +124,10 @@ Changing `A1` to `5` triggers: `B1` → `10`, then `C1` → `15`.
 
 | Error | Cause |
 |---|---|
-| `#REF!` | Invalid cell reference |
+| `#REF!` | Invalid cell reference or circular reference |
 | `#VALUE!` | Wrong argument type |
 | `#DIV/0!` | Division by zero |
 | `#NAME?` | Unknown function name |
-| `#NUM!` | Invalid numeric value |
-| `#NULL!` | Null intersection of ranges |
 
 ## Usage with React
 
@@ -216,6 +214,19 @@ extractDependencies(ast);     // ["0:0", "1:0", "1:1", ...] — all referenced c
 
 The dependency graph performs topological sort for recalculation order and detects circular references.
 
+### Convenience Helpers
+
+```typescript
+import { evaluateFormula, colLetterToIndex, colIndexToLetter } from '@witqq/spreadsheet-plugins';
+
+// One-shot formula evaluation (tokenize → parse → evaluate)
+const result = evaluateFormula('=SUM(A1:A10)', resolver);
+
+// Column letter/index conversion
+colLetterToIndex('C');   // 2
+colIndexToLetter(2);     // "C"
+```
+
 ## Worker Mode
 
 For large datasets, offload formula evaluation to a Web Worker:
@@ -295,12 +306,13 @@ interface PercentNode { type: 'Percent'; operand: ASTNode; }
 interface ErrorNode { type: 'Error'; error: FormulaError; }
 ```
 
-### FunctionDef
+### Function Implementation (Internal)
 
-Signature for built-in function implementations used by the evaluator.
+The built-in function registry is module-private and cannot be extended at runtime. Each function implementation follows this internal signature:
 
 ```ts
-type FunctionDef = (
+// Internal type — not exported
+type FnImpl = (
   args: ASTNode[],
   resolver: CellValueResolver,
   evalNode: (node: ASTNode) => FormulaResult,
@@ -315,3 +327,4 @@ Interface for resolving cell values during formula evaluation.
 interface CellValueResolver {
   getCellValue(row: number, col: number): unknown;
 }
+```

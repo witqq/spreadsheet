@@ -237,23 +237,6 @@ export class DependencyGraph {
     if (deps.includes(cell)) return true;
 
     // DFS: can we reach `cell` from any of its new deps?
-    const visited = new Set<string>();
-
-    function dfs(current: string, dependedBy: Map<string, Set<string>>): boolean {
-      if (current === cell) return true;
-      if (visited.has(current)) return false;
-      visited.add(current);
-
-      // Follow the "depends on" chain from current
-      // We need to check: if we go FROM deps through THEIR deps, can we reach cell?
-      const nextDeps = dependedBy.get(current);
-      if (nextDeps) {
-        for (const next of nextDeps) {
-          if (dfs(next, dependedBy)) return true;
-        }
-      }
-      return false;
-    }
 
     // We want to check: can any of `deps` reach `cell` through the dependedBy graph?
     // Actually, we need to check: if cell depends on deps, and some dep transitively depends on cell

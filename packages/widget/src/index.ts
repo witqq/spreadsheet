@@ -30,14 +30,9 @@ export interface WidgetConfig extends SpreadsheetEngineConfig {
  * @param config - Engine configuration (columns required)
  * @returns The SpreadsheetEngine instance for programmatic access
  */
-export function create(
-  container: HTMLElement | string,
-  config: WidgetConfig,
-): SpreadsheetEngine {
+export function create(container: HTMLElement | string, config: WidgetConfig): SpreadsheetEngine {
   const el =
-    typeof container === 'string'
-      ? document.querySelector<HTMLElement>(container)
-      : container;
+    typeof container === 'string' ? document.querySelector<HTMLElement>(container) : container;
 
   if (!el) {
     throw new Error(
@@ -73,10 +68,4 @@ export function embed(
 // Re-export core types needed by widget consumers
 export { SpreadsheetEngine, lightTheme, darkTheme };
 export type { SpreadsheetEngineConfig };
-export type {
-  ColumnDef,
-  CellData,
-  CellValue,
-  Selection,
-  CellAddress,
-} from '@witqq/spreadsheet';
+export type { ColumnDef, CellData, CellValue, Selection, CellAddress } from '@witqq/spreadsheet';

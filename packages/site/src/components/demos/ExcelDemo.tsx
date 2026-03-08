@@ -30,7 +30,9 @@ export function ExcelDemo() {
     try {
       setStatus('Exporting...');
       const buffer = await pluginRef.current.exportExcel({ sheetName: 'Employees' });
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -58,7 +60,11 @@ export function ExcelDemo() {
   };
 
   return (
-    <DemoWrapper title="Live Demo" description="Upload an .xlsx file or export the current table to Excel." height={440}>
+    <DemoWrapper
+      title="Live Demo"
+      description="Upload an .xlsx file or export the current table to Excel."
+      height={440}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <DemoToolbar>
           <input

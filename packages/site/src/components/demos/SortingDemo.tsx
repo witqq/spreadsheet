@@ -7,7 +7,7 @@ import { generateEmployees, employeeColumns } from './generate-data';
 import { useSiteTheme } from './useSiteTheme';
 
 const data = generateEmployees(100);
-const sortableColumns = employeeColumns.map(col => ({ ...col, sortable: true }));
+const sortableColumns = employeeColumns.map((col) => ({ ...col, sortable: true }));
 
 export function SortingDemo() {
   const { witTheme } = useSiteTheme();
@@ -19,15 +19,29 @@ export function SortingDemo() {
     if (cols.length === 0) {
       setSortInfo('No sort applied');
     } else {
-      const desc = cols.map(s => `${sortableColumns[s.col]?.title ?? `col ${s.col}`} (${s.direction})`).join(', ');
+      const desc = cols
+        .map((s) => `${sortableColumns[s.col]?.title ?? `col ${s.col}`} (${s.direction})`)
+        .join(', ');
       setSortInfo(`Sorted by: ${desc}`);
     }
   };
 
   return (
-    <DemoWrapper title="Live Demo" description="Click headers to sort. Hold Shift and click another header for multi-column sort." height={440}>
+    <DemoWrapper
+      title="Live Demo"
+      description="Click headers to sort. Hold Shift and click another header for multi-column sort."
+      height={440}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: '#64748b', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+        <div
+          style={{
+            padding: '0.5rem 0.75rem',
+            fontSize: '0.8rem',
+            color: '#64748b',
+            borderBottom: '1px solid #e2e8f0',
+            flexShrink: 0,
+          }}
+        >
           {sortInfo}
         </div>
         <div style={{ flex: 1 }}>

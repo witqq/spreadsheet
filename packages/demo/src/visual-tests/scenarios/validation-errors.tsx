@@ -30,7 +30,9 @@ export function ValidationErrors() {
     // Name is required
     ve.setColumnRules(1, [{ type: 'required', message: 'Name is required' }]);
     // Email must match pattern
-    ve.setColumnRules(2, [{ type: 'regex', pattern: '^[^@]+@[^@]+\\.[^@]+$', message: 'Invalid email' }]);
+    ve.setColumnRules(2, [
+      { type: 'regex', pattern: '^[^@]+@[^@]+\\.[^@]+$', message: 'Invalid email' },
+    ]);
     // Age: 0-120
     ve.setColumnRules(3, [{ type: 'range', min: 0, max: 120, message: 'Age must be 0-120' }]);
     // Score: 0-100

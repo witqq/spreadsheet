@@ -1,0 +1,99 @@
+---
+title: "Date & DateTime Editors"
+description: "Calendar overlay for date cells and datetime cells with time spinners — keyboard navigation, positioning, and format handling."
+---
+
+# Date & DateTime Editors
+
+Columns with `type: 'date'` or `type: 'datetime'` open a calendar overlay when a cell is activated (double-click or Enter). The date editor commits on day selection; the datetime editor adds hour and minute spinners before committing.
+
+## Configuration
+
+Set the column type to activate the corresponding editor:
+
+```ts
+const columns: ColumnDef[] = [
+  { key: 'dueDate', title: 'Due Date', width: 120, type: 'date' },
+  { key: 'timestamp', title: 'Timestamp', width: 160, type: 'datetime' },
+];
+```
+
+No additional configuration is needed — the editor is registered automatically via the [cell editor registry](/guides/cell-editor-registry/).
+
+## Date Editor
+
+The `DatePickerEditor` renders a calendar grid inside a `<div role="dialog">`.
+
+- **Trigger**: Double-click or Enter on a date cell
+- **Positioning**: Below the cell; flips above if no room below; clamped horizontally to container bounds
+- **Width**: 224px, z-index 50
+- **Day click**: Selects the date, commits immediately, and closes
+- **Footer**: "Today" button to jump to the current date
+- **Commit format**: `YYYY-MM-DD`
+
+### Input Parsing
+
+Accepts `Date` objects, ISO strings (`YYYY-MM-DD`), and numeric timestamps.
+
+## DateTime Editor
+
+The `DateTimeEditor` extends the calendar with hour and minute spin groups.
+
+- **Day click**: Sets the selected date but stays open for time editing
+- **Time inputs**: Two spin groups (hour 0–23, minute 0–59) with ▲/▼ buttons and editable text inputs
+- **Footer**: "Now" button (sets current date and time) and "OK" button (commits)
+- **Width**: 240px
+- **Commit format**: `YYYY-MM-DDTHH:mm` (ISO)
+
+### Time Input Behavior
+
+- Arrow Up/Down on a time input increments or decrements with wrapping (59 → 0, 23 → 0)
+- Values are clamped to the valid range on manual entry
+- Focus tracking highlights the active section (calendar, hour, or minute)
+
+## Keyboard Navigation
+
+### Calendar
+
+| Key | Action |
+|---|---|
+| Arrow Left/Right | Move ±1 day |
+| Arrow Up/Down | Move ±7 days (one week) |
+| Enter | Commit (date: select day; datetime: commit date+time) |
+| Escape | Close without committing |
+| Tab | Date: commits and closes. Datetime: cycles focus (calendar → hour → minute) |
+| Shift+Tab | Datetime: reverse focus cycle |
+
+Crossing month boundaries auto-navigates to the previous or next month.
+
+## Overlay Positioning
+
+Both editors calculate position from `LayoutEngine.getCellRect()`, adjusted for scroll offset:
+
+1. Place below the cell (`y + cellHeight`)
+2. If insufficient space below, flip above
+3. Clamp horizontally within the container
+4. Frozen cells account for their fixed position (no scroll adjustment)
+
+## Close Triggers
+
+The overlay closes on:
+
+- Outside click (`mousedown` outside the dialog)
+- Scroll (unless the cell is in a frozen corner — both row and column frozen)
+- Escape key
+- Programmatic close via `editor.close()`
+
+## Locale Integration
+
+Calendar labels (week day names, month names, "Today"/"Now" button text) are provided by the [locale system](/guides/locale/):
+
+- `datePicker`: `weekLabels`, `monthNames`, `today`, `ariaLabel`
+- `dateTimePicker`: `hour`, `minute`, `now`, `ariaLabel`
+
+Locale changes at runtime propagate to open editors.
+
+## See Also
+
+- [Cell Editor Registry](/guides/cell-editor-registry/) — how editors are registered and selected
+- [Locale System](/guides/locale/) — translating editor labels

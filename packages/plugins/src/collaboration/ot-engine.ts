@@ -14,12 +14,7 @@
  * Invariant: apply(apply(state, opA), opB') === apply(apply(state, opB), opA')
  */
 
-import type {
-  OTOperation,
-  SetCellValueOp,
-  InsertRowOp,
-  DeleteRowOp,
-} from './ot-types';
+import type { OTOperation, SetCellValueOp, InsertRowOp, DeleteRowOp } from './ot-types';
 
 export type TransformResult = [OTOperation | null, OTOperation | null];
 
@@ -27,10 +22,7 @@ export type TransformResult = [OTOperation | null, OTOperation | null];
  * Transform opA against opB, returning [opA', opB'].
  * null means the operation becomes a no-op.
  */
-export function transform(
-  opA: OTOperation,
-  opB: OTOperation,
-): TransformResult {
+export function transform(opA: OTOperation, opB: OTOperation): TransformResult {
   const key = `${opA.type}:${opB.type}` as const;
 
   switch (key) {
@@ -41,21 +33,15 @@ export function transform(
     case 'setCellValue:deleteRow':
       return transformSetDelete(opA as SetCellValueOp, opB as DeleteRowOp);
     case 'insertRow:setCellValue':
-      return swap(
-        transformSetInsert(opB as SetCellValueOp, opA as InsertRowOp),
-      );
+      return swap(transformSetInsert(opB as SetCellValueOp, opA as InsertRowOp));
     case 'insertRow:insertRow':
       return transformInsertInsert(opA as InsertRowOp, opB as InsertRowOp);
     case 'insertRow:deleteRow':
       return transformInsertDelete(opA as InsertRowOp, opB as DeleteRowOp);
     case 'deleteRow:setCellValue':
-      return swap(
-        transformSetDelete(opB as SetCellValueOp, opA as DeleteRowOp),
-      );
+      return swap(transformSetDelete(opB as SetCellValueOp, opA as DeleteRowOp));
     case 'deleteRow:insertRow':
-      return swap(
-        transformInsertDelete(opB as InsertRowOp, opA as DeleteRowOp),
-      );
+      return swap(transformInsertDelete(opB as InsertRowOp, opA as DeleteRowOp));
     case 'deleteRow:deleteRow':
       return transformDeleteDelete(opA as DeleteRowOp, opB as DeleteRowOp);
     default:
@@ -69,10 +55,7 @@ function swap(result: TransformResult): TransformResult {
 
 // ─── setCellValue × setCellValue ────────────────────────
 
-function transformSetSet(
-  a: SetCellValueOp,
-  b: SetCellValueOp,
-): TransformResult {
+function transformSetSet(a: SetCellValueOp, b: SetCellValueOp): TransformResult {
   if (a.row === b.row && a.col === b.col) {
     // Both edit the same cell — last-writer-wins (opB wins as "server" op)
     // opA becomes no-op, opB stays
@@ -84,10 +67,7 @@ function transformSetSet(
 
 // ─── setCellValue × insertRow ───────────────────────────
 
-function transformSetInsert(
-  set: SetCellValueOp,
-  ins: InsertRowOp,
-): TransformResult {
+function transformSetInsert(set: SetCellValueOp, ins: InsertRowOp): TransformResult {
   if (set.row >= ins.row) {
     // Cell shifted down by insert
     return [{ ...set, row: set.row + ins.count }, ins];
@@ -97,10 +77,7 @@ function transformSetInsert(
 
 // ─── setCellValue × deleteRow ───────────────────────────
 
-function transformSetDelete(
-  set: SetCellValueOp,
-  del: DeleteRowOp,
-): TransformResult {
+function transformSetDelete(set: SetCellValueOp, del: DeleteRowOp): TransformResult {
   if (set.row >= del.row && set.row < del.row + del.count) {
     // Cell is in deleted range — set becomes no-op
     return [null, del];
@@ -114,10 +91,7 @@ function transformSetDelete(
 
 // ─── insertRow × insertRow ──────────────────────────────
 
-function transformInsertInsert(
-  a: InsertRowOp,
-  b: InsertRowOp,
-): TransformResult {
+function transformInsertInsert(a: InsertRowOp, b: InsertRowOp): TransformResult {
   if (a.row <= b.row) {
     // A inserts before or at B's position — B shifts down
     return [a, { ...b, row: b.row + a.count }];
@@ -128,10 +102,7 @@ function transformInsertInsert(
 
 // ─── insertRow × deleteRow ──────────────────────────────
 
-function transformInsertDelete(
-  ins: InsertRowOp,
-  del: DeleteRowOp,
-): TransformResult {
+function transformInsertDelete(ins: InsertRowOp, del: DeleteRowOp): TransformResult {
   if (ins.row <= del.row) {
     // Insert before delete range — delete shifts down
     return [ins, { ...del, row: del.row + ins.count }];
@@ -146,10 +117,7 @@ function transformInsertDelete(
 
 // ─── deleteRow × deleteRow ──────────────────────────────
 
-function transformDeleteDelete(
-  a: DeleteRowOp,
-  b: DeleteRowOp,
-): TransformResult {
+function transformDeleteDelete(a: DeleteRowOp, b: DeleteRowOp): TransformResult {
   const aEnd = a.row + a.count;
   const bEnd = b.row + b.count;
 

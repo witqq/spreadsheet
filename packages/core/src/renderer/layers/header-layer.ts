@@ -80,7 +80,7 @@ export class HeaderLayer implements RenderLayer {
       // Icon zone layout: rightmost 28px of cell
       // [... title ...][filter 14px][sort 14px]
       const iconZoneRight = cr.x + cr.width - padding - scrollX;
-      const sortCenterX = iconZoneRight - 7;   // center of right 14px
+      const sortCenterX = iconZoneRight - 7; // center of right 14px
       const filterCenterX = iconZoneRight - 21; // center of left 14px
       const centerY = headerHeight / 2;
 

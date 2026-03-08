@@ -1,0 +1,101 @@
+---
+title: "Column Stretch"
+description: "Auto-fill container width by distributing extra space to columns — 'all' for even distribution, 'last' for last column."
+---
+
+# Column Stretch
+
+When total column width is less than the container width, `stretchColumns` distributes the remaining space so columns fill the container. Two modes are available: `'all'` distributes space evenly across stretchable columns, `'last'` gives all extra space to the last visible column.
+
+## Configuration
+
+```ts
+<Spreadsheet
+  columns={columns}
+  data={data}
+  stretchColumns="all"
+/>
+```
+
+| Value | Behavior |
+|---|---|
+| `'all'` | Extra space distributed evenly among stretchable columns |
+| `'last'` | All extra space added to the last visible column |
+| `undefined` | No stretching (default) — columns use their defined widths |
+
+## How It Works
+
+The `ColumnStretchManager` calculates stretched widths:
+
+1. Sum all visible column widths
+2. If total ≥ container width → no stretch needed (return)
+3. Calculate `extraSpace = containerWidth - totalColumnWidth`
+4. Distribute based on mode
+
+### `'all'` Mode
+
+Extra space is divided equally among stretchable columns. A column is stretchable if it is:
+
+- Not frozen
+- Not manually resized by the user
+
+```
+perColumn = extraSpace / stretchableCount
+newWidth = Math.max(currentWidth + perColumn, minWidth ?? 30)
+```
+
+If all columns are frozen or manually resized, `'all'` mode falls back to `'last'` mode.
+
+### `'last'` Mode
+
+All extra space goes to the last visible column:
+
+```
+lastColumnWidth = currentWidth + extraSpace
+```
+
+## Manual Column Resize
+
+When a user manually resizes a column:
+
+1. The column is marked as `manuallyResized`
+2. Stretch recalculates — the resized column keeps its manual width
+3. Remaining extra space is redistributed among non-manual, non-frozen columns
+
+Manual resize marks are tracked in a `Set`. Clearing marks (e.g., on column reorder) re-enables stretch for those columns.
+
+## Container Resize
+
+A `ResizeObserver` monitors the container element. When the container changes size:
+
+1. Canvas dimensions are synced
+2. Column stretch recalculates with the new container width
+3. The table re-renders with updated widths
+
+This means stretch responds automatically to browser window resize, sidebar toggles, or any container layout change.
+
+## Frozen Column Interaction
+
+Frozen columns are never stretched — their widths are fixed. However, their widths count toward the total, reducing the available space for stretched columns.
+
+```
+Available stretch space = containerWidth - totalVisibleColumnWidths
+```
+
+## Minimum Column Width
+
+Each column respects `ColumnDef.minWidth` (default: 30px). Stretch never shrinks a column below its minimum. If the `perColumn` addition would result in a width below `minWidth`, the minimum is enforced.
+
+## When Stretch Has No Effect
+
+Stretch does nothing when:
+
+- Total column width already equals or exceeds container width
+- `stretchColumns` is not set
+- Container width is unknown (not yet mounted)
+
+## See Also
+
+- [Column & Row Resize](/guides/resize/) — manual column resizing
+- [Frozen Panes](/guides/frozen-panes/) — frozen columns are excluded from stretch
+- [Text Wrapping](/guides/text-wrapping/) — stretched columns affect available wrap width

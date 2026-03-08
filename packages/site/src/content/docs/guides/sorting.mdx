@@ -37,8 +37,8 @@ function App() {
       columns={columns}
       data={data}
       sortable={true}
-      onSortChange={(sortColumns) => {
-        console.log('Sort changed:', sortColumns);
+      onSortChange={(event) => {
+        console.log('Sort changed:', event.sortColumns);
       }}
     />
   );
@@ -74,7 +74,7 @@ const cols = ref.current?.getInstance().getSortEngine().sortColumns;
 
 | Method | Signature | Description |
 |---|---|---|
-| `toggleColumn` | `(col: number) => SortColumn[]` | Cycle sort on column (none→asc→desc→none) |
+| `toggleColumn` | `(col: number, multiColumn?: boolean) => SortColumn[]` | Cycle sort on column (none→asc→desc→none) |
 | `setSortColumns` | `(columns: SortColumn[]) => void` | Set full sort state |
 | `clearSort` | `() => void` | Remove all sorting |
 | `sortColumns` | `readonly SortColumn[]` | Current sort columns (getter) |
@@ -96,7 +96,7 @@ The low-level comparison function used by `SortEngine`:
 import { compareCellValues } from '@witqq/spreadsheet';
 
 // Type-aware: number < boolean < string, nulls always last
-compareCellValues(valA, valB, 'asc'); // -1 | 0 | 1
+compareCellValues(valA, valB); // -1 | 0 | 1
 ```
 
 ## See Also

@@ -41,9 +41,7 @@ export class MergeManager {
    * Returns false if no region starts at that position.
    */
   unmerge(startRow: number, startCol: number): boolean {
-    const idx = this.regions.findIndex(
-      (r) => r.startRow === startRow && r.startCol === startCol,
-    );
+    const idx = this.regions.findIndex((r) => r.startRow === startRow && r.startCol === startCol);
     if (idx === -1) return false;
 
     const region = this.regions[idx];
@@ -102,11 +100,7 @@ export class MergeManager {
    * Validate a merge against frozen pane boundaries.
    * Returns an error message string, or null if valid.
    */
-  validateMerge(
-    region: MergedRegion,
-    frozenRows: number,
-    frozenCols: number,
-  ): string | null {
+  validateMerge(region: MergedRegion, frozenRows: number, frozenCols: number): string | null {
     const cellCount = (region.endRow - region.startRow + 1) * (region.endCol - region.startCol + 1);
     if (cellCount < 2 || region.startRow > region.endRow || region.startCol > region.endCol) {
       return 'Merge region must contain at least 2 cells';

@@ -1,0 +1,118 @@
+---
+title: "Locale System"
+description: "Built-in locales, custom translations, runtime locale switching, and how locale affects date/number formatting and UI labels."
+---
+
+# Locale System
+
+The locale system translates UI labels (context menus, filters, date pickers) and controls date/number formatting. Pass a `SpreadsheetLocale` object to configure translations.
+
+## Configuration
+
+```ts
+import { ruLocale } from '@witqq/spreadsheet';
+
+<Spreadsheet
+  columns={columns}
+  data={data}
+  locale={ruLocale}
+/>
+```
+
+## Built-in Locales
+
+| Locale | Import | Format Locale |
+|---|---|---|
+| English (default) | `enLocale` | `en-US` |
+| Russian | `ruLocale` | `ru-RU` |
+
+English is the default when no locale is provided.
+
+## Locale Interface
+
+`SpreadsheetLocale` is organized by category. All fields are optional — missing keys fall back to English.
+
+### Categories
+
+**`formatLocale`** — BCP 47 tag for `toLocaleString()` and `toLocaleDateString()` formatting.
+
+**`contextMenu`** — 8 keys:
+`cut`, `copy`, `paste`, `sortAscending`, `sortDescending`, `insertRowAbove`, `insertRowBelow`, `deleteRow`
+
+**`datePicker`** — Calendar labels:
+`weekLabels` (7-tuple), `monthNames` (12-tuple), `today`, `ariaLabel`
+
+**`dateTimePicker`** — Time input labels:
+`hour`, `minute`, `now`, `ariaLabel`
+
+**`filter`** — 16 keys:
+`equals`, `notEquals`, `contains`, `startsWith`, `endsWith`, `greaterThan`, `lessThan`, `greaterOrEqual`, `lessOrEqual`, `between`, `isEmpty`, `isNotEmpty`, `valuePlaceholder`, `toValuePlaceholder`, `apply`, `clear`
+
+**`grouping`** — Aggregate labels:
+`sum`, `count`, `avg`, `min`, `max`
+
+**`emptyState`** — `noData`
+
+**`print`** — `showingRows` (template with `{shown}` and `{total}` placeholders)
+
+**`aria`** — Accessibility announcements:
+`cellAnnouncement`, `cellEmpty`, `sortCleared`, `sortAscending`, `sortDescending`, `sortedBy`, `filterCleared`, `filterActive`
+
+## Creating Custom Locales
+
+Supply a partial `SpreadsheetLocale` — only override the keys you need:
+
+```ts
+const deLocale: SpreadsheetLocale = {
+  formatLocale: 'de-DE',
+  contextMenu: {
+    cut: 'Ausschneiden',
+    copy: 'Kopieren',
+    paste: 'Einfügen',
+    sortAscending: 'Aufsteigend sortieren',
+    sortDescending: 'Absteigend sortieren',
+    insertRowAbove: 'Zeile oben einfügen',
+    insertRowBelow: 'Zeile unten einfügen',
+    deleteRow: 'Zeile löschen',
+  },
+  filter: {
+    apply: 'Anwenden',
+    clear: 'Löschen',
+  },
+};
+```
+
+## Fallback Behavior
+
+`resolveLocale()` performs a shallow merge per category:
+
+```
+resolved.contextMenu = { ...enLocale.contextMenu, ...locale.contextMenu }
+resolved.filter = { ...enLocale.filter, ...locale.filter }
+// ... for each category
+```
+
+Any key not provided in the custom locale uses its English value.
+
+## Runtime Locale Switching
+
+Call `engine.setLocale(locale)` to change the locale after initialization. This:
+
+1. Merges the new locale with English defaults
+2. Propagates to 7 subsystems: context menu, cell editor registry, filter panel, grid renderer, row group manager, ARIA manager, print manager
+3. Updates `formatLocale` on the cell type registry (affects number and date rendering)
+4. Marks the grid dirty and triggers a re-render
+
+## Date and Number Formatting
+
+The `formatLocale` string (BCP 47 tag) controls how numbers and dates are displayed:
+
+- **Numbers**: `value.toLocaleString(formatLocale)` — applies locale-specific thousands separators and decimal points
+- **Dates**: `date.toLocaleDateString(formatLocale)` — applies locale-specific date formatting
+
+Setting `formatLocale: 'de-DE'` displays `1.234,56` instead of `1,234.56` for numbers, and `15.3.2025` instead of `3/15/2025` for dates.
+
+## See Also
+
+- [Date & DateTime Editors](/guides/date-editors/) — calendar labels are locale-aware
+- [Cell Editor Registry](/guides/cell-editor-registry/) — locale propagation to editors

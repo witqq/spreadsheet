@@ -54,7 +54,6 @@ export class AutofillManager {
   private readonly eventBus: EventBus;
   private readonly dirtyTracker: DirtyTracker;
   private readonly renderScheduler: RenderScheduler;
-  private readonly container: HTMLElement;
   private readonly rowCount: number;
   private readonly colCount: number;
   private readonly mergeManager?: MergeManager;
@@ -76,7 +75,6 @@ export class AutofillManager {
     this.eventBus = config.eventBus;
     this.dirtyTracker = config.dirtyTracker;
     this.renderScheduler = config.renderScheduler;
-    this.container = config.container;
     this.rowCount = config.rowCount;
     this.colCount = config.colCount;
     this.mergeManager = config.mergeManager;

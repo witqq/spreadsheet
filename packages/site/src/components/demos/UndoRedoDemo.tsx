@@ -17,11 +17,15 @@ export function UndoRedoDemo() {
   const handleUndo = useCallback(() => tableRef.current?.undo(), []);
   const handleRedo = useCallback(() => tableRef.current?.redo(), []);
   const handleCellChange = useCallback((_event: CellChangeEvent) => {
-    setEditCount(prev => prev + 1);
+    setEditCount((prev) => prev + 1);
   }, []);
 
   return (
-    <DemoWrapper title="Live Demo" description="Double-click to edit cells. Use the buttons or Ctrl+Z / Ctrl+Y to undo and redo." height={440}>
+    <DemoWrapper
+      title="Live Demo"
+      description="Double-click to edit cells. Use the buttons or Ctrl+Z / Ctrl+Y to undo and redo."
+      height={440}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <DemoToolbar>
           <DemoButton onClick={handleUndo}>↩ Undo</DemoButton>

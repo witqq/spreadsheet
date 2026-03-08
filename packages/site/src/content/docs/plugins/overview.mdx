@@ -37,8 +37,8 @@ interface SpreadsheetPlugin {
 | `name` | Unique identifier (e.g. `'formula'`, `'conditional-format'`) |
 | `version` | Semver string |
 | `dependencies` | Optional array of plugin names that must be installed first |
-| `install(api)` | Called when the plugin is added to the engine |
-| `destroy()` | Optional cleanup — unbind events, remove layers |
+| `install(api)` | Called when the plugin is added to the engine. If the engine is not yet mounted, `install()` is deferred until `engine.mount()` is called |
+| `destroy()` | Optional cleanup — plugins must manually unbind event handlers and remove layers |
 
 ## PluginAPI
 
@@ -67,6 +67,8 @@ engine.installPlugin(myPlugin);
 engine.removePlugin('my-plugin');
 ```
 
+When `engine.destroy()` is called, plugins are destroyed in **reverse installation order**.
+
 ### Via React ref
 
 ```tsx
@@ -81,7 +83,7 @@ tableRef.current?.removePlugin('my-plugin');
 
 | Plugin | Package | Description |
 |---|---|---|
-| `FormulaPlugin` | `@witqq/spreadsheet-plugins` | Spreadsheet formulas with dependency graph |
+| `FormulaPlugin` | `@witqq/spreadsheet-plugins` | Spreadsheet formulas with dependency graph. Supports `worker` option for off-thread calculation |
 | `ConditionalFormattingPlugin` | `@witqq/spreadsheet-plugins` | Color scales, data bars, icon sets |
 | `ExcelPlugin` | `@witqq/spreadsheet-plugins` | Import/export `.xlsx` via lazy-loaded SheetJS |
 | `createContextMenuPlugin` | `@witqq/spreadsheet-plugins` | Right-click context menu with custom items |
@@ -93,7 +95,7 @@ tableRef.current?.removePlugin('my-plugin');
 A plugin that highlights the active row:
 
 ```ts
-import type { SpreadsheetPlugin, PluginAPI } from '@witqq/spreadsheet';
+import type { SpreadsheetPlugin, PluginAPI, SelectionChangeEvent } from '@witqq/spreadsheet';
 
 const activeRowPlugin: SpreadsheetPlugin = {
   name: 'active-row-highlight',
@@ -102,7 +104,7 @@ const activeRowPlugin: SpreadsheetPlugin = {
   install(api: PluginAPI) {
     const { engine } = api;
 
-    const handler = (event: { selection: Selection }) => {
+    const handler = (event: SelectionChangeEvent) => {
       const row = event.selection.activeCell.row;
       api.setPluginState('activeRow', row);
       engine.requestRender();
@@ -113,7 +115,8 @@ const activeRowPlugin: SpreadsheetPlugin = {
   },
 
   destroy() {
-    // Cleanup handled by engine when plugin is removed
+    // Plugins must manually unbind event handlers here.
+    // The engine does NOT auto-unbind handlers on plugin removal.
   },
 };
 ```

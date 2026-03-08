@@ -6,7 +6,7 @@
     "composite": true,
     "emitDeclarationOnly": true
   },
-  "include": ["src", "formula/src", "context-menu/src", "conditional-format/src", "excel/src"],
+  "include": ["src", "formula/src", "context-menu/src", "conditional-format/src", "excel/src", "progressive-loader/src"],
   "references": [
     { "path": "../core" }
   ]

@@ -135,7 +135,6 @@ export class ExcelPlugin implements SpreadsheetPlugin {
     const range = XLSX.utils.decode_range(ws['!ref']);
     const headerRow = range.s.r;
     const dataStartRow = headerRow + 1;
-    const colCount = range.e.c - range.s.c + 1;
     const dataRowCount = range.e.r - dataStartRow + 1;
 
     // Derive columns from header row

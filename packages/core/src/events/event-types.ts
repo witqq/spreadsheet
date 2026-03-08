@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2025 witqq contributors
 
-import type { CellValue, CellRange, Selection, ColumnDef, CellMetadata, ValidationResult } from '../types/interfaces';
+import type {
+  CellValue,
+  CellRange,
+  Selection,
+  ColumnDef,
+  CellMetadata,
+  ValidationResult,
+} from '../types/interfaces';
 import type { FillDirection } from '../autofill/autofill-manager';
 import type { SpreadsheetTheme } from '../themes/theme-types';
 
@@ -36,7 +43,15 @@ export interface ScrollEvent {
 
 // --- Internal Grid Events ---
 
-export type HitRegion = 'cell' | 'header' | 'header-sort-icon' | 'header-filter-icon' | 'row-number' | 'row-group-toggle' | 'corner' | 'outside';
+export type HitRegion =
+  | 'cell'
+  | 'header'
+  | 'header-sort-icon'
+  | 'header-filter-icon'
+  | 'row-number'
+  | 'row-group-toggle'
+  | 'corner'
+  | 'outside';
 
 export interface HitTestResult {
   /** Region of the grid that was hit. */

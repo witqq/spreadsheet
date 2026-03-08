@@ -31,8 +31,8 @@ function App() {
       columns={columns}
       data={data}
       editable={true}
-      onCellChange={(row, col, oldValue, newValue) => {
-        console.log(`Cell [${row},${col}]: ${oldValue} → ${newValue}`);
+      onCellChange={(event) => {
+        console.log(`Cell [${event.row},${event.col}]: ${event.oldValue} → ${event.newValue}`);
         // Update your data source
       }}
     />
@@ -58,14 +58,17 @@ const columns: ColumnDef[] = [
 When the editor closes, the reason is provided as `EditorCloseReason`:
 
 ```typescript
-type EditorCloseReason = 'enter' | 'tab' | 'escape' | 'blur' | 'scroll';
+type EditorCloseReason = 'enter' | 'shift-enter' | 'tab' | 'shift-tab' | 'escape' | 'blur' | 'scroll' | 'programmatic';
 ```
 
 - `enter` — User pressed Enter (commits value, moves down)
+- `shift-enter` — User pressed Shift+Enter (commits value, moves up)
 - `tab` — User pressed Tab (commits value, moves to next cell)
+- `shift-tab` — User pressed Shift+Tab (commits value, moves to previous cell)
 - `escape` — User pressed Escape (cancels edit, restores original)
 - `blur` — Editor lost focus (commits value)
 - `scroll` — User scrolled while editing (auto-commits value)
+- `programmatic` — Closed by code via API call
 
 ## API Reference
 
@@ -73,7 +76,12 @@ type EditorCloseReason = 'enter' | 'tab' | 'escape' | 'blur' | 'scroll';
 
 | Method | Signature | Description |
 |---|---|---|
-| `open` | `(row: number, col: number) => void` | Open editor on cell |
-| `commitAndClose` | `() => void` | Commit current value and close |
+| `open` | `(row: number, col: number, initialText?: string) => void` | Open editor on cell |
+| `commitAndClose` | `(reason: EditorCloseReason) => void` | Commit current value and close |
 | `cancelAndClose` | `() => void` | Discard changes and close |
-| `isEditing` | `() => boolean` | Whether editor is currently open |
+| `isEditing` | `boolean` (getter) | Whether editor is currently open |
+
+## See Also
+
+- [Date & DateTime Editors](/guides/date-editors/) — calendar overlay for date and datetime cells
+- [Cell Editor Registry](/guides/cell-editor-registry/) — register custom editors and control editor selection

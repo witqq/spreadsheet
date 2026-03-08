@@ -24,13 +24,13 @@ All inter-subsystem communication in @witqq/spreadsheet goes through a typed `Ev
 const engine = tableRef.current?.getInstance();
 
 // Subscribe to an event
-const unsubscribe = engine.on('cellChange', (event) => {
+engine.on('cellChange', (event) => {
   console.log(`Cell [${event.row}, ${event.col}] changed`);
   console.log(`Old: ${event.oldValue}, New: ${event.newValue}`);
 });
 
 // Unsubscribe when done
-unsubscribe();
+engine.off('cellChange', handler);
 ```
 
 ## Event Reference
@@ -39,80 +39,80 @@ unsubscribe();
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `cellClick` | `{ row, col, originalEvent }` | Single click on a cell |
-| `cellDoubleClick` | `{ row, col, originalEvent }` | Double-click on a cell (opens editor) |
-| `cellChange` | `{ row, col, oldValue, newValue }` | Cell value changed after edit commit |
-| `cellStatusChange` | `{ row, col, status }` | Cell status lifecycle: changed → saving → saved, error |
-| `cellValidation` | `{ row, col, valid, errors }` | Validation result after cell edit |
+| `cellClick` | `{ row, col, value, column }` | Single click on a cell |
+| `cellDoubleClick` | `{ row, col, value, column }` | Double-click on a cell (opens editor) |
+| `cellChange` | `{ row, col, value, column, oldValue, newValue, source }` | Cell value changed after edit commit |
+| `cellStatusChange` | `{ row, col, oldStatus, newStatus, errorMessage? }` | Cell status lifecycle: changed → saving → saved, error |
+| `cellValidation` | `{ row, col, result }` | Validation result after cell edit |
 
 ### Selection Events
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `selectionChange` | `{ activeCell, ranges, anchor }` | Selection changed (click, keyboard, or programmatic) |
+| `selectionChange` | `{ selection, previousSelection }` | Selection changed (click, keyboard, or programmatic) |
 
 ### Scroll Events
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `scroll` | `{ scrollTop, scrollLeft, viewport }` | Scroll position changed |
+| `scroll` | `{ scrollTop, scrollLeft }` | Scroll position changed |
 
 ### Lifecycle Events
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `ready` | `{ engine }` | Engine initialization complete |
-| `destroy` | `{}` | Engine destroyed and resources cleaned up |
+| `ready` | *(none)* | Engine initialization complete |
+| `destroy` | *(none)* | Engine destroyed and resources cleaned up |
 
 ### Command Events
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `commandExecute` | `{ command }` | A command was executed |
-| `commandUndo` | `{ command }` | A command was undone |
-| `commandRedo` | `{ command }` | A command was redone |
+| `commandExecute` | `{ description }` | A command was executed |
+| `commandUndo` | `{ description }` | A command was undone |
+| `commandRedo` | `{ description }` | A command was redone |
 
 ### Clipboard Events
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `clipboardCopy` | `{ cells, text }` | Cells copied to clipboard |
-| `clipboardCut` | `{ cells, text }` | Cells cut to clipboard |
-| `clipboardPaste` | `{ cells, target }` | Data pasted from clipboard |
+| `clipboardCopy` | `{ rowCount, colCount }` | Cells copied to clipboard |
+| `clipboardCut` | `{ rowCount, colCount }` | Cells cut to clipboard |
+| `clipboardPaste` | `{ rowCount, colCount }` | Data pasted from clipboard |
 
 ### Resize Events
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `columnResizeStart` | `{ col, width }` | Column resize drag started |
-| `columnResize` | `{ col, width }` | Column width changing during drag |
-| `columnResizeEnd` | `{ col, oldWidth, newWidth }` | Column resize drag completed |
-| `rowResizeStart` | `{ row, height }` | Row resize drag started |
-| `rowResize` | `{ row, height }` | Row height changing during drag |
-| `rowResizeEnd` | `{ row, oldHeight, newHeight }` | Row resize drag completed |
+| `columnResizeStart` | `{ colIndex }` | Column resize drag started |
+| `columnResize` | `{ colIndex, oldWidth, newWidth }` | Column width changing during drag |
+| `columnResizeEnd` | `{ colIndex, oldWidth, newWidth }` | Column resize drag completed |
+| `rowResizeStart` | `{ rowIndex }` | Row resize drag started |
+| `rowResize` | `{ rowIndex, oldHeight, newHeight }` | Row height changing during drag |
+| `rowResizeEnd` | `{ rowIndex, oldHeight, newHeight }` | Row resize drag completed |
 
 ### Autofill Events
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `autofillStart` | `{ startCell, direction }` | Fill handle drag started |
-| `autofillPreview` | `{ range, values }` | Preview values during drag |
-| `autofillComplete` | `{ range, values }` | Fill operation completed |
+| `autofillStart` | `{ sourceRange }` | Fill handle drag started |
+| `autofillPreview` | `{ sourceRange, fillRange, direction }` | Preview values during drag |
+| `autofillComplete` | `{ sourceRange, fillRange, direction }` | Fill operation completed |
 
 ### Sort & Filter Events
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `sortChange` | `{ columns }` | Sort configuration changed |
-| `sortRejected` | `{ column, reason }` | Sort request rejected |
-| `filterChange` | `{ filters }` | Filter configuration changed |
+| `sortChange` | `{ sortColumns }` | Sort configuration changed |
+| `sortRejected` | `{ reason }` | Sort request rejected |
+| `filterChange` | `{ visibleRowCount, totalRowCount }` | Filter configuration changed |
 
 ### Group Events
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `rowGroupToggle` | `{ groupKey, expanded }` | Row group expanded/collapsed |
-| `rowGroupChange` | `{ groups }` | Row grouping configuration changed |
+| `rowGroupToggle` | `{ headerRow, expanded }` | Row group expanded/collapsed |
+| `rowGroupChange` | `{ groupHeaders }` | Row grouping configuration changed |
 
 ### Theme Events
 
@@ -137,6 +137,18 @@ interface CellEvent {
 }
 ```
 
+### CellChangeEvent
+
+Fired on `cellChange`. Extends `CellEvent` with old/new value tracking.
+
+```ts
+interface CellChangeEvent extends CellEvent {
+  oldValue: CellValue;
+  newValue: CellValue;
+  source: string;
+}
+```
+
 ### CommandEvent
 
 Fired on `commandExecute`, `commandUndo`, and `commandRedo`.
@@ -144,6 +156,17 @@ Fired on `commandExecute`, `commandUndo`, and `commandRedo`.
 ```ts
 interface CommandEvent {
   description: string;
+}
+```
+
+### SelectionChangeEvent
+
+Fired on `selectionChange`.
+
+```ts
+interface SelectionChangeEvent {
+  selection: Selection;
+  previousSelection: Selection;
 }
 ```
 
@@ -296,6 +319,40 @@ interface AutofillStartEvent {
 }
 ```
 
+### AutofillPreviewEvent
+
+Fired on `autofillPreview` during fill handle drag.
+
+```ts
+interface AutofillPreviewEvent {
+  sourceRange: CellRange;
+  fillRange: CellRange | null;
+  direction: FillDirection | null;
+}
+```
+
+### AutofillCompleteEvent
+
+Fired on `autofillComplete` when the fill operation is committed.
+
+```ts
+interface AutofillCompleteEvent {
+  sourceRange: CellRange;
+  fillRange: CellRange;
+  direction: FillDirection;
+}
+```
+
+### SortChangeEvent
+
+Fired on `sortChange` when sort configuration changes.
+
+```ts
+interface SortChangeEvent {
+  readonly sortColumns: readonly { col: number; direction: 'asc' | 'desc' }[];
+}
+```
+
 ## EventTranslator
 
 The `EventTranslator` converts raw DOM events (mouse clicks, touch, keyboard) into cell-level events. It performs hit-testing to determine which cell or region was interacted with.
@@ -334,10 +391,10 @@ In the React wrapper, events are exposed as props:
     // event.selection
   }}
   onSortChange={(event: SortChangeEvent) => {
-    // event.columns
+    // event.sortColumns
   }}
   onFilterChange={(event: FilterChangeEvent) => {
-    // event.filters
+    // event.visibleRowCount, event.totalRowCount
   }}
   onReady={() => {
     // Table mounted and ready

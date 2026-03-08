@@ -6,6 +6,7 @@ import type { DataView } from '../dataview/data-view';
 import type { ColumnDef } from '../types/interfaces';
 import type { RowStore } from '../model/row-store';
 import type { SpreadsheetTheme } from '../themes/theme-types';
+import type { ResolvedLocale } from '../locale/resolve-locale';
 
 /**
  * PrintManager — generates a print-friendly HTML table and injects @media print CSS.
@@ -30,9 +31,15 @@ export class PrintManager {
   private styleElement: HTMLStyleElement | null = null;
   private printTable: HTMLTableElement | null = null;
   private afterPrintHandler: (() => void) | null = null;
+  private locale: ResolvedLocale | null = null;
 
   constructor(config: PrintManagerConfig) {
     this.config = config;
+  }
+
+  /** Set locale for print labels. */
+  setLocale(locale: ResolvedLocale): void {
+    this.locale = locale;
   }
 
   /** Inject @media print CSS that hides canvas UI and shows print table. */
@@ -151,7 +158,8 @@ export class PrintManager {
       footCell.colSpan = visibleCols.length;
       footCell.style.fontStyle = 'italic';
       footCell.style.textAlign = 'center';
-      footCell.textContent = `Showing ${rowCount.toLocaleString()} of ${totalVisibleRows.toLocaleString()} rows`;
+      const tpl = this.locale?.print?.showingRows ?? 'Showing {shown} of {total} rows';
+      footCell.textContent = tpl.replace('{shown}', rowCount.toLocaleString()).replace('{total}', totalVisibleRows.toLocaleString());
       footRow.appendChild(footCell);
       tfoot.appendChild(footRow);
       table.appendChild(tfoot);

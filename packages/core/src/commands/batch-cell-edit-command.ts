@@ -26,7 +26,12 @@ export class BatchCellEditCommand implements Command {
     this.description = `Batch edit (${edits.length} cells)`;
   }
 
-  get affectedCells(): ReadonlyArray<{ row: number; col: number; oldValue: CellValue; newValue: CellValue }> {
+  get affectedCells(): ReadonlyArray<{
+    row: number;
+    col: number;
+    oldValue: CellValue;
+    newValue: CellValue;
+  }> {
     return this.edits;
   }
 

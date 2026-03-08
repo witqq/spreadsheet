@@ -17,7 +17,6 @@ function computeStyleHash(style: CellStyle): string {
         // Border objects — sort their keys too
         const subKeys = Object.keys(value).sort();
         const subParts = subKeys
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-boundary record access for style serialization
           .map((sk) => `${sk}:${(value as unknown as Record<string, unknown>)[sk]}`)
           .join(',');
         parts.push(`${key}={${subParts}}`);

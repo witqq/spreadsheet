@@ -6,7 +6,7 @@ const columns: ColumnDef[] = Array.from({ length: 30 }, (_, i) => ({
   key: `col${i}`,
   title: `Column ${i + 1}`,
   width: 80 + (i % 3) * 20,
-  type: i % 4 === 0 ? 'number' as const : undefined,
+  type: i % 4 === 0 ? ('number' as const) : undefined,
 }));
 
 const data: Record<string, unknown>[] = Array.from({ length: 50 }, (_, row) => {

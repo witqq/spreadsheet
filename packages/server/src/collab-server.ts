@@ -24,8 +24,14 @@ export interface ServerMessage {
 }
 
 const CURSOR_COLORS = [
-  '#e74c3c', '#3498db', '#2ecc71', '#f39c12',
-  '#9b59b6', '#1abc9c', '#e67e22', '#34495e',
+  '#e74c3c',
+  '#3498db',
+  '#2ecc71',
+  '#f39c12',
+  '#9b59b6',
+  '#1abc9c',
+  '#e67e22',
+  '#34495e',
 ];
 
 export function createCollabServer(port: number): {
@@ -71,10 +77,7 @@ export function createCollabServer(port: number): {
     });
 
     // Notify others of new client
-    broadcast(
-      { type: 'join', clientId, color, name: client.name },
-      clientId,
-    );
+    broadcast({ type: 'join', clientId, color, name: client.name }, clientId);
 
     ws.on('message', (data: Buffer) => {
       let msg: ServerMessage;
@@ -141,10 +144,7 @@ export function createCollabServer(port: number): {
     send(client.ws, { type: 'ack', revision });
 
     // Broadcast to others
-    broadcast(
-      { type: 'op', clientId: client.id, revision, op: transformedOp },
-      client.id,
-    );
+    broadcast({ type: 'op', clientId: client.id, revision, op: transformedOp }, client.id);
   }
 
   function handleCursor(client: ClientInfo, msg: ServerMessage): void {

@@ -35,10 +35,10 @@ Apply a style when a cell value matches a comparison:
 
 ```ts
 interface ValueCondition {
-  type: 'value';
-  operator: ComparisonOperator;
-  value: number;
-  value2?: number; // Required for 'between' / 'notBetween'
+  readonly type: 'value';
+  readonly operator: ComparisonOperator;
+  readonly value: number;
+  readonly value2?: number; // Required for 'between' / 'notBetween'
 }
 ```
 
@@ -48,8 +48,8 @@ Interpolate colors across a numeric range:
 
 ```ts
 interface GradientScaleCondition {
-  type: 'gradientScale';
-  stops: readonly { value: number; color: string }[];
+  readonly type: 'gradientScale';
+  readonly stops: readonly { value: number; color: string }[];
 }
 ```
 
@@ -59,13 +59,15 @@ Fill a portion of the cell background proportional to the value:
 
 ```ts
 interface DataBarCondition {
-  type: 'dataBar';
-  minValue?: number;
-  maxValue?: number;
-  color: string;
-  showValue?: boolean;
+  readonly type: 'dataBar';
+  readonly minValue?: number;
+  readonly maxValue?: number;
+  readonly color: string;
+  readonly showValue?: boolean;
 }
 ```
+
+> **Note:** `showValue` is accepted in the condition but is currently a no-op — cell values are always shown alongside data bars and icons.
 
 ### Icon Set
 
@@ -73,18 +75,18 @@ Display an icon based on value thresholds:
 
 ```ts
 interface IconSetCondition {
-  type: 'iconSet';
-  iconSet: IconSetName; // 'arrows' | 'circles' | 'flags' | 'stars'
-  thresholds: readonly { value: number; icon: string }[];
-  showValue?: boolean;
+  readonly type: 'iconSet';
+  readonly iconSet: IconSetName; // 'arrows' | 'circles' | 'flags' | 'stars'
+  readonly thresholds: readonly { value: number; icon: string }[];
+  readonly showValue?: boolean;
 }
 ```
 
 Built-in icon sets:
-- **arrows** — `▲` `▶` `▼`
-- **circles** — colored circles
-- **flags** — flag indicators
-- **stars** — star ratings
+- **arrows** — `▲` `▶` `▼` (thresholds at 67, 33, 0)
+- **circles** — `🟢` `🟡` `🔴` (thresholds at 67, 33, 0)
+- **flags** — `🟩` `🟨` `🟥` colored squares (thresholds at 67, 33, 0)
+- **stars** — `★★★` `★★☆` `★☆☆` `☆☆☆` (4 levels; thresholds at 80, 60, 40, 0)
 
 ## Comparison Operators
 
@@ -231,7 +233,7 @@ The conditional formatting layer uses several internal utilities:
 | `toNumber(value)` | Convert cell value to number for comparison |
 | `evaluateComparison(value, operator, threshold, threshold2?)` | Evaluate a comparison condition |
 | `interpolateColor(value, stops)` | Interpolate between color stops for gradient scales |
-| `getLayer()` | Access the `ConditionalFormatLayer` render layer instance |
+| `getLayer()` | Access the `ConditionalFormatLayer` render layer instance (returns `null` if plugin not installed) |
 
 ## API Types
 

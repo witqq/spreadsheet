@@ -28,6 +28,8 @@ import { Spreadsheet } from '@witqq/spreadsheet-react';
 
 All `SpreadsheetEngineConfig` props pass through to the core engine (columns, data, theme, frozenColumns, frozenRows, etc.).
 
+The component also accepts `className` and `style` props that are applied to the wrapper `<div>` element.
+
 ## Callbacks
 
 ```ts
@@ -93,13 +95,12 @@ interface SpreadsheetRef {
 
 - **`data`** — updates the cell store and re-renders
 - **`theme`** — propagates to all subsystems (canvas layers, editor overlay, tooltips)
-- **`columns`** — updates column definitions and layout
 
 ## Complete Example
 
 ```tsx
 import { useRef, useState, useCallback } from 'react';
-import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+import { Spreadsheet, type SpreadsheetRef } from '@witqq/spreadsheet-react';
 import type { ColumnDef } from '@witqq/spreadsheet';
 
 interface Employee {
@@ -167,7 +168,7 @@ function Controls({ tableRef }: { tableRef: RefObject<SpreadsheetRef> }) {
 
 ```tsx
 import { useRef, useEffect } from 'react';
-import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+import { Spreadsheet, type SpreadsheetRef } from '@witqq/spreadsheet-react';
 import { FormulaPlugin, ExcelPlugin, ConditionalFormattingPlugin } from '@witqq/spreadsheet-plugins';
 
 function App() {

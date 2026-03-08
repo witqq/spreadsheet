@@ -1,0 +1,96 @@
+---
+title: "Text Wrapping"
+description: "Per-column word wrap with automatic line breaking, ellipsis truncation, and cached text measurement."
+---
+
+# Text Wrapping
+
+By default, cell text is rendered on a single line and truncated with an ellipsis (`…`) when it overflows. Enable `wrapText` on a column to wrap long text into multiple lines within the cell.
+
+## Configuration
+
+Set `wrapText: true` on a `ColumnDef`:
+
+```ts
+const columns: ColumnDef[] = [
+  { key: 'id', title: 'ID', width: 60 },
+  { key: 'notes', title: 'Notes', width: 250, wrapText: true },
+  { key: 'description', title: 'Description', width: 300, wrapText: true },
+];
+```
+
+:::note
+`CellStyle.textWrap` is defined in the interface but is not currently read by the renderer. Use `ColumnDef.wrapText` for wrapping control.
+:::
+
+## Wrapping Behavior
+
+### Wrapped Text (`wrapText: true`)
+
+1. Text is split on explicit `\n` newlines
+2. Each paragraph is broken into words by whitespace
+3. Words are placed greedily until the line exceeds the available width
+4. If a single word is wider than the column, it is split character-by-character
+5. Lines are rendered vertically centered within the cell
+
+```
+Available width: 200px
+Text: "This is a long sentence that will wrap"
+
+Line 1: "This is a long"
+Line 2: "sentence that will"
+Line 3: "wrap"
+```
+
+### Non-Wrapped Text (Default)
+
+When `wrapText` is not set:
+
+1. Text is measured against available cell width
+2. If it overflows, a binary search finds the longest prefix that fits
+3. An ellipsis (`…`) is appended
+4. Result: `"This is a long sen…"`
+
+## Text Alignment
+
+Both wrapped and non-wrapped text respect horizontal alignment. Alignment is determined by the cell type renderer. Each wrapped line is aligned independently.
+
+## Auto Row Height
+
+Wrapped text only affects row height when [`autoRowHeight`](/guides/auto-row-height/) is enabled. Without it, wrapped text that exceeds the fixed row height is clipped.
+
+```ts
+<Spreadsheet
+  columns={columns}
+  data={data}
+  autoRowHeight={true}
+/>
+```
+
+With auto row height, the engine measures the height of wrapped content and expands the row. The height formula is:
+
+```
+lineCount × emHeight × 1.2 + cellPadding
+```
+
+Where `emHeight` is measured from the font's `actualBoundingBoxAscent + actualBoundingBoxDescent`.
+
+## Performance
+
+Text measurement uses a `TextMeasureCache` with three internal caches:
+
+| Cache | Purpose | Capacity |
+|---|---|---|
+| Width cache | `measureText()` results | LRU, 10K entries |
+| Wrap cache | `getWrappedLines()` line arrays | Keyed by font + text + maxWidth |
+| Height cache | `measureEmHeight()` font metrics | Keyed by font string |
+
+Cache keys include font information, so theme or style changes produce fresh measurements.
+
+Column resize on a `wrapText` column invalidates auto row height measurements for all rows, since available width changes affect line breaking.
+
+## See Also
+
+- [Auto Row Height](/guides/auto-row-height/) — automatic row sizing based on wrapped content
+- [Column Stretch](/guides/column-stretch/) — auto-filling container width affects available wrap width
+- [Column & Row Resize](/guides/resize/) — manual column resize triggers re-wrap

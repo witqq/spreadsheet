@@ -8,7 +8,10 @@ const data = generateEmployees(200);
 export function BasicTableDemo() {
   const { witTheme } = useSiteTheme();
   return (
-    <DemoWrapper title="Live Demo" description="Scroll through 200 rows. Resize columns by dragging header borders.">
+    <DemoWrapper
+      title="Live Demo"
+      description="Scroll through 200 rows. Resize columns by dragging header borders."
+    >
       <Spreadsheet
         theme={witTheme}
         columns={employeeColumns}

@@ -1,0 +1,122 @@
+---
+title: "Cell Editor Registry"
+description: "Register custom cell editors, understand the editor lifecycle, and control which editor opens for each cell type."
+---
+
+# Cell Editor Registry
+
+The `CellEditorRegistry` determines which editor opens when a user activates a cell. Editors are registered with a matcher function and a priority — the first match wins.
+
+## Built-in Editors
+
+| Editor | Column Type | Behavior |
+|---|---|---|
+| **InlineEditor** | fallback (all) | Textarea overlay; handles Enter, Escape, Tab, scroll |
+| **DatePickerEditor** | `'date'` | Calendar overlay; commits `YYYY-MM-DD` |
+| **DateTimeEditor** | `'datetime'` | Calendar + time spinners; commits `YYYY-MM-DDTHH:mm` |
+
+The inline editor is the default fallback when no registered editor matches.
+
+## Editor Selection
+
+`resolve(column, value)` iterates registered entries from highest to lowest priority. The first matcher returning `true` provides the editor. If no match, the engine falls back to `InlineEditor`.
+
+```
+registry.resolve(column, cellValue)
+  → entries sorted by priority (descending)
+  → first matcher(column, value) === true → return editor
+  → no match → null → InlineEditor fallback
+```
+
+## Registering Custom Editors
+
+### By Column Type
+
+```ts
+engine.registerCellEditor(myEditor, 'currency', 10);
+```
+
+This registers `myEditor` to handle columns with `type: 'currency'` at priority 10.
+
+### By Predicate
+
+For complex matching logic, access the registry directly:
+
+```ts
+engine.getCellEditorRegistry().register(
+  myEditor,
+  (column, value) => column.type === 'rating' && typeof value === 'number',
+  5
+);
+```
+
+Higher priority values are checked first.
+
+## CellEditor Interface
+
+Custom editors implement the `CellEditor` interface:
+
+```ts
+interface CellEditor {
+  readonly id: string;
+  readonly isOpen: boolean;
+  readonly editingRow: number;
+  readonly editingCol: number;
+
+  open(context: CellEditorContext, commitFn: CellEditorCommit, closeFn): void;
+  close(reason: EditorCloseReason): void;
+  setTheme(theme: SpreadsheetTheme): void;
+  setLocale(locale: ResolvedLocale): void;
+  destroy(): void;
+}
+```
+
+`ResolvedLocale` is `Required<SpreadsheetLocale>` — the result of merging a partial locale with English defaults via `resolveLocale()`.
+
+### Editor Lifecycle
+
+1. **Open**: The engine calls `editor.open(context, commitFn, closeFn)`. The editor renders its DOM into `context.container`.
+2. **Value change**: The editor manages its own internal state.
+3. **Commit**: Call `commitFn(row, col, oldValue, newValue)` to write the value. This executes a `CellEditCommand` via the command manager and emits a `cellChange` event.
+4. **Close**: Call `closeFn(reason)` or the engine calls `editor.close(reason)`. The editor removes its DOM.
+5. **Destroy**: Called during engine teardown to release all resources.
+
+### CellEditorContext
+
+The context object provides everything the editor needs:
+
+| Field | Description |
+|---|---|
+| `row`, `col` | Cell coordinates |
+| `value` | Current cell value |
+| `column` | ColumnDef for this cell |
+| `container` | DOM element to render into |
+| `scrollContainer` | Scrollable parent |
+| `layoutEngine` | For cell rect calculations |
+| `scrollManager` | Scroll state |
+| `cellStore` | Cell data access |
+| `dataView` | Filtered/sorted data view |
+| `theme` | Current theme |
+| `locale` | Current locale |
+| `mergeManager` | Merged cell info |
+| `frozenRows`, `frozenColumns` | Freeze pane counts |
+
+### EditorCloseReason
+
+The `reason` parameter in `close()` tells the engine how to handle focus after closing:
+
+`'enter'` | `'shift-enter'` | `'tab'` | `'shift-tab'` | `'escape'` | `'blur'` | `'scroll'` | `'programmatic'`
+
+## DOM and Focus
+
+- **InlineEditor**: Creates a `<textarea>` positioned over the cell via `LayoutEngine.getCellRect()`, z-index 20. Auto-focuses and selects content on open. Scroll commits and closes (except for frozen corner cells).
+- **Overlay editors** (date, datetime): Create a `<div role="dialog">`, z-index 50. Positioned below the cell (flips above if needed). Outside click closes.
+
+## Theme and Locale Propagation
+
+When `engine.setTheme()` or `engine.setLocale()` is called, the registry propagates the change to all registered editors via `setTheme()` / `setLocale()`.
+
+## See Also
+
+- [Date & DateTime Editors](/guides/date-editors/) — built-in calendar editors
+- [Locale System](/guides/locale/) — editor label translations

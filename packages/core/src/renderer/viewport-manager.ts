@@ -82,7 +82,10 @@ export class ViewportManager {
           Math.min(scrollX + viewportWidth - 1, this.layout.totalWidth - 1),
         );
         const startCol = Math.max(0, firstVisibleCol - this.colBuffer);
-        const endCol = Math.min(colCount - 1, (lastVisibleCol >= 0 ? lastVisibleCol : 0) + this.colBuffer);
+        const endCol = Math.min(
+          colCount - 1,
+          (lastVisibleCol >= 0 ? lastVisibleCol : 0) + this.colBuffer,
+        );
         return {
           startRow: 0,
           endRow: -1,
@@ -109,10 +112,7 @@ export class ViewportManager {
       Math.min(scrollY + viewportHeight - 1, this.layout.contentHeight - 1),
     );
 
-    const startRow = Math.max(
-      0,
-      (firstVisibleRow === -1 ? 0 : firstVisibleRow) - this.rowBuffer,
-    );
+    const startRow = Math.max(0, (firstVisibleRow === -1 ? 0 : firstVisibleRow) - this.rowBuffer);
     const endRow = Math.min(
       rowCount - 1,
       (lastVisibleRow === -1 ? rowCount - 1 : lastVisibleRow) + this.rowBuffer,
@@ -124,10 +124,7 @@ export class ViewportManager {
       Math.min(scrollX + viewportWidth - 1, this.layout.contentWidth - 1),
     );
 
-    const startCol = Math.max(
-      0,
-      (firstVisibleCol === -1 ? 0 : firstVisibleCol) - this.colBuffer,
-    );
+    const startCol = Math.max(0, (firstVisibleCol === -1 ? 0 : firstVisibleCol) - this.colBuffer);
     const endCol = Math.min(
       colCount - 1,
       (lastVisibleCol === -1 ? colCount - 1 : lastVisibleCol) + this.colBuffer,
@@ -184,7 +181,10 @@ export class ViewportManager {
       startCol: Math.max(fc, frozenRowRange.startCol),
       endCol: frozenRowRange.endCol,
       visibleRowCount: fr,
-      visibleColCount: Math.max(0, frozenRowRange.endCol - Math.max(fc, frozenRowRange.startCol) + 1),
+      visibleColCount: Math.max(
+        0,
+        frozenRowRange.endCol - Math.max(fc, frozenRowRange.startCol) + 1,
+      ),
     };
 
     // Frozen-col strip: scrolling rows × frozen cols
@@ -194,7 +194,10 @@ export class ViewportManager {
       endRow: frozenColRange.endRow,
       startCol: 0,
       endCol: fc > 0 ? fc - 1 : -1,
-      visibleRowCount: Math.max(0, frozenColRange.endRow - Math.max(fr, frozenColRange.startRow) + 1),
+      visibleRowCount: Math.max(
+        0,
+        frozenColRange.endRow - Math.max(fr, frozenColRange.startRow) + 1,
+      ),
       visibleColCount: fc,
     };
 

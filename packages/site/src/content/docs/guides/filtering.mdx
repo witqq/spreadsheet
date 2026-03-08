@@ -51,8 +51,8 @@ function App() {
     <Spreadsheet
       columns={columns}
       data={data}
-      onFilterChange={(filters) => {
-        console.log('Active filters:', filters);
+      onFilterChange={(event) => {
+        console.log('Visible rows:', event.visibleRowCount, '/', event.totalRowCount);
       }}
     />
   );

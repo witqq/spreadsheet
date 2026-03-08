@@ -23,7 +23,10 @@ export interface RowCommandDeps {
   getRowCount: () => number;
 }
 
-function collectCellsFromRow(cellStore: CellStore, startRow: number): Array<{ row: number; col: number; data: CellData }> {
+function collectCellsFromRow(
+  cellStore: CellStore,
+  startRow: number,
+): Array<{ row: number; col: number; data: CellData }> {
   const result: Array<{ row: number; col: number; data: CellData }> = [];
   for (const entry of cellStore.entries()) {
     if (entry.row >= startRow) {
@@ -34,7 +37,10 @@ function collectCellsFromRow(cellStore: CellStore, startRow: number): Array<{ ro
   return result;
 }
 
-function collectRowCells(cellStore: CellStore, row: number): Array<{ col: number; data: CellData }> {
+function collectRowCells(
+  cellStore: CellStore,
+  row: number,
+): Array<{ col: number; data: CellData }> {
   const result: Array<{ col: number; data: CellData }> = [];
   for (const entry of cellStore.entries()) {
     if (entry.row === row) {
@@ -53,9 +59,19 @@ function shiftMergesForInsert(mgr: MergeManager, targetRow: number): MergedRegio
   for (const r of regions) {
     saved.push({ ...r });
     if (r.startRow >= targetRow) {
-      newRegions.push({ startRow: r.startRow + 1, startCol: r.startCol, endRow: r.endRow + 1, endCol: r.endCol });
+      newRegions.push({
+        startRow: r.startRow + 1,
+        startCol: r.startCol,
+        endRow: r.endRow + 1,
+        endCol: r.endCol,
+      });
     } else if (r.endRow >= targetRow) {
-      newRegions.push({ startRow: r.startRow, startCol: r.startCol, endRow: r.endRow + 1, endCol: r.endCol });
+      newRegions.push({
+        startRow: r.startRow,
+        startCol: r.startCol,
+        endRow: r.endRow + 1,
+        endCol: r.endCol,
+      });
     } else {
       newRegions.push({ ...r });
     }
@@ -83,16 +99,31 @@ function shiftMergesForDelete(mgr: MergeManager, targetRow: number): MergedRegio
   for (const r of regions) {
     saved.push({ ...r });
     if (r.startRow > targetRow) {
-      newRegions.push({ startRow: r.startRow - 1, startCol: r.startCol, endRow: r.endRow - 1, endCol: r.endCol });
+      newRegions.push({
+        startRow: r.startRow - 1,
+        startCol: r.startCol,
+        endRow: r.endRow - 1,
+        endCol: r.endCol,
+      });
     } else if (r.startRow === targetRow && r.endRow === targetRow) {
       // Single-row merge at target — removed entirely
     } else if (r.endRow >= targetRow && r.startRow < targetRow) {
       if (r.endRow - 1 > r.startRow || r.endCol > r.startCol) {
-        newRegions.push({ startRow: r.startRow, startCol: r.startCol, endRow: r.endRow - 1, endCol: r.endCol });
+        newRegions.push({
+          startRow: r.startRow,
+          startCol: r.startCol,
+          endRow: r.endRow - 1,
+          endCol: r.endCol,
+        });
       }
     } else if (r.startRow === targetRow && r.endRow > targetRow) {
       if (r.endRow - 1 >= r.startRow) {
-        newRegions.push({ startRow: r.startRow, startCol: r.startCol, endRow: r.endRow - 1, endCol: r.endCol });
+        newRegions.push({
+          startRow: r.startRow,
+          startCol: r.startCol,
+          endRow: r.endRow - 1,
+          endCol: r.endCol,
+        });
       }
     } else {
       newRegions.push({ ...r });

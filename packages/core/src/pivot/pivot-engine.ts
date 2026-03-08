@@ -12,10 +12,7 @@ export class PivotEngine {
    * and applies aggregation functions to measures.
    * Stores source row indices per output cell for drill-down.
    */
-  compute(
-    sourceData: Record<string, unknown>[],
-    config: PivotConfig,
-  ): PivotResult {
+  compute(sourceData: Record<string, unknown>[], config: PivotConfig): PivotResult {
     const { rowDimensions, columnDimensions, measures } = config;
 
     if (measures.length === 0) {
@@ -29,9 +26,10 @@ export class PivotEngine {
     for (let i = 0; i < sourceData.length; i++) {
       const row = sourceData[i];
       const rowKey = rowDimensions.map((d) => String(row[d] ?? '')).join(KEY_SEP);
-      const colKey = columnDimensions.length > 0
-        ? columnDimensions.map((d) => String(row[d] ?? '')).join(KEY_SEP)
-        : '_total';
+      const colKey =
+        columnDimensions.length > 0
+          ? columnDimensions.map((d) => String(row[d] ?? '')).join(KEY_SEP)
+          : '_total';
 
       colKeySet.add(colKey);
 
@@ -66,15 +64,11 @@ export class PivotEngine {
     }
 
     for (const colKey of colKeys) {
-      const colLabel = colKey === '_total'
-        ? ''
-        : colKey.split(KEY_SEP).join(' / ');
+      const colLabel = colKey === '_total' ? '' : colKey.split(KEY_SEP).join(' / ');
 
       for (const measure of measures) {
         const measureLabel = measure.label ?? `${measure.aggregate}(${measure.field})`;
-        const title = colLabel
-          ? `${colLabel} — ${measureLabel}`
-          : measureLabel;
+        const title = colLabel ? `${colLabel} — ${measureLabel}` : measureLabel;
 
         columns.push({
           key: `_val_${colKey}${KEY_SEP}${measure.field}${KEY_SEP}${measure.aggregate}`,
@@ -144,10 +138,7 @@ export class PivotEngine {
     return indices.map((idx) => sourceData[idx]);
   }
 
-  private aggregate(
-    rows: Record<string, unknown>[],
-    measure: PivotMeasure,
-  ): number | null {
+  private aggregate(rows: Record<string, unknown>[], measure: PivotMeasure): number | null {
     if (rows.length === 0) return null;
 
     if (measure.aggregate === 'count') {
@@ -170,9 +161,9 @@ export class PivotEngine {
       case 'average':
         return values.reduce((a, b) => a + b, 0) / values.length;
       case 'min':
-        return values.reduce((a, b) => a < b ? a : b);
+        return values.reduce((a, b) => (a < b ? a : b));
       case 'max':
-        return values.reduce((a, b) => a > b ? a : b);
+        return values.reduce((a, b) => (a > b ? a : b));
       default:
         return null;
     }

@@ -1,0 +1,105 @@
+---
+title: "Auto Row Height"
+description: "Automatically size row heights based on cell content with two-phase measurement: synchronous viewport and async off-screen."
+---
+
+# Auto Row Height
+
+When cells contain wrapped text or custom renderers with variable height, auto row height measures actual content and adjusts row heights automatically. The engine uses a two-phase approach: synchronous measurement for visible rows and asynchronous background measurement for off-screen rows.
+
+## Configuration
+
+```ts
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+
+<Spreadsheet
+  columns={columns}
+  data={data}
+  autoRowHeight={true}
+/>
+```
+
+Enable with `true` for defaults, or pass an `AutoRowSizeConfig` object:
+
+```ts
+interface AutoRowSizeConfig {
+  batchSize?: number;    // Off-screen async batch size (default: 100)
+  minRowHeight?: number; // Floor height in px (default: theme rowHeight, fallback 28)
+  cellPadding?: number;  // Vertical padding added to measured height (default: 8)
+}
+```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `batchSize` | `number` | `100` | Number of off-screen rows measured per idle callback |
+| `minRowHeight` | `number` | `theme.dimensions.rowHeight` | Minimum row height — auto measurement never goes below this |
+| `cellPadding` | `number` | `8` | Extra vertical padding added to measured content height |
+
+```ts
+<Spreadsheet
+  columns={columns}
+  data={data}
+  autoRowHeight={{
+    batchSize: 200,
+    minRowHeight: 32,
+    cellPadding: 12,
+  }}
+/>
+```
+
+## How Measurement Works
+
+Auto row height measures content in two phases:
+
+### Phase 1 — Viewport (Synchronous)
+
+After each render, the engine measures all visible rows synchronously. For each row, it finds the tallest content across all columns with `wrapText: true` or custom cell types that implement `measureHeight()`. The final height is:
+
+```
+Math.max(measuredContentHeight + cellPadding, minRowHeight)
+```
+
+A guard flag prevents infinite measure → render → measure loops.
+
+### Phase 2 — Off-Screen (Asynchronous)
+
+On mount, a background sweep starts measuring off-screen rows using `requestIdleCallback`. Rows are processed in batches of `batchSize`, never blocking the main thread. The sweep runs when the browser is idle and yields between batches.
+
+### Dirty Tracking
+
+The engine tracks which rows need re-measurement:
+
+- **Cell edit** — marks the edited row dirty
+- **Column resize on a `wrapText` column** — marks all rows dirty (available width changed)
+- **Data load** — marks all rows dirty
+
+Only dirty rows are re-measured, avoiding full-table sweeps after small edits.
+
+## Manual Resize Interaction
+
+Manual row resizes always take priority over auto measurement. The `RowStore` maintains separate `manualHeightOverrides` and `autoHeightOverrides` maps:
+
+- If a user manually resizes a row, it is marked as manual
+- Auto measurement skips manual rows entirely
+- Clearing a manual override (`clearHeight(row)`) lets auto height resume for that row
+
+## Performance
+
+For large datasets (100K+ rows):
+
+- Off-screen measurement runs via `requestIdleCallback` — zero main thread blocking
+- Text measurement results are cached by `TextMeasureCache` (LRU, 10K entries)
+- Dirty tracking avoids re-measuring unchanged rows
+- Height updates are batched — rows with height changes < 0.01px are skipped
+- Only columns with `wrapText: true` are measured; non-wrap columns are skipped
+
+Monitor progress via `autoRowSizeManager.progress` (0–1) and `autoRowSizeManager.isMeasuring`.
+
+## Interaction with Text Wrapping
+
+Auto row height requires at least one column with `wrapText: true` to have any effect. Without wrapped text, all cells are single-line and have the same height. See [Text Wrapping](/guides/text-wrapping/) for wrap configuration.
+
+## See Also
+
+- [Text Wrapping](/guides/text-wrapping/) — per-column word wrap configuration
+- [Column & Row Resize](/guides/resize/) — manual resizing

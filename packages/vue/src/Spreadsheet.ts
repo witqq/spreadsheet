@@ -1,12 +1,4 @@
-import {
-  defineComponent,
-  ref,
-  h,
-  onMounted,
-  onUnmounted,
-  watch,
-  type PropType,
-} from 'vue';
+import { defineComponent, ref, h, onMounted, onUnmounted, watch, type PropType } from 'vue';
 import { SpreadsheetEngine } from '@witqq/spreadsheet';
 import type {
   SpreadsheetEngineConfig,

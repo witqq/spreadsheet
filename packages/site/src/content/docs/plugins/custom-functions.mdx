@@ -7,6 +7,8 @@ description: "Extend the formula engine with your own spreadsheet functions."
 
 The formula engine can be extended with custom functions by working with the `FormulaComputeEngine` directly. Custom functions follow the same signature as built-in functions and integrate with the dependency graph for automatic recalculation.
 
+> **Note:** The built-in function registry is module-private. There is currently no public API to register custom functions at runtime. The patterns below show how custom function implementations work and can be used when forking or extending the formula module.
+
 ## FormulaComputeEngine
 
 The compute engine handles formula evaluation and cell dependency tracking:
@@ -112,10 +114,10 @@ function lookupFn(
   }
 
   // Iterate search range rows
-  for (let row = searchRange.startRow; row <= searchRange.endRow; row++) {
-    const cellValue = resolver.getCellValue(row, searchRange.startCol);
+  for (let row = searchRange.start.row; row <= searchRange.end.row; row++) {
+    const cellValue = resolver.getCellValue(row, searchRange.start.col);
     if (cellValue === searchValue) {
-      return resolver.getCellValue(row, resultRange.startCol);
+      return resolver.getCellValue(row, resultRange.start.col);
     }
   }
 

@@ -47,7 +47,7 @@ const columns: ColumnDef[] = [
     editable: true,
     validation: [
       { type: 'required', message: 'Email is required', severity: 'error' },
-      { type: 'regex', pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Invalid email', severity: 'error' },
+      { type: 'regex', pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$', message: 'Invalid email', severity: 'error' },
     ],
   },
   {
@@ -78,7 +78,7 @@ ve.setColumnRules(1, [
 
 // Set cell-level rules
 ve.setCellRules(0, 2, [
-  { type: 'custom', validate: (value) => value > 0, message: 'Must be positive', severity: 'warning' },
+  { type: 'custom', validate: (value) => ({ valid: Number(value) > 0 }), message: 'Must be positive', severity: 'warning' },
 ]);
 
 // Validate a specific cell
@@ -101,10 +101,10 @@ const result = ve.validateCell(0, 1);
 
 ```typescript
 type SpreadsheetValidationRule =
-  | { type: 'required'; message: string; severity: Severity }
-  | { type: 'range'; min?: number; max?: number; message: string; severity: Severity }
-  | { type: 'regex'; pattern: RegExp; message: string; severity: Severity }
-  | { type: 'custom'; validate: (value: unknown) => boolean; message: string; severity: Severity };
+  | { type: 'required'; message?: string; severity?: 'error' | 'warning' | 'info' }
+  | { type: 'range'; min?: number; max?: number; message?: string; severity?: 'error' | 'warning' | 'info' }
+  | { type: 'regex'; pattern: string; flags?: string; message?: string; severity?: 'error' | 'warning' | 'info' }
+  | { type: 'custom'; validate: (value: CellValue) => ValidationResult; message?: string; severity?: 'error' | 'warning' | 'info' };
 
-type Severity = 'error' | 'warning' | 'info';
+type ValidationResult = { valid: boolean; message?: string; severity?: 'error' | 'warning' | 'info' };
 ```

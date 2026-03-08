@@ -1,24 +1,24 @@
 ---
 title: Introduction
-description: High-performance canvas-based spreadsheet engine for the web
+description: Canvas-based spreadsheet engine for the web
 ---
 
 # @witqq/spreadsheet
 
-A high-performance, canvas-based spreadsheet engine built with TypeScript. Renders 100K+ rows at 60 FPS with zero external dependencies in the core package.
+A canvas-based spreadsheet engine built with TypeScript. Renders 100K+ rows at 60 FPS with zero external dependencies in the core package.
 
 ## What is @witqq/spreadsheet?
 
 @witqq/spreadsheet is a spreadsheet component that uses Canvas 2D for rendering instead of the DOM. This eliminates the DOM node ceiling that limits traditional table libraries and enables smooth scrolling, fast cell rendering, and consistent performance regardless of dataset size.
 
-The engine is framework-agnostic — the core package is pure TypeScript with no dependencies. An official React wrapper is provided, and wrappers for other frameworks can be built on top of the core.
+The engine is framework-agnostic — the core package is pure TypeScript with no dependencies. Official wrappers are provided for React, Vue 3, and Angular. A framework-agnostic IIFE/UMD widget bundle is also available.
 
 ## Key Features
 
-- **Canvas 2D rendering** — 60 FPS scrolling and rendering at any scale. No DOM nodes per cell.
+- **Canvas 2D rendering** — 60 FPS scrolling and rendering with 1M+ rows. No DOM nodes per cell.
 - **Zero dependencies** — The `@witqq/spreadsheet` package has no external dependencies. Under 500KB total.
 - **Plugin system** — Extend with official plugins for formulas, Excel I/O, conditional formatting, and context menus.
-- **Framework-agnostic core** — Pure TypeScript engine works anywhere. Official React wrapper included.
+- **Framework-agnostic core** — Pure TypeScript engine with no framework dependency. Official React, Vue 3, and Angular wrappers included.
 - **Full editing** — Inline editing, undo/redo (100 steps), clipboard with Excel/Sheets interop.
 - **Sorting & filtering** — Multi-column stable sort, 14 filter operators, header click integration.
 - **Frozen panes** — Freeze rows and columns with 4-region viewport rendering.
@@ -32,15 +32,18 @@ The engine is framework-agnostic — the core package is pure TypeScript with no
 
 ## Architecture
 
-@witqq/spreadsheet is organized as a monorepo with three main packages:
+@witqq/spreadsheet is organized as a monorepo:
 
 | Package | Description |
 |---------|-------------|
 | `@witqq/spreadsheet` | Canvas engine — pure TypeScript, zero dependencies |
 | `@witqq/spreadsheet-react` | React wrapper — `Spreadsheet<TRow>` component with callbacks and ref API |
-| `@witqq/spreadsheet-plugins` | Official plugins — formula engine, conditional formatting, Excel I/O, context menu |
+| `@witqq/spreadsheet-vue` | Vue 3 wrapper |
+| `@witqq/spreadsheet-angular` | Angular wrapper |
+| `@witqq/spreadsheet-widget` | Framework-agnostic IIFE/UMD bundle |
+| `@witqq/spreadsheet-plugins` | Official plugins — formula engine, conditional formatting, Excel I/O, context menu, progressive loader |
 
-The core engine (`SpreadsheetEngine`) orchestrates 20+ subsystems: CellStore, DataView, EventBus, SelectionManager, KeyboardNavigator, InlineEditor, CommandManager, ClipboardManager, RenderPipeline, and more. Each subsystem is independent and communicates through the typed EventBus.
+The core engine (`SpreadsheetEngine`) orchestrates multiple subsystems: CellStore, DataView, EventBus, SelectionManager, KeyboardNavigator, InlineEditor, CommandManager, ClipboardManager, RenderPipeline, and more. Each subsystem is independent and communicates through the typed EventBus.
 
 ## License
 
@@ -53,6 +56,6 @@ The core engine (`SpreadsheetEngine`) orchestrates 20+ subsystems: CellStore, Da
 ## Next Steps
 
 - [Installation](/getting-started/installation/) — Install packages via npm
-- [Quick Start](/getting-started/quick-start/) — Build your first table in 5 minutes
+- [Quick Start](/getting-started/quick-start/) — Build your first table
 - [Configuration](/getting-started/configuration/) — All available options
 - [Architecture](/concepts/architecture/) — How the engine works internally

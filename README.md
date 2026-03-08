@@ -27,11 +27,13 @@ Official wrappers for **React**, **Vue 3**, and **Angular**. Embeddable widget b
 
 | Category | Features |
 |----------|----------|
-| **Rendering** | Canvas 2D multi-layer pipeline, 100K+ rows at 60fps, progressive loading |
-| **Editing** | Inline editor, undo/redo (100 steps), clipboard (TSV + HTML), autofill |
-| **Data** | Sort (multi-column), filter (14 operators), frozen panes, merged cells |
-| **Plugins** | Formulas, conditional formatting, collaboration (OT), Excel I/O, context menu |
+| **Rendering** | Canvas 2D multi-layer pipeline, 100K+ rows at 60fps, progressive loading, auto row height with text wrapping |
+| **Editing** | Inline editor, date picker, datetime picker, custom cell editors via CellEditorRegistry, undo/redo (100 steps), clipboard (TSV + HTML), autofill |
+| **Layout** | Column stretch (`'all'` / `'last'`), frozen panes, auto row sizing, container resize observation |
+| **Data** | Sort (multi-column), filter (14 operators), merged cells |
+| **Plugins** | Formulas, conditional formatting, collaboration (OT), Excel I/O, context menu with submenus |
 | **Theming** | Light/dark built-in, fully customizable via `WitTheme` |
+| **Localization** | Built-in English and Russian locales, custom locale packs, runtime switching |
 | **Accessibility** | WCAG 2.1 AA: role=grid, aria-live, keyboard-only, print support |
 | **Frameworks** | React, Vue 3, Angular, vanilla JS widget (<36KB gzip) |
 
@@ -95,6 +97,48 @@ Full documentation with interactive demos at **[spreadsheet.witqq.dev](https://s
 - [Plugins](https://spreadsheet.witqq.dev/plugins/overview/) — Formulas, collaboration, Excel I/O
 - [API Reference](https://spreadsheet.witqq.dev/api/wit-engine/) — WitEngine, types, cell types
 - [Migration from Handsontable](https://spreadsheet.witqq.dev/guides/migration-from-handsontable/) — Side-by-side API mapping
+
+## 🌐 Localization
+
+Built-in English and Russian locale packs. Create custom locales for any language:
+
+```tsx
+import { WitTable } from '@witqq/spreadsheet-react';
+import { ruLocale } from '@witqq/spreadsheet';
+
+<WitTable columns={columns} data={data} locale={ruLocale} />
+```
+
+Custom partial locales are merged over English defaults:
+
+```ts
+import { resolveLocale } from '@witqq/spreadsheet';
+
+const myLocale = resolveLocale({
+  contextMenu: { cut: 'Cortar', copy: 'Copiar', paste: 'Pegar' },
+  formatLocale: 'es-ES',
+});
+```
+
+Locale covers: context menu labels, date picker, filter panel, accessibility announcements, aggregate labels, print notices, and number/date formatting.
+
+## 🔌 Custom Cell Editors
+
+Register custom overlay editors for specific column types via `CellEditorRegistry`:
+
+```ts
+import type { CellEditor } from '@witqq/spreadsheet';
+
+class ColorPickerEditor implements CellEditor {
+  readonly id = 'color-picker';
+  // ... implement open(), close(), setTheme(), setLocale(), destroy()
+}
+
+const engine = new SpreadsheetEngine({ columns, data });
+engine.registerCellEditor(new ColorPickerEditor(), 'color');
+```
+
+Built-in editors: `DatePickerEditor` (registered for `type: 'date'`), `DateTimeEditor` (registered for `type: 'datetime'` — calendar + hour/minute controls, commits ISO `YYYY-MM-DDTHH:mm`), `InlineEditor` (textarea fallback). The registry resolves editors by priority — higher priority wins when multiple editors match.
 
 ## 🛠 Development
 

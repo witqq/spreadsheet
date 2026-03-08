@@ -9,7 +9,7 @@ import { MillionRowsDemo, MillionRowsExplanation } from '../../../components/dem
 
 # 1,000,000 Rows at 60 FPS
 
-@witqq/spreadsheet renders a million rows with the same performance as a hundred. Click the button below to load 1,000,000 rows and scroll through them.
+@witqq/spreadsheet renders a million rows at 60 FPS because rendering cost is O(viewport size), not O(total rows). Click the button below to load 1,000,000 rows and scroll through them.
 
 <MillionRowsDemo height={500} client:visible />
 
@@ -28,7 +28,9 @@ The data array for 1M rows with 7 columns uses approximately 200-400MB of JavaSc
 ## Try It Yourself
 
 ```tsx
+import { useRef, useEffect } from 'react';
 import { Spreadsheet } from '@witqq/spreadsheet-react';
+import type { SpreadsheetRef } from '@witqq/spreadsheet-react';
 import { ProgressiveLoaderPlugin } from '@witqq/spreadsheet-plugins';
 
 const columns = [
@@ -38,7 +40,7 @@ const columns = [
 ];
 
 function App() {
-  const ref = useRef(null);
+  const ref = useRef<SpreadsheetRef>(null);
 
   useEffect(() => {
     const engine = ref.current?.getInstance();
@@ -53,6 +55,7 @@ function App() {
         name: `Row ${i + 1}`,
         value: Math.random() * 1000,
       }),
+      onProgress: (loaded, total) => console.log(`${loaded}/${total}`),
       onComplete: (ms) => console.log(`Loaded in ${ms}ms`),
     });
     engine.installPlugin(loader);
@@ -71,7 +74,7 @@ function App() {
 }
 ```
 
-The `ProgressiveLoaderPlugin` loads data in time-budgeted chunks using `scheduler.yield()` (Chrome 129+) or `MessageChannel` fallback, showing an animated progress overlay. The table is interactive immediately — scroll and navigate while data loads.
+The `ProgressiveLoaderPlugin` loads data in time-budgeted chunks using `scheduler.yield()` with `MessageChannel` fallback, showing an animated progress overlay. The table is interactive immediately — scroll and navigate while data loads.
 
 ## Benchmark Utilities
 
