@@ -14,15 +14,13 @@ The rendering system uses a composable layer architecture. Each layer is respons
 | Order | Layer | Description |
 |-------|-------|-------------|
 | 1 | BackgroundLayer | Fills cell backgrounds with alternating row colors |
-| 2 | GridLinesLayer | Draws horizontal and vertical grid lines |
-| 3 | HeaderLayer | Renders column headers with sort/filter indicators |
-| 4 | RowNumberLayer | Draws row numbers on the left side |
-| 5 | CellTextLayer | Renders cell text content with type-specific formatting |
-| 6 | SelectionOverlayLayer | Draws selection highlight and active cell border |
-| 7 | CellStatusLayer | Shows cell status indicators (changed, saving, saved, error) |
-| 8 | FillHandleLayer | Renders the fill handle square on the active cell |
-| 9 | EmptyStateLayer | Shows empty state placeholder when no data |
-| 10 | RowGroupToggleLayer | Renders expand/collapse toggles for row groups |
+| 2 | CellTextLayer | Renders cell text content with type-specific formatting |
+| 3 | CellStatusLayer | Shows cell status indicators (changed, saving, saved, error) |
+| 4 | EmptyStateLayer | Shows empty state placeholder when no data |
+| 5 | GridLinesLayer | Draws horizontal and vertical grid lines (conditional) |
+| 6 | HeaderLayer | Renders column headers with sort/filter indicators |
+| 7 | RowNumberLayer | Draws row numbers on the left side (conditional) |
+| 8 | SelectionOverlayLayer | Draws selection highlight and active cell border |
 
 Plugin layers (added via plugins, not part of core):
 - **ConditionalFormatLayer** — applies conditional formatting (gradients, data bars, icons)
@@ -32,17 +30,22 @@ Each layer implements the `RenderLayer` interface:
 
 ```ts
 interface RenderLayer {
-  name: string;
-  render(ctx: RenderContext): void;
+  render(rc: RenderContext): void;
+  measureHeights?(rc: RenderContext): Map<number, number>;
 }
 
 interface RenderContext {
-  canvas: CanvasRenderingContext2D;
-  viewport: ViewportRange;
+  ctx: CanvasRenderingContext2D;
+  geometry: GridGeometry;
   theme: SpreadsheetTheme;
-  cellStore: CellStore;
-  layoutEngine: LayoutEngine;
-  selection: SelectionState;
+  canvasWidth: number;
+  canvasHeight: number;
+  viewport: ViewportRange;
+  scrollX: number;
+  scrollY: number;
+  renderMode: RenderMode;
+  paneRegion: PaneRegion;
+  mergeManager?: MergeManager;
 }
 ```
 
@@ -76,25 +79,20 @@ The `ViewportManager` calculates which rows and columns are currently visible, p
 
 ```ts
 interface ViewportRange {
-  startRow: number;    // First visible row
-  endRow: number;      // Last visible row (inclusive)
-  startCol: number;    // First visible column
-  endCol: number;      // Last visible column (inclusive)
-  bufferRows: number;  // Extra rows rendered above/below viewport
+  readonly startRow: number;       // First visible row (inclusive, with buffer)
+  readonly endRow: number;         // Last visible row (inclusive, with buffer)
+  readonly startCol: number;       // First visible column (inclusive, with buffer)
+  readonly endCol: number;         // Last visible column (inclusive, with buffer)
+  readonly visibleRowCount: number; // Visible rows including buffer
+  readonly visibleColCount: number; // Visible columns including buffer
 }
 ```
 
 Only cells within the viewport (plus buffer) are rendered. For a 100K-row dataset, typically only 30-50 rows are drawn per frame.
 
-## ScrollVelocityTracker
+## Scroll Rendering
 
-When the user scrolls fast, full cell rendering would cause frame drops. The `ScrollVelocityTracker` detects fast scrolling and switches to placeholder mode:
-
-- **Entry condition**: 2 consecutive scroll samples exceeding 150 px/frame
-- **Placeholder mode**: Renders simplified rectangles instead of full cell content
-- **Exit condition**: Sticky — exits only after 150ms of scroll idle (no early exit on single slow frame)
-
-This two-mode rendering ensures smooth scrolling even through large datasets.
+The `RenderMode` type supports `'full' | 'light' | 'placeholder'` modes. Currently the mode is always `'full'` — all cells are rendered with complete fidelity. The type union exists for future optimization where fast scrolling could switch to simplified rendering.
 
 ## TextMeasureCache
 
@@ -102,7 +100,7 @@ Text measurement (`ctx.measureText()`) is expensive. The `TextMeasureCache` stor
 
 ```ts
 // Cache hit rate is typically >95% for real spreadsheets
-const width = textMeasureCache.measure('14px Inter', 'Hello World');
+const width = textMeasureCache.measureText(ctx, 'Hello World', '14px Inter');
 ```
 
 - **Capacity**: 10,000 entries with LRU eviction
@@ -117,21 +115,20 @@ const width = textMeasureCache.measure('14px Inter', 'Hello World');
 You can add custom layers to the pipeline or reorder existing ones:
 
 ```ts
-engine.getRenderPipeline().addLayer(myCustomLayer);
-engine.getRenderPipeline().insertLayerBefore('SelectionOverlayLayer', myCustomLayer);
-engine.getRenderPipeline().removeLayer('EmptyStateLayer');
+engine.addRenderLayer(myCustomLayer);
+engine.insertRenderLayerBefore(myCustomLayer, selectionLayer);
+engine.removeRenderLayer(emptyStateLayer);
 ```
 
 | Method | Description |
 |---|---|
-| `addLayer(layer)` | Append layer at end of pipeline |
-| `insertLayerBefore(name, layer)` | Insert before a named layer |
-| `removeLayer(name)` | Remove a layer by name |
-| `getLayers()` | Get all layers in order |
+| `addRenderLayer(layer)` | Append layer at end of pipeline |
+| `insertRenderLayerBefore(layer, beforeLayer)` | Insert before an existing layer |
+| `removeRenderLayer(layer)` | Remove a layer |
 
 ## Frozen Pane Rendering
 
-When frozen rows or columns are enabled, the `FrozenPaneManager` splits rendering into 4 regions:
+When frozen rows or columns are enabled, the render pipeline splits rendering into 4 regions:
 
 ```mermaid
 block-beta

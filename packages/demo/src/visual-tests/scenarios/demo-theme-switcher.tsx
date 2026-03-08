@@ -15,7 +15,13 @@ const data = generateRows(15);
 export function DemoThemeSwitcher() {
   return (
     <ScenarioContainer width={550} height={350} background="#1e1e2e">
-      <Spreadsheet columns={columns} data={data} theme={darkTheme} showRowNumbers style={tableStyle} />
+      <Spreadsheet
+        columns={columns}
+        data={data}
+        theme={darkTheme}
+        showRowNumbers
+        style={tableStyle}
+      />
     </ScenarioContainer>
   );
 }

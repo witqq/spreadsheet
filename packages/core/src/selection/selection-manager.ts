@@ -78,12 +78,14 @@ export class SelectionManager {
       c = region.startCol;
       this._activeCell = { row: r, col: c };
       this._anchorCell = { row: r, col: c };
-      this._ranges = [{
-        startRow: region.startRow,
-        startCol: region.startCol,
-        endRow: region.endRow,
-        endCol: region.endCol,
-      }];
+      this._ranges = [
+        {
+          startRow: region.startRow,
+          startCol: region.startCol,
+          endRow: region.endRow,
+          endCol: region.endCol,
+        },
+      ];
     } else {
       this._activeCell = { row: r, col: c };
       this._anchorCell = { row: r, col: c };
@@ -211,12 +213,14 @@ export class SelectionManager {
 
     this._activeCell = { row: 0, col: 0 };
     this._anchorCell = { row: 0, col: 0 };
-    this._ranges = [{
-      startRow: 0,
-      startCol: 0,
-      endRow: this._rowCount - 1,
-      endCol: this._colCount - 1,
-    }];
+    this._ranges = [
+      {
+        startRow: 0,
+        startCol: 0,
+        endRow: this._rowCount - 1,
+        endCol: this._colCount - 1,
+      },
+    ];
     this._type = 'all';
 
     this.notifyChange(prev);
@@ -226,8 +230,10 @@ export class SelectionManager {
   isSelected(row: number, col: number): boolean {
     for (const range of this._ranges) {
       if (
-        row >= range.startRow && row <= range.endRow &&
-        col >= range.startCol && col <= range.endCol
+        row >= range.startRow &&
+        row <= range.endRow &&
+        col >= range.startCol &&
+        col <= range.endCol
       ) {
         return true;
       }

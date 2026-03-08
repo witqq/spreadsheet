@@ -8,7 +8,7 @@
  * comparison, concatenation, and built-in functions.
  */
 
-import type { ASTNode, RangeNode, CellRefNode } from './parser';
+import type { ASTNode, RangeNode } from './parser';
 import {
   FormulaError,
   FormulaErrorType,

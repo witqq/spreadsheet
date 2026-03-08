@@ -131,10 +131,10 @@ interface VersionedOperation {
 The OT engine handles all 9 operation pairs (3×3 matrix):
 
 ```typescript
-import { transform, transformAgainstAll } from '@witqq/spreadsheet-plugins';
+import { otTransform, transformAgainstAll } from '@witqq/spreadsheet-plugins';
 
-// Transform opA against opB → [opA', opB']
-const [aPrime, bPrime] = transform(opA, opB);
+// Transform opA against opB → [opA', opB'] (either may be null for no-op)
+const [aPrime, bPrime] = otTransform(opA, opB);
 
 // Transform local op against a list of server ops
 const transformed = transformAgainstAll(localOp, serverOps);
@@ -282,7 +282,7 @@ Cursor updates are relayed to all other clients without transformation. Each cur
 
 When the last client disconnects, the server resets its state:
 - Clears operation history
-- Resets revision counter to 1
+- Resets revision counter (first client receives revision `0`)
 
 This ensures a clean state for the next session.
 

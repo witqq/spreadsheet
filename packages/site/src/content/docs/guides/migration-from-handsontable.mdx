@@ -24,9 +24,9 @@ const hot = new Handsontable(container, {
 ### @witqq/spreadsheet
 
 ```ts
-import { WitEngine } from '@witqq/spreadsheet';
+import { SpreadsheetEngine } from '@witqq/spreadsheet';
 
-const engine = new WitEngine({
+const engine = new SpreadsheetEngine({
   columns: [
     { key: 'name', title: 'Name', width: 150, type: 'string' },
     { key: 'age', title: 'Age', width: 80, type: 'number' },
@@ -114,7 +114,7 @@ engine.on('cellChange', (event) => {
 hot.getPlugin('columnSorting').sort({ column: 0, sortOrder: 'asc' });
 
 // @witqq/spreadsheet
-engine.sortBy(0, 'asc');           // single column
+engine.sortBy([{ col: 0, direction: 'asc' }]);
 engine.sortBy([                    // multi-column
   { col: 0, direction: 'asc' },
   { col: 2, direction: 'desc' },
@@ -133,13 +133,13 @@ hot.getPlugin('filters').addCondition(0, 'contains', ['text']);
 hot.getPlugin('filters').filter();
 
 // @witqq/spreadsheet
-engine.setColumnFilter(0, { operator: 'contains', value: 'text' });
+engine.setColumnFilter(0, [{ col: 0, operator: 'contains', value: 'text' }]);
 engine.removeColumnFilter(0);
 engine.clearFilters();
 engine.getFilteredRowCount();      // visible rows after filter
 ```
 
-Supported operators: `equals`, `notEquals`, `contains`, `notContains`, `startsWith`, `endsWith`, `greaterThan`, `lessThan`, `greaterThanOrEqual`, `lessThanOrEqual`, `between`, `notBetween`, `isEmpty`, `isNotEmpty`.
+Supported operators: `equals`, `notEquals`, `contains`, `startsWith`, `endsWith`, `greaterThan`, `lessThan`, `greaterThanOrEqual`, `lessThanOrEqual`, `between`, `in`, `notIn`, `isEmpty`, `isNotEmpty`.
 
 ## Frozen Panes
 
@@ -148,7 +148,7 @@ Supported operators: `equals`, `notEquals`, `contains`, `notContains`, `startsWi
 new Handsontable(el, { fixedRowsTop: 2, fixedColumnsLeft: 1 });
 
 // @witqq/spreadsheet
-new WitEngine({ frozenRows: 2, frozenColumns: 1, columns: [...] });
+new SpreadsheetEngine({ frozenRows: 2, frozenColumns: 1, columns: [...] });
 ```
 
 ## Merged Cells
@@ -159,8 +159,8 @@ new Handsontable(el, { mergeCells: [{ row: 0, col: 0, rowspan: 2, colspan: 3 }] 
 
 // @witqq/spreadsheet
 engine.mergeCells({ startRow: 0, startCol: 0, endRow: 1, endCol: 2 });
-engine.unmergeCells({ startRow: 0, startCol: 0, endRow: 1, endCol: 2 });
-engine.getMergedRegion(0, 0);      // MergedRegion | undefined
+engine.unmergeCells(0, 0);
+engine.getMergedRegion(0, 0);      // MergedRegion | null
 ```
 
 ## Plugins
@@ -174,9 +174,9 @@ Handsontable.plugins.registerPlugin('MyPlugin', MyPlugin);
 ### @witqq/spreadsheet
 
 ```ts
-import type { WitPlugin, PluginAPI } from '@witqq/spreadsheet';
+import type { SpreadsheetPlugin, PluginAPI } from '@witqq/spreadsheet';
 
-const myPlugin: WitPlugin = {
+const myPlugin: SpreadsheetPlugin = {
   name: 'my-plugin',
   version: '1.0.0',
   install(api: PluginAPI) {
@@ -195,7 +195,7 @@ engine.getPlugin('my-plugin');
 ```
 
 **Key differences:**
-- Plugins are plain objects implementing `WitPlugin` interface (no class registration)
+- Plugins are plain objects implementing `SpreadsheetPlugin` interface (no class registration)
 - `PluginAPI` provides isolated state via `getPluginState` / `setPluginState`
 - Plugin dependencies declared via `dependencies: ['other-plugin']`
 
@@ -233,14 +233,14 @@ columns: [{ validator: (value, callback) => callback(value > 0) }]
 // @witqq/spreadsheet
 engine.setColumnValidation(0, [
   { type: 'required', message: 'Value is required' },
-  { type: 'min', min: 0, message: 'Must be positive' },
+  { type: 'range', min: 0, message: 'Must be positive' },
 ]);
 engine.setCellValidation(0, 0, [
-  { type: 'custom', validate: (v) => v !== null, message: 'Cannot be null' },
+  { type: 'custom', validate: (v) => ({ valid: v !== null }), message: 'Cannot be null' },
 ]);
 ```
 
-Built-in rules: `required`, `min`, `max`, `range`, `minLength`, `maxLength`, `pattern` (regex), `custom` (function).
+Built-in rules: `required`, `range` (min/max), `regex` (pattern string with optional flags), `custom` (function).
 
 ## Theming
 
@@ -249,14 +249,14 @@ Built-in rules: `required`, `min`, `max`, `range`, `minLength`, `maxLength`, `pa
 // @witqq/spreadsheet — theme object
 import { lightTheme, darkTheme } from '@witqq/spreadsheet';
 
-const engine = new WitEngine({ theme: darkTheme, columns: [...] });
+const engine = new SpreadsheetEngine({ theme: darkTheme, columns: [...] });
 engine.setTheme(lightTheme);  // switch at runtime
 ```
 
 Create custom themes by spreading a built-in theme:
 
 ```ts
-const myTheme: WitTheme = {
+const myTheme: SpreadsheetTheme = {
   ...lightTheme,
   name: 'my-theme',
   colors: { ...lightTheme.colors, background: '#f5f5f5' },
@@ -271,9 +271,9 @@ import { HotTable } from '@handsontable/react';
 <HotTable data={data} columns={columns} />
 
 // @witqq/spreadsheet
-import { WitTable, WitTableRef } from '@witqq/spreadsheet-react';
-const ref = useRef<WitTableRef>(null);
-<WitTable
+import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
+const ref = useRef<SpreadsheetRef>(null);
+<Spreadsheet
   ref={ref}
   columns={columns}
   data={data}

@@ -68,6 +68,17 @@ import { createDefaultMenuItems } from '../context-menu/default-items';
 import { RowGroupManager } from '../grouping/row-group-manager';
 import type { RowGroupDef, ColumnAggregate } from '../grouping/row-group-manager';
 import { RowGroupToggleLayer } from '../renderer/layers/row-group-toggle-layer';
+import { AutoRowSizeManager } from '../auto-row-size/auto-row-size-manager';
+import type { AutoRowSizeConfig } from '../auto-row-size/auto-row-size-manager';
+import { CellTextLayer } from '../renderer/layers/cell-text-layer';
+import { ColumnStretchManager } from '../resize/column-stretch-manager';
+import { CellEditorRegistry } from '../editing/cell-editor-registry';
+import { DatePickerEditor } from '../editing/date-picker-editor';
+import { DateTimeEditor } from '../editing/date-time-editor';
+import type { CellEditor, CellEditorContext } from '../editing/cell-editor';
+import type { SpreadsheetLocale } from '../locale/locale-types';
+import { resolveLocale } from '../locale/resolve-locale';
+import type { ResolvedLocale } from '../locale/resolve-locale';
 
 // Plugin API implementation for per-plugin state isolation
 class SpreadsheetPluginAPI implements PluginAPI {
@@ -137,6 +148,12 @@ export interface SpreadsheetEngineConfig {
   showRowNumbers?: boolean;
   /** Visual theme (default: lightTheme). */
   theme?: SpreadsheetTheme;
+  /** Enable automatic row height based on cell content (default: false). */
+  autoRowHeight?: boolean | AutoRowSizeConfig;
+  /** Stretch columns to fill container width. 'all' distributes evenly, 'last' stretches last column. */
+  stretchColumns?: 'all' | 'last';
+  /** Locale for built-in UI strings. Defaults to English. */
+  locale?: SpreadsheetLocale;
 }
 
 export class SpreadsheetEngine {
@@ -175,15 +192,23 @@ export class SpreadsheetEngine {
   private contextMenuManager: ContextMenuManager | null = null;
   private ariaManager: AriaManager | null = null;
   private printManager: PrintManager | null = null;
+  private autoRowSizeManager: AutoRowSizeManager | null = null;
+  private columnStretchManager: ColumnStretchManager | null = null;
+  private cellEditorRegistry: CellEditorRegistry = new CellEditorRegistry();
+  private activeOverlayEditor: CellEditor | null = null;
+  /** Guard against infinite measure→render→measure loops. */
+  private _inAutoMeasure = false;
   private readonly plugins = new Map<string, SpreadsheetPlugin>();
   private readonly pluginAPIs = new Map<string, SpreadsheetPluginAPI>();
   private _isDraggingSelection = false;
   private mounted = false;
   private currentTheme: SpreadsheetTheme;
+  private resolvedLocale: ResolvedLocale;
 
   constructor(config: SpreadsheetEngineConfig) {
     this.config = config;
     this.currentTheme = config.theme ?? lightTheme;
+    this.resolvedLocale = resolveLocale(config.locale);
     this.cellStore = new CellStore();
     this.rowStore = new RowStore();
     this.eventBus = new EventBus();
@@ -211,6 +236,12 @@ export class SpreadsheetEngine {
     // Create RowGroupManager for row grouping
     this.rowGroupManager = new RowGroupManager();
     this.rowGroupManager.setCellStore(this.cellStore);
+    this.rowGroupManager.setLocale(this.resolvedLocale);
+
+    // Apply format locale to cell type registry
+    if (this.resolvedLocale.formatLocale) {
+      this.cellTypeRegistry.setFormatLocale(this.resolvedLocale.formatLocale);
+    }
 
     // Create change tracker and validation engine early (before commands)
     this.changeTracker = new ChangeTracker({
@@ -329,6 +360,26 @@ export class SpreadsheetEngine {
 
     // Wire merge manager into render pipeline
     this.gridRenderer.setMergeManager(this.mergeManager);
+    this.gridRenderer.setLocale(this.resolvedLocale);
+
+    // Create auto row size manager if enabled
+    if (this.config.autoRowHeight) {
+      const autoConfig =
+        typeof this.config.autoRowHeight === 'object' ? this.config.autoRowHeight : {};
+      this.autoRowSizeManager = new AutoRowSizeManager(
+        {
+          ...autoConfig,
+          minRowHeight: autoConfig.minRowHeight ?? theme.dimensions.rowHeight,
+        },
+        (updates) => this.setAutoRowHeights(updates),
+      );
+
+      // Register render layers that can measure heights
+      const cellTextLayer = this.gridRenderer.getLayer(CellTextLayer);
+      if (cellTextLayer) {
+        this.autoRowSizeManager.setLayers([cellTextLayer]);
+      }
+    }
 
     // Create scroll manager for native scrollbar behavior
     this.scrollManager = new ScrollManager({
@@ -380,9 +431,7 @@ export class SpreadsheetEngine {
         if (!this.canvasManager || !this.layoutEngine) return 10;
         const viewportHeight = this.canvasManager.getCssHeight();
         const frozenRows = this.config.frozenRows ?? 0;
-        const frozenH = frozenRows > 0
-          ? this.layoutEngine.getFrozenRowsHeight(frozenRows)
-          : 0;
+        const frozenH = frozenRows > 0 ? this.layoutEngine.getFrozenRowsHeight(frozenRows) : 0;
         return Math.floor(
           (viewportHeight - this.layoutEngine.headerHeight - frozenH) / this.layoutEngine.rowHeight,
         );
@@ -432,6 +481,13 @@ export class SpreadsheetEngine {
       },
     });
 
+    // Register built-in DatePicker editor for date columns via CellEditorRegistry
+    const datePickerEditor = new DatePickerEditor();
+    this.cellEditorRegistry.registerForType(datePickerEditor, 'date', 0);
+    const dateTimeEditor = new DateTimeEditor();
+    this.cellEditorRegistry.registerForType(dateTimeEditor, 'datetime', 0);
+    this.cellEditorRegistry.setLocale(this.resolvedLocale);
+
     // Wire merge manager into selection, keyboard navigator, and inline editor
     this.selectionManager.setMergeManager(this.mergeManager);
     this.keyboardNavigator.setMergeManager(this.mergeManager);
@@ -460,6 +516,7 @@ export class SpreadsheetEngine {
         this.removeColumnFilter(col);
       },
     });
+    this.filterPanel.setLocale(this.resolvedLocale);
 
     // Create clipboard manager for copy/cut/paste
     this.clipboardManager = new ClipboardManager({
@@ -468,7 +525,7 @@ export class SpreadsheetEngine {
       selectionManager: this.selectionManager,
       commandManager: this.commandManager,
       eventBus: this.eventBus,
-      isEditing: () => this.inlineEditor?.isEditing ?? false,
+      isEditing: () => (this.inlineEditor?.isEditing ?? false) || (this.activeOverlayEditor?.isOpen ?? false),
       onDataChange: () => {
         if (this.dirtyTracker) this.dirtyTracker.markDirty('cell-update');
         if (this.renderScheduler) this.renderScheduler.requestRender();
@@ -483,7 +540,7 @@ export class SpreadsheetEngine {
       eventBus: this.eventBus,
       theme,
     });
-    for (const item of createDefaultMenuItems()) {
+    for (const item of createDefaultMenuItems(this.resolvedLocale)) {
       this.contextMenuManager.registerItem(item);
     }
 
@@ -498,6 +555,7 @@ export class SpreadsheetEngine {
       rowCount,
     });
     this.ariaManager.attach();
+    this.ariaManager.setLocale(this.resolvedLocale);
 
     // Create print manager for @media print support
     this.printManager = new PrintManager({
@@ -509,6 +567,7 @@ export class SpreadsheetEngine {
       theme: this.currentTheme,
     });
     this.printManager.attach();
+    this.printManager.setLocale(this.resolvedLocale);
 
     // Create column resize manager for drag-to-resize columns
     this.columnResizeManager = new ColumnResizeManager({
@@ -531,6 +590,16 @@ export class SpreadsheetEngine {
       },
     });
     this.columnResizeManager.attach(this.scrollManager.getElement());
+
+    // Hook column resize end into stretch manager
+    this.eventBus.on('columnResizeEnd', (event) => {
+      if (this.columnStretchManager) {
+        this.columnStretchManager.markManualResize(event.colIndex);
+        this.applyColumnStretch();
+        if (this.dirtyTracker) this.dirtyTracker.markDirty('full');
+        if (this.renderScheduler) this.renderScheduler.requestRender();
+      }
+    });
 
     // Create row resize manager for drag-to-resize rows
     this.rowResizeManager = new RowResizeManager({
@@ -572,19 +641,34 @@ export class SpreadsheetEngine {
     this.autofillManager.attach(this.scrollManager.getElement());
 
     // Add fill handle layer to render pipeline (after selection overlay)
-    this.gridRenderer.addLayer(new FillHandleLayer(this.autofillManager), 'content');
+    this.gridRenderer.addLayer(new FillHandleLayer(this.autofillManager));
 
     // Add row group toggle layer to render pipeline
-    this.gridRenderer.addLayer(
-      new RowGroupToggleLayer(this.rowGroupManager, this.dataView),
-      'content',
-    );
+    this.gridRenderer.addLayer(new RowGroupToggleLayer(this.rowGroupManager, this.dataView));
 
     // Observe container resizes to update canvas dimensions
     this.resizeObserver = new ResizeObserver(() => {
       this.handleResize();
     });
     this.resizeObserver.observe(container);
+
+    // Set up column stretch manager if configured
+    if (this.config.stretchColumns) {
+      this.columnStretchManager = new ColumnStretchManager(
+        { mode: this.config.stretchColumns },
+        (updates) => {
+          if (!this.layoutEngine || !this.gridRenderer) return;
+          this.layoutEngine.setColumnWidthsBatch(updates);
+          const geometry = this.gridRenderer.getGeometry();
+          for (const [colIndex, width] of updates) {
+            geometry.setColumnWidth(colIndex, width);
+          }
+        },
+      );
+    }
+
+    // Apply column stretch before first render (needs container width from syncSize)
+    this.applyColumnStretch();
 
     // Initial render
     this.dirtyTracker.markDirty('full');
@@ -597,6 +681,25 @@ export class SpreadsheetEngine {
       const api = this.pluginAPIs.get(name)!;
       plugin.install(api);
     }
+
+    // Start async measurement sweep for off-screen rows
+    if (this.autoRowSizeManager) {
+      this.startAutoMeasureSweep();
+
+      // Column resize: mark all rows dirty for wrap-enabled columns
+      this.eventBus.on('columnResize', (event) => {
+        if (!this.autoRowSizeManager) return;
+        const col = this.config.columns[event.colIndex];
+        if (col?.wrapText) {
+          this.autoRowSizeManager.markAllDirty();
+          this.startDirtyMeasureSweep();
+        }
+      });
+
+      // Row manual resize: row now has manual override, auto height is suppressed
+      // No action needed — RowStore.setHeight marks it as manual, and
+      // measureViewport/startAsyncMeasurement skip manual rows via isManual()
+    }
   }
 
   /**
@@ -607,11 +710,29 @@ export class SpreadsheetEngine {
 
     this.canvasManager.syncSize();
 
+    this.applyColumnStretch();
+
     if (this.dirtyTracker) {
       this.dirtyTracker.markDirty('full');
     }
 
     this.executeRender();
+  }
+
+  /** Recalculate column stretch distribution based on current container width. */
+  private applyColumnStretch(): void {
+    if (!this.columnStretchManager || !this.layoutEngine || !this.canvasManager) return;
+
+    const showRowNumbers = this.config.showRowNumbers ?? true;
+    const rowNumberWidth = showRowNumbers ? this.currentTheme.dimensions.rowNumberWidth : 0;
+    const containerWidth = this.canvasManager.getCssWidth() - rowNumberWidth;
+
+    this.columnStretchManager.recalculate(
+      this.config.columns,
+      containerWidth,
+      this.config.frozenColumns ?? 0,
+      (colIndex) => this.layoutEngine!.getColumnWidth(colIndex),
+    );
   }
 
   /** Handle mouse click for selection. */
@@ -622,6 +743,10 @@ export class SpreadsheetEngine {
     // If editor is open, commit and close before processing the click
     if (this.inlineEditor?.isEditing) {
       this.inlineEditor.commitAndClose('blur');
+    }
+    // Close overlay editor (date picker, etc.) on grid click
+    if (this.activeOverlayEditor?.isOpen) {
+      this.activeOverlayEditor.close('blur');
     }
 
     const { region, row, col, shiftKey, ctrlKey } = event;
@@ -672,7 +797,11 @@ export class SpreadsheetEngine {
   private handleGridMouseHover = (event: GridMouseEvent): void => {
     const el = this.scrollManager?.getElement();
     if (!el) return;
-    if (event.region === 'header-sort-icon' || event.region === 'header-filter-icon' || event.region === 'row-group-toggle') {
+    if (
+      event.region === 'header-sort-icon' ||
+      event.region === 'header-filter-icon' ||
+      event.region === 'row-group-toggle'
+    ) {
       el.style.cursor = 'pointer';
     } else {
       el.style.cursor = '';
@@ -690,6 +819,8 @@ export class SpreadsheetEngine {
   private handleGridKeyDown = (event: GridKeyboardEvent): void => {
     // Don't navigate while editing — the textarea handles its own keyboard events
     if (this.inlineEditor?.isEditing) return;
+    // Don't navigate while overlay editor is open
+    if (this.activeOverlayEditor?.isOpen) return;
 
     const keyLower = event.key.toLowerCase();
 
@@ -714,7 +845,7 @@ export class SpreadsheetEngine {
     if (event.key === 'F2') {
       event.originalEvent.preventDefault();
       const { row, col } = this.selectionManager.getSelection().activeCell;
-      this.inlineEditor?.open(row, col);
+      this.openCellEditor(row, col);
       return;
     }
 
@@ -727,16 +858,26 @@ export class SpreadsheetEngine {
     }
 
     // Type-to-edit: printable character (not Ctrl+key) opens editor with that character
+    // Overlay editors (date picker, etc.) use structured input, not free-text
     if (!event.ctrlKey && event.key.length === 1 && this.inlineEditor) {
       event.originalEvent.preventDefault();
       const { row, col } = this.selectionManager.getSelection().activeCell;
-      this.inlineEditor.open(row, col, event.key);
+      const visibleCols = this.config.columns.filter((c) => !c.hidden);
+      const column = visibleCols[col];
+      const physRow = this.dataView.getPhysicalRow(row);
+      const cellData = this.cellStore.get(physRow, col);
+      const value = cellData?.value ?? null;
+      if (column && this.cellEditorRegistry.resolve(column, value)) {
+        this.openCellEditor(row, col);
+      } else {
+        this.inlineEditor.open(row, col, event.key);
+      }
     }
   };
 
   /** Handle double-click to open editor. */
   private handleCellDoubleClick = (event: CellEvent): void => {
-    this.inlineEditor?.open(event.row, event.col);
+    this.openCellEditor(event.row, event.col);
   };
 
   /** Handle editor close: navigate and refocus based on close reason. */
@@ -789,6 +930,90 @@ export class SpreadsheetEngine {
 
     this.selectionManager.selectCell(nextRow, nextCol);
     this.scrollCellIntoView(nextRow, nextCol);
+  }
+
+  /**
+   * Open the appropriate editor for a cell — overlay editor from registry, or InlineEditor fallback.
+   */
+  private openCellEditor(row: number, col: number): void {
+    // Close any active editor first
+    if (this.inlineEditor?.isEditing) {
+      this.inlineEditor.commitAndClose('programmatic');
+    }
+    if (this.activeOverlayEditor?.isOpen) {
+      this.activeOverlayEditor.close('programmatic');
+    }
+
+    const visibleCols = this.config.columns.filter((c) => !c.hidden);
+    const column = visibleCols[col];
+    if (!column) return;
+
+    const physRow = this.dataView.getPhysicalRow(row);
+    const cellData = this.cellStore.get(physRow, col);
+    const value = cellData?.value ?? null;
+
+    const editor = this.cellEditorRegistry.resolve(column, value);
+    if (editor) {
+      if (!this.scrollManager || !this.layoutEngine) return;
+      const container = this.scrollManager.getElement().parentElement;
+      if (!container) return;
+
+      const context: CellEditorContext = {
+        row,
+        col,
+        value,
+        column,
+        container,
+        scrollContainer: this.scrollManager.getElement(),
+        layoutEngine: this.layoutEngine,
+        scrollManager: this.scrollManager,
+        cellStore: this.cellStore,
+        dataView: this.dataView,
+        theme: this.currentTheme,
+        locale: this.resolvedLocale,
+        mergeManager: this.mergeManager,
+        frozenRows: this.config.frozenRows ?? 0,
+        frozenColumns: this.config.frozenColumns ?? 0,
+      };
+
+      const commitFn = (r: number, c: number, oldValue: CellValue, newValue: CellValue) => {
+        const pRow = this.dataView.getPhysicalRow(r);
+        const command = new CellEditCommand(this.cellStore, pRow, c, oldValue, newValue);
+        this.commandManager.execute(command);
+        this.eventBus.emit('commandExecute', { description: command.description });
+
+        const vc = this.config.columns.filter((col) => !col.hidden);
+        const col2 = vc[c];
+        if (col2) {
+          this.eventBus.emit('cellChange', {
+            row: r,
+            col: c,
+            value: newValue,
+            column: col2,
+            oldValue,
+            newValue,
+            source: 'edit',
+          });
+        }
+        if (this.dirtyTracker) {
+          this.dirtyTracker.markCellDirty(r, c);
+        }
+        if (this.renderScheduler) {
+          this.renderScheduler.requestRender();
+        }
+      };
+
+      const closeFn = (reason: EditorCloseReason) => {
+        this.activeOverlayEditor = null;
+        this.handleEditorClose(reason);
+      };
+
+      this.activeOverlayEditor = editor;
+      editor.open(context, commitFn, closeFn);
+    } else {
+      // Fallback: InlineEditor (textarea)
+      this.inlineEditor?.open(row, col);
+    }
   }
 
   /** Undo the last command and trigger re-render. */
@@ -845,9 +1070,7 @@ export class SpreadsheetEngine {
 
     // Vertical: skip if cell is in frozen rows (always visible)
     if (row >= frozenRows) {
-      const frozenH = frozenRows > 0
-        ? this.layoutEngine.getFrozenRowsHeight(frozenRows)
-        : 0;
+      const frozenH = frozenRows > 0 ? this.layoutEngine.getFrozenRowsHeight(frozenRows) : 0;
       const cellTop = this.layoutEngine.getRowY(row);
       const cellBottom = cellTop + this.layoutEngine.getRowHeight(row);
       // Scrollable area starts after frozen rows
@@ -863,9 +1086,7 @@ export class SpreadsheetEngine {
 
     // Horizontal: skip if cell is in frozen columns (always visible)
     if (col >= frozenCols) {
-      const frozenW = frozenCols > 0
-        ? this.layoutEngine.getFrozenColsWidth(frozenCols)
-        : 0;
+      const frozenW = frozenCols > 0 ? this.layoutEngine.getFrozenColsWidth(frozenCols) : 0;
       const colX = this.layoutEngine.getColumnX(col);
       const colW = this.layoutEngine.getColumnWidth(col);
       const cellLeft = colX;
@@ -912,6 +1133,17 @@ export class SpreadsheetEngine {
 
     this.commandManager.clear();
     this.eventBus.emit('destroy');
+
+    // Destroy auto row size manager
+    if (this.autoRowSizeManager) {
+      this.autoRowSizeManager.destroy();
+      this.autoRowSizeManager = null;
+    }
+
+    if (this.columnStretchManager) {
+      this.columnStretchManager.destroy();
+      this.columnStretchManager = null;
+    }
 
     // Destroy clipboard manager
     if (this.clipboardManager) {
@@ -967,6 +1199,10 @@ export class SpreadsheetEngine {
       this.inlineEditor = null;
     }
 
+    // Destroy cell editor registry (all registered editors)
+    this.cellEditorRegistry.destroy();
+    this.activeOverlayEditor = null;
+
     // Destroy filter panel
     if (this.filterPanel) {
       this.filterPanel.destroy();
@@ -1020,6 +1256,10 @@ export class SpreadsheetEngine {
     if (this.dirtyTracker) {
       this.dirtyTracker.markCellDirty(row, col);
     }
+    // Mark row dirty for auto row height re-measurement
+    if (this.autoRowSizeManager) {
+      this.autoRowSizeManager.markDirtyRows([row]);
+    }
     if (this.renderScheduler) {
       this.renderScheduler.requestRender();
     }
@@ -1044,6 +1284,142 @@ export class SpreadsheetEngine {
     this.syncScrollDimensions();
     if (this.dirtyTracker) this.dirtyTracker.markDirty('full');
     if (this.renderScheduler) this.renderScheduler.requestRender();
+  }
+
+  /**
+   * Set auto-measured row heights in batch. Only updates rows without manual overrides.
+   * Uses batch layout update for O(n) instead of O(n²) position recomputation.
+   * Applies scroll compensation when heights change above the viewport.
+   */
+  setAutoRowHeights(updates: Map<number, number>): void {
+    const changed = this.rowStore.setAutoHeightsBatch(updates, this.layoutEngine?.rowHeight ?? 28);
+    if (changed.size === 0) return;
+
+    // Scroll compensation: record position of top visible row before layout change
+    const scrollY = this.scrollManager?.scrollY ?? 0;
+    let anchorRow = -1;
+    let anchorOldY = 0;
+    if (this.layoutEngine && this.viewportManager && scrollY > 0) {
+      anchorRow = this.layoutEngine.getRowAtY(scrollY);
+      if (anchorRow >= 0) {
+        anchorOldY = this.layoutEngine.getRowY(anchorRow);
+      }
+    }
+
+    if (this.layoutEngine) {
+      // Build layout updates from changed rows (effective heights)
+      const layoutUpdates = new Map<number, number>();
+      for (const row of changed) {
+        layoutUpdates.set(row, this.rowStore.getHeight(row, this.layoutEngine.rowHeight));
+      }
+      this.layoutEngine.setRowHeightsBatch(layoutUpdates);
+    }
+    this.syncScrollDimensions();
+
+    // Scroll compensation: adjust scroll position if anchor row shifted
+    if (anchorRow >= 0 && this.layoutEngine && this.scrollManager) {
+      const anchorNewY = this.layoutEngine.getRowY(anchorRow);
+      const delta = anchorNewY - anchorOldY;
+      if (Math.abs(delta) > 0.5) {
+        this.scrollManager.scrollTo(this.scrollManager.scrollX, scrollY + delta);
+      }
+    }
+
+    if (this.dirtyTracker) this.dirtyTracker.markDirty('full');
+    if (this.renderScheduler) this.renderScheduler.requestRender();
+  }
+
+  /**
+   * Start async row height measurement sweep for all off-screen rows.
+   * Uses requestIdleCallback to avoid blocking the main thread.
+   */
+  private startAutoMeasureSweep(): void {
+    if (!this.autoRowSizeManager || !this.gridRenderer || !this.layoutEngine) return;
+
+    const totalRows = this.layoutEngine.rowCount;
+    this.autoRowSizeManager.startAsyncMeasurement(
+      totalRows,
+      this.buildAutoMeasureContext(),
+      this.rowStore,
+    );
+  }
+
+  /**
+   * Start async measurement only for dirty rows.
+   * More efficient than full sweep when a few rows changed (e.g. cell edit).
+   */
+  private startDirtyMeasureSweep(): void {
+    if (!this.autoRowSizeManager || !this.gridRenderer || !this.layoutEngine) return;
+
+    if (this.autoRowSizeManager.isAllDirty) {
+      // Full sweep needed (e.g. theme/font change)
+      this.startAutoMeasureSweep();
+      return;
+    }
+
+    if (!this.autoRowSizeManager.hasDirtyRows) return;
+
+    this.autoRowSizeManager.startDirtyMeasurement(this.buildAutoMeasureContext(), this.rowStore);
+  }
+
+  /** Build a RenderContext factory for auto row height measurement. */
+  private buildAutoMeasureContext(): (
+    startRow: number,
+    endRow: number,
+  ) => import('../renderer/render-layer').RenderContext | null {
+    const geometry = this.gridRenderer!.getGeometry();
+    const visibleColCount = this.config.columns.filter((c) => !c.hidden).length;
+
+    return (startRow: number, endRow: number) => {
+      if (!this.canvasManager || !this.gridRenderer) return null;
+      const ctx = this.canvasManager.getContext();
+      const viewport: import('../renderer/viewport-manager').ViewportRange = {
+        startRow,
+        endRow,
+        startCol: 0,
+        endCol: visibleColCount - 1,
+        visibleRowCount: endRow - startRow + 1,
+        visibleColCount,
+      };
+      return {
+        ctx,
+        geometry,
+        theme: this.currentTheme,
+        canvasWidth: this.canvasManager.getCssWidth(),
+        canvasHeight: this.canvasManager.getCssHeight(),
+        viewport,
+        scrollX: 0,
+        scrollY: 0,
+        renderMode: 'full' as import('../renderer/render-layer').RenderMode,
+        paneRegion: 'full' as import('../renderer/render-layer').PaneRegion,
+        mergeManager: this.mergeManager,
+      };
+    };
+  }
+
+  /**
+   * Notify auto row size manager that specific rows need re-measurement.
+   * Triggers async dirty measurement if auto row height is enabled.
+   */
+  markAutoRowHeightDirty(rows: number[]): void {
+    if (!this.autoRowSizeManager || rows.length === 0) return;
+    this.autoRowSizeManager.markDirtyRows(rows);
+    this.startDirtyMeasureSweep();
+  }
+
+  /**
+   * Notify auto row size manager that all rows need re-measurement.
+   * Used for theme/font changes that affect all row heights.
+   */
+  markAllAutoRowHeightDirty(): void {
+    if (!this.autoRowSizeManager) return;
+    this.autoRowSizeManager.markAllDirty();
+    this.startAutoMeasureSweep();
+  }
+
+  /** Get the auto row size manager instance (null if autoRowHeight is disabled). */
+  getAutoRowSizeManager(): AutoRowSizeManager | null {
+    return this.autoRowSizeManager;
   }
 
   // Command API
@@ -1156,7 +1532,12 @@ export class SpreadsheetEngine {
 
     if ((frozenRows > 0 || frozenColumns > 0) && this.layoutEngine) {
       const frozenRanges = this.viewportManager.computeFrozenRanges(
-        scrollX, scrollY, width, height, frozenRows, frozenColumns,
+        scrollX,
+        scrollY,
+        width,
+        height,
+        frozenRows,
+        frozenColumns,
       );
       this.gridRenderer.setFrozenConfig({
         frozenRows,
@@ -1175,12 +1556,60 @@ export class SpreadsheetEngine {
     if (dirtyCells && this.gridRenderer) {
       const dirtyRects = this.computeDirtyRects(dirtyCells, scrollX, scrollY);
       if (dirtyRects.length > 0) {
-        this.gridRenderer.renderPartial(ctx, viewport, width, height, scrollX, scrollY, dirtyRects, renderMode);
+        this.gridRenderer.renderPartial(
+          ctx,
+          viewport,
+          width,
+          height,
+          scrollX,
+          scrollY,
+          dirtyRects,
+          renderMode,
+        );
         return;
       }
     }
 
     this.gridRenderer.render(ctx, viewport, width, height, scrollX, scrollY, renderMode);
+
+    // Post-render: measure visible rows for auto row height
+    this.autoMeasureViewport(ctx, viewport, width, height, scrollX, scrollY);
+  }
+
+  /**
+   * Measure visible row heights after render and apply auto heights.
+   * Uses a guard flag to prevent infinite measure→render→measure loops.
+   */
+  private autoMeasureViewport(
+    ctx: CanvasRenderingContext2D,
+    viewport: import('../renderer/viewport-manager').ViewportRange,
+    canvasWidth: number,
+    canvasHeight: number,
+    scrollX: number,
+    scrollY: number,
+  ): void {
+    if (!this.autoRowSizeManager || this._inAutoMeasure || !this.gridRenderer) return;
+
+    this._inAutoMeasure = true;
+    try {
+      const geometry = this.gridRenderer.getGeometry();
+      const rc: import('../renderer/render-layer').RenderContext = {
+        ctx,
+        geometry,
+        theme: this.currentTheme,
+        canvasWidth,
+        canvasHeight,
+        viewport,
+        scrollX,
+        scrollY,
+        renderMode: 'full',
+        paneRegion: 'full',
+        mergeManager: this.mergeManager,
+      };
+      this.autoRowSizeManager.measureViewport(rc, this.rowStore);
+    } finally {
+      this._inAutoMeasure = false;
+    }
   }
 
   /**
@@ -1393,7 +1822,6 @@ export class SpreadsheetEngine {
     this.gridRenderer?.setFilterState(this.filterEngine.getFilteredColumns());
 
     // Update selection bounds for visible row count (after all pipeline stages)
-    const totalRows = this.dataView.totalRowCount;
     const visibleRows = this.dataView.visibleRowCount;
     this.selectionManager?.setRowCount(visibleRows);
 
@@ -1548,6 +1976,7 @@ export class SpreadsheetEngine {
   setRowGroups(groups: RowGroupDef[]): void {
     this.rowGroupManager.setGroups(groups);
     this.applyFilterAndSortToDataView();
+    this.markAllAutoRowHeightDirty();
     this.eventBus.emit('rowGroupChange', { groupHeaders: this.rowGroupManager.getGroupHeaders() });
     this.dirtyTracker?.markDirty('full');
     this.renderScheduler?.requestRender();
@@ -1563,6 +1992,7 @@ export class SpreadsheetEngine {
   expandAllGroups(): void {
     this.rowGroupManager.expandAll();
     this.applyFilterAndSortToDataView();
+    this.markAllAutoRowHeightDirty();
     this.dirtyTracker?.markDirty('full');
     this.renderScheduler?.requestRender();
   }
@@ -1571,6 +2001,7 @@ export class SpreadsheetEngine {
   collapseAllGroups(): void {
     this.rowGroupManager.collapseAll();
     this.applyFilterAndSortToDataView();
+    this.markAllAutoRowHeightDirty();
     this.dirtyTracker?.markDirty('full');
     this.renderScheduler?.requestRender();
   }
@@ -1579,6 +2010,7 @@ export class SpreadsheetEngine {
   clearRowGroups(): void {
     this.rowGroupManager.clear();
     this.applyFilterAndSortToDataView();
+    this.markAllAutoRowHeightDirty();
     this.eventBus.emit('rowGroupChange', { groupHeaders: [] });
     this.dirtyTracker?.markDirty('full');
     this.renderScheduler?.requestRender();
@@ -1607,6 +2039,7 @@ export class SpreadsheetEngine {
     if (!this.rowGroupManager.isGroupHeader(phys)) return;
     const expanded = this.rowGroupManager.toggleGroup(phys);
     this.applyFilterAndSortToDataView();
+    this.markAllAutoRowHeightDirty();
     this.eventBus.emit('rowGroupToggle', { headerRow: phys, expanded });
     this.dirtyTracker?.markDirty('full');
     this.renderScheduler?.requestRender();
@@ -1637,10 +2070,7 @@ export class SpreadsheetEngine {
   }
 
   /** Add a render layer to the pipeline (appended after existing layers). */
-  addRenderLayer(
-    layer: import('../renderer/render-layer').RenderLayer,
-    _target?: string,
-  ): void {
+  addRenderLayer(layer: import('../renderer/render-layer').RenderLayer, _target?: string): void {
     this.gridRenderer?.addLayer(layer);
   }
 
@@ -1691,6 +2121,7 @@ export class SpreadsheetEngine {
 
     // Propagate to DOM overlay subsystems
     this.inlineEditor?.setTheme(theme);
+    this.cellEditorRegistry.setTheme(theme);
     this.filterPanel?.setTheme(theme);
     this.contextMenuManager?.setTheme(theme);
     this.tooltipManager?.setTheme(theme);
@@ -1698,7 +2129,58 @@ export class SpreadsheetEngine {
     // Notify plugins of theme change
     this.eventBus.emit('themeChange', { theme });
 
+    // Theme/font change affects all row heights
+    this.markAllAutoRowHeightDirty();
+
     // Trigger full re-render
+    if (this.dirtyTracker) {
+      this.dirtyTracker.markDirty('full');
+    }
+    if (this.renderScheduler) {
+      this.renderScheduler.requestRender();
+    }
+  }
+
+  /** Get the resolved locale (English defaults merged with user-provided locale). */
+  getLocale(): ResolvedLocale {
+    return this.resolvedLocale;
+  }
+
+  /**
+   * Get the CellEditorRegistry for registering custom overlay editors.
+   * Call before mount() to register editors, or after — editors registered
+   * after mount() will be available on next cell open.
+   */
+  getCellEditorRegistry(): CellEditorRegistry {
+    return this.cellEditorRegistry;
+  }
+
+  /**
+   * Convenience: register a CellEditor for a column type string.
+   * Equivalent to getCellEditorRegistry().registerForType(editor, type, priority).
+   */
+  registerCellEditor(editor: CellEditor, type: string, priority = 0): void {
+    this.cellEditorRegistry.registerForType(editor, type, priority);
+  }
+
+  /** Switch locale at runtime. Propagates to subsystems that use locale strings. */
+  setLocale(locale: SpreadsheetLocale): void {
+    this.resolvedLocale = resolveLocale(locale);
+    this.config = { ...this.config, locale };
+
+    // Propagate to subsystems
+    this.contextMenuManager?.setLocale(this.resolvedLocale);
+    this.cellEditorRegistry.setLocale(this.resolvedLocale);
+    this.filterPanel?.setLocale(this.resolvedLocale);
+    this.gridRenderer?.setLocale(this.resolvedLocale);
+    this.rowGroupManager.setLocale(this.resolvedLocale);
+    this.ariaManager?.setLocale(this.resolvedLocale);
+    this.printManager?.setLocale(this.resolvedLocale);
+    if (this.resolvedLocale.formatLocale) {
+      this.cellTypeRegistry.setFormatLocale(this.resolvedLocale.formatLocale);
+    }
+
+    // Re-render to apply any canvas-drawn locale strings
     if (this.dirtyTracker) {
       this.dirtyTracker.markDirty('full');
     }
@@ -1723,9 +2205,7 @@ export class SpreadsheetEngine {
     if (plugin.dependencies) {
       for (const dep of plugin.dependencies) {
         if (!this.plugins.has(dep)) {
-          throw new Error(
-            `Plugin "${plugin.name}" requires "${dep}" which is not installed`,
-          );
+          throw new Error(`Plugin "${plugin.name}" requires "${dep}" which is not installed`);
         }
       }
     }
@@ -1748,9 +2228,7 @@ export class SpreadsheetEngine {
     // Check no other plugin depends on this one
     for (const [otherName, other] of this.plugins) {
       if (otherName !== name && other.dependencies?.includes(name)) {
-        throw new Error(
-          `Cannot remove plugin "${name}": "${otherName}" depends on it`,
-        );
+        throw new Error(`Cannot remove plugin "${name}": "${otherName}" depends on it`);
       }
     }
 
@@ -1792,10 +2270,9 @@ export class SpreadsheetEngine {
     if (this.layoutEngine) {
       this.layoutEngine.setRowCount(count);
       // Propagate new Float64Array references if reallocation occurred
-      this.gridRenderer?.getGeometry().setRowData(
-        this.layoutEngine.getRowPositions(),
-        this.layoutEngine.getRowHeightsArray(),
-      );
+      this.gridRenderer
+        ?.getGeometry()
+        .setRowData(this.layoutEngine.getRowPositions(), this.layoutEngine.getRowHeightsArray());
       this.scrollManager?.updateContentSize(
         this.layoutEngine.totalWidth,
         this.layoutEngine.totalHeight,

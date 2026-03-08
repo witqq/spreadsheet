@@ -12,7 +12,14 @@ const TARGET_ROWS = 1_000_000;
 const columns: ColumnDef[] = [
   { key: 'id', title: 'ID', width: 70, type: 'number', sortable: true },
   { key: 'name', title: 'Name', width: 160, type: 'string', sortable: true, filterable: true },
-  { key: 'department', title: 'Department', width: 130, type: 'string', sortable: true, filterable: true },
+  {
+    key: 'department',
+    title: 'Department',
+    width: 130,
+    type: 'string',
+    sortable: true,
+    filterable: true,
+  },
   { key: 'salary', title: 'Salary', width: 100, type: 'number', sortable: true },
   { key: 'city', title: 'City', width: 120, type: 'string', sortable: true, filterable: true },
   { key: 'startDate', title: 'Start Date', width: 110, type: 'date', sortable: true },
@@ -21,9 +28,50 @@ const columns: ColumnDef[] = [
 
 const COLUMN_KEYS = columns.map((c) => c.key);
 
-const FIRST_NAMES = ['Alice', 'Bob', 'Carol', 'David', 'Eva', 'Frank', 'Grace', 'Henry', 'Iris', 'Jack', 'Karen', 'Leo', 'Mona', 'Nick', 'Olivia', 'Paul', 'Quinn', 'Rita', 'Sam', 'Tina'];
-const LAST_NAMES = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor'];
-const DEPARTMENTS = ['Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Design', 'Support', 'Legal'];
+const FIRST_NAMES = [
+  'Alice',
+  'Bob',
+  'Carol',
+  'David',
+  'Eva',
+  'Frank',
+  'Grace',
+  'Henry',
+  'Iris',
+  'Jack',
+  'Karen',
+  'Leo',
+  'Mona',
+  'Nick',
+  'Olivia',
+  'Paul',
+  'Quinn',
+  'Rita',
+  'Sam',
+  'Tina',
+];
+const LAST_NAMES = [
+  'Smith',
+  'Johnson',
+  'Williams',
+  'Brown',
+  'Jones',
+  'Davis',
+  'Miller',
+  'Wilson',
+  'Moore',
+  'Taylor',
+];
+const DEPARTMENTS = [
+  'Engineering',
+  'Marketing',
+  'Sales',
+  'HR',
+  'Finance',
+  'Design',
+  'Support',
+  'Legal',
+];
 const CITIES = ['New York', 'London', 'Tokyo', 'Berlin', 'Paris', 'Sydney', 'Toronto', 'Singapore'];
 
 // Stable reference — prevents React useEffect from wiping CellStore on re-renders
@@ -122,10 +170,30 @@ export function MillionRowsDemo({ height = 500 }: MillionRowsDemoProps) {
 
   if (!active) {
     return (
-      <DemoWrapper title="1,000,000 Rows Demo" description="Canvas virtual scrolling renders only visible rows — constant 60 FPS regardless of dataset size." height={height}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem', padding: '2rem' }}>
-          <div style={{ fontSize: '3rem', fontWeight: 700, color: 'var(--sl-color-accent, #3b82f6)' }}>1,000,000</div>
-          <div style={{ fontSize: '1.1rem', color: 'var(--sl-color-gray-2, #475569)' }}>rows rendered at 60 FPS</div>
+      <DemoWrapper
+        title="1,000,000 Rows Demo"
+        description="Canvas virtual scrolling renders only visible rows — constant 60 FPS regardless of dataset size."
+        height={height}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            gap: '1rem',
+            padding: '2rem',
+          }}
+        >
+          <div
+            style={{ fontSize: '3rem', fontWeight: 700, color: 'var(--sl-color-accent, #3b82f6)' }}
+          >
+            1,000,000
+          </div>
+          <div style={{ fontSize: '1.1rem', color: 'var(--sl-color-gray-2, #475569)' }}>
+            rows rendered at 60 FPS
+          </div>
           <DemoButton
             variant="primary"
             onClick={handleActivate}
@@ -133,7 +201,15 @@ export function MillionRowsDemo({ height = 500 }: MillionRowsDemoProps) {
           >
             ▶ Load 1M Rows
           </DemoButton>
-          <div style={{ fontSize: '0.8rem', color: 'var(--sl-color-gray-3, #94a3b8)', textAlign: 'center', maxWidth: 400, marginTop: '0.5rem' }}>
+          <div
+            style={{
+              fontSize: '0.8rem',
+              color: 'var(--sl-color-gray-3, #94a3b8)',
+              textAlign: 'center',
+              maxWidth: 400,
+              marginTop: '0.5rem',
+            }}
+          >
             Only visible rows are drawn on canvas. Scroll through a million rows with zero jank.
           </div>
         </div>
@@ -142,16 +218,13 @@ export function MillionRowsDemo({ height = 500 }: MillionRowsDemoProps) {
   }
 
   const fmt = new Intl.NumberFormat('en-US');
-  const desc = loadTime !== null
-    ? `Loaded in ${loadTime}ms · ${fmt.format(TARGET_ROWS)} rows · ${fps !== null ? fps + ' FPS' : 'Measuring...'}`
-    : `Loading ${fmt.format(loadedRows)} / ${fmt.format(TARGET_ROWS)} (${progress}%) · ${fps !== null ? fps + ' FPS' : ''}`;
+  const desc =
+    loadTime !== null
+      ? `Loaded in ${loadTime}ms · ${fmt.format(TARGET_ROWS)} rows · ${fps !== null ? fps + ' FPS' : 'Measuring...'}`
+      : `Loading ${fmt.format(loadedRows)} / ${fmt.format(TARGET_ROWS)} (${progress}%) · ${fps !== null ? fps + ' FPS' : ''}`;
 
   return (
-    <DemoWrapper
-      title="1,000,000 Rows — Live"
-      description={desc}
-      height={height}
-    >
+    <DemoWrapper title="1,000,000 Rows — Live" description={desc} height={height}>
       <Spreadsheet
         theme={witTheme}
         ref={tableRef}
@@ -169,33 +242,59 @@ export function MillionRowsDemo({ height = 500 }: MillionRowsDemoProps) {
 
 export function MillionRowsExplanation() {
   return (
-    <div style={{ padding: '1rem 0', fontSize: '0.9rem', lineHeight: 1.7, color: 'var(--sl-color-gray-1, #334155)' }}>
+    <div
+      style={{
+        padding: '1rem 0',
+        fontSize: '0.9rem',
+        lineHeight: 1.7,
+        color: 'var(--sl-color-gray-1, #334155)',
+      }}
+    >
       <h3 style={{ marginTop: 0 }}>How It Works</h3>
       <p>
-        @witqq/spreadsheet uses <strong>canvas-based virtual scrolling</strong> — only the rows visible in the viewport are
-        rendered on each frame. The engine calculates which rows are visible based on scroll position and row heights,
-        then draws only those cells on a single <code>&lt;canvas&gt;</code> element.
+        @witqq/spreadsheet uses <strong>canvas-based virtual scrolling</strong> — only the rows
+        visible in the viewport are rendered on each frame. The engine calculates which rows are
+        visible based on scroll position and row heights, then draws only those cells on a single{' '}
+        <code>&lt;canvas&gt;</code> element.
       </p>
       <p>
         The <strong>ProgressiveLoaderPlugin</strong> streams data in time-budgeted chunks using
-        <code>scheduler.yield()</code> (with <code>MessageChannel</code> fallback). Each chunk runs for ~50ms then yields
-        to the browser. The table is interactive immediately — you can scroll, sort, and filter
-        while remaining data loads. A progress overlay shows loading status.
+        <code>scheduler.yield()</code> (with <code>MessageChannel</code> fallback). Each chunk runs
+        for ~50ms then yields to the browser. The table is interactive immediately — you can scroll,
+        sort, and filter while remaining data loads. A progress overlay shows loading status.
       </p>
       <p>
         <strong>Why it's fast:</strong>
       </p>
       <ul>
-        <li><strong>O(viewport)</strong> rendering — drawing cost is proportional to visible rows (~30-50), not total rows (1M)</li>
-        <li><strong>Canvas 2D API</strong> — GPU-accelerated text and shape rendering, no DOM node creation per cell</li>
-        <li><strong>Float64Array layout</strong> — cumulative row positions in typed arrays for O(1) cell rect lookups and O(log n) scroll-to-row</li>
-        <li><strong>rAF coalescing</strong> — multiple changes within a frame produce a single render, via <code>requestAnimationFrame</code></li>
-        <li><strong>Text measurement cache</strong> — LRU cache (10K entries) avoids redundant <code>ctx.measureText()</code> calls</li>
-        <li><strong>Progressive loading</strong> — data streams in chunks without blocking the UI thread</li>
+        <li>
+          <strong>O(viewport)</strong> rendering — drawing cost is proportional to visible rows
+          (~30-50), not total rows (1M)
+        </li>
+        <li>
+          <strong>Canvas 2D API</strong> — GPU-accelerated text and shape rendering, no DOM node
+          creation per cell
+        </li>
+        <li>
+          <strong>Float64Array layout</strong> — cumulative row positions in typed arrays for O(1)
+          cell rect lookups and O(log n) scroll-to-row
+        </li>
+        <li>
+          <strong>rAF coalescing</strong> — multiple changes within a frame produce a single render,
+          via <code>requestAnimationFrame</code>
+        </li>
+        <li>
+          <strong>Text measurement cache</strong> — LRU cache (10K entries) avoids redundant{' '}
+          <code>ctx.measureText()</code> calls
+        </li>
+        <li>
+          <strong>Progressive loading</strong> — data streams in chunks without blocking the UI
+          thread
+        </li>
       </ul>
       <p>
-        The data array itself lives in memory (~200-400MB for 1M rows), but rendering performance is independent
-        of dataset size. Scroll at any speed — the frame budget stays under 16ms.
+        The data array itself lives in memory (~200-400MB for 1M rows), but rendering performance is
+        independent of dataset size. Scroll at any speed — the frame budget stays under 16ms.
       </p>
     </div>
   );

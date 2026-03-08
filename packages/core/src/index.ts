@@ -12,6 +12,16 @@
 export { SpreadsheetEngine } from './engine/spreadsheet-engine';
 export type { SpreadsheetEngineConfig } from './engine/spreadsheet-engine';
 
+// Constants
+export { LINE_HEIGHT_MULTIPLIER } from './constants';
+
+// Auto Row Size
+export { AutoRowSizeManager } from './auto-row-size/auto-row-size-manager';
+export type {
+  AutoRowSizeConfig,
+  ApplyHeightsCallback,
+} from './auto-row-size/auto-row-size-manager';
+
 // Commands
 export type { Command } from './commands/command';
 export { CellEditCommand } from './commands/cell-edit-command';
@@ -97,7 +107,11 @@ export type { GridGeometryConfig } from './renderer/grid-geometry';
 export { LayoutEngine } from './renderer/layout-engine';
 export type { LayoutEngineConfig } from './renderer/layout-engine';
 export { ViewportManager } from './renderer/viewport-manager';
-export type { ViewportRange, ViewportConfig, FrozenViewportRanges } from './renderer/viewport-manager';
+export type {
+  ViewportRange,
+  ViewportConfig,
+  FrozenViewportRanges,
+} from './renderer/viewport-manager';
 export { RenderScheduler } from './renderer/render-scheduler';
 export { DirtyTracker } from './renderer/dirty-tracker';
 export type { DirtyRegion, DirtyCell, DirtyRect } from './renderer/dirty-tracker';
@@ -127,11 +141,7 @@ export type { SortChangeEvent, SortRejectedEvent } from './events/event-types';
 
 // Filter
 export { FilterEngine, evaluateCondition } from './filter/filter-engine';
-export type {
-  FilterCondition,
-  FilterOperator,
-  FilterEngineConfig,
-} from './filter/filter-engine';
+export type { FilterCondition, FilterOperator, FilterEngineConfig } from './filter/filter-engine';
 export { FilterPanel } from './filter/filter-panel';
 export type { FilterPanelConfig } from './filter/filter-panel';
 export type { FilterChangeEvent } from './events/event-types';
@@ -159,6 +169,19 @@ export { RowGroupToggleLayer } from './renderer/layers/row-group-toggle-layer';
 // Editing
 export { InlineEditor } from './editing/inline-editor';
 export type { InlineEditorConfig, EditorCloseReason } from './editing/inline-editor';
+export { DatePickerOverlay } from './editing/date-picker-overlay';
+export type { DatePickerConfig } from './editing/date-picker-overlay';
+export { DatePickerEditor } from './editing/date-picker-editor';
+export { DateTimeEditor } from './editing/date-time-editor';
+export { CellEditorRegistry } from './editing/cell-editor-registry';
+export type {
+  CellEditor,
+  CellEditorContext,
+  CellEditorCommit,
+  CellEditorClose,
+  CellEditorMatcher,
+  CellEditorRegistration,
+} from './editing/cell-editor';
 
 // Selection
 export { SelectionManager } from './selection/selection-manager';
@@ -177,6 +200,8 @@ export { lightTheme, darkTheme } from './themes/built-in-themes';
 // Resize
 export { ColumnResizeManager } from './resize/column-resize-manager';
 export type { ColumnResizeManagerConfig } from './resize/column-resize-manager';
+export { ColumnStretchManager } from './resize/column-stretch-manager';
+export type { ColumnStretchConfig, StretchMode } from './resize/column-stretch-manager';
 export { RowResizeManager } from './resize/row-resize-manager';
 export type { RowResizeManagerConfig } from './resize/row-resize-manager';
 export { ResizeRowCommand } from './commands/resize-row-command';
@@ -223,7 +248,12 @@ export { MergeManager } from './merge/merge-manager';
 
 // Context Menu
 export { ContextMenuManager } from './context-menu/context-menu-manager';
-export type { ContextMenuItem, MenuContext, MenuActionContext, ContextMenuManagerConfig } from './context-menu/context-menu-manager';
+export type {
+  ContextMenuItem,
+  MenuContext,
+  MenuActionContext,
+  ContextMenuManagerConfig,
+} from './context-menu/context-menu-manager';
 export { createDefaultMenuItems } from './context-menu/default-items';
 
 // ARIA Accessibility
@@ -242,7 +272,26 @@ export { StreamingAdapter } from './streaming/streaming-adapter';
 export type { StreamingAdapterOptions } from './streaming/streaming-adapter';
 
 // Benchmark
-export { measureInitTime, FPSCounter } from './benchmark/performance-benchmark';
-export type { BenchmarkResult, FPSResult } from './benchmark/performance-benchmark';
+export {
+  measureInitTime,
+  measureMultiRun,
+  measureThroughput,
+  computeStats,
+  FPSCounter,
+  BenchmarkRunner,
+} from './benchmark/performance-benchmark';
+export type {
+  BenchmarkResult,
+  FPSResult,
+  TimingResult,
+  RunStats,
+  BenchmarkMetric,
+  BenchmarkSuiteResult,
+} from './benchmark/performance-benchmark';
 
-
+// Locale
+export type { SpreadsheetLocale } from './locale/locale-types';
+export type { ResolvedLocale } from './locale/resolve-locale';
+export { resolveLocale } from './locale/resolve-locale';
+export { enLocale } from './locale/en';
+export { ruLocale } from './locale/ru';

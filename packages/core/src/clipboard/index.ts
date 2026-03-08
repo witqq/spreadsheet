@@ -3,9 +3,4 @@
 
 export { ClipboardManager } from './clipboard-manager';
 export type { ClipboardManagerConfig } from './clipboard-manager';
-export {
-  serializeToTSV,
-  serializeToHTML,
-  parseTSV,
-  parseHTML,
-} from './clipboard-serializer';
+export { serializeToTSV, serializeToHTML, parseTSV, parseHTML } from './clipboard-serializer';

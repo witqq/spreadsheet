@@ -49,9 +49,9 @@ function App() {
     <Spreadsheet
       columns={columns}
       data={data}
-      onSelectionChange={(selection) => {
-        console.log('Active cell:', selection.activeCell);
-        console.log('Ranges:', selection.ranges);
+      onSelectionChange={(event) => {
+        console.log('Active cell:', event.selection.activeCell);
+        console.log('Ranges:', event.selection.ranges);
       }}
     />
   );

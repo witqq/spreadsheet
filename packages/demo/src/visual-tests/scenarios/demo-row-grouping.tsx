@@ -36,9 +36,7 @@ export function DemoRowGrouping() {
       { headerRow: 4, childRows: [5, 6], expanded: true },
       { headerRow: 7, childRows: [8, 9, 10], expanded: false },
     ]);
-    rgm.setAggregates([
-      { col: 2, fn: 'sum' },
-    ]);
+    rgm.setAggregates([{ col: 2, fn: 'sum' }]);
     engine.requestRender();
   }, []);
   return (

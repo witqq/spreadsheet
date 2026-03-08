@@ -5,7 +5,7 @@ description: "How to install @witqq/spreadsheet packages via npm"
 
 # Installation
 
-## React Project (Recommended)
+## React Project
 
 Install the core engine and the React wrapper together:
 
@@ -17,13 +17,13 @@ This gives you the `Spreadsheet` React component with full TypeScript support.
 
 ### Peer Dependencies
 
-The React wrapper requires React 18 or later:
+The React wrapper requires React 18 or 19:
 
 ```json
 {
   "peerDependencies": {
-    "react": ">=18.0.0",
-    "react-dom": ">=18.0.0"
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
   }
 }
 ```
@@ -38,7 +38,7 @@ If you are not using React, install just the core engine:
 npm install @witqq/spreadsheet
 ```
 
-The core package has **zero external dependencies**. It works in any JavaScript environment — browsers, Node.js, Web Workers, or any framework.
+The core package has **zero external dependencies**. It works in browsers, Node.js, and Web Workers.
 
 You can build your own framework wrapper on top of the core `SpreadsheetEngine` class.
 
@@ -58,6 +58,7 @@ This package includes:
 | Conditional Format | Gradients, data bars, icon sets |
 | Excel I/O | Import/export via lazy-loaded SheetJS (Apache-2.0) |
 | Context Menu | Right-click menu with keyboard navigation |
+| Progressive Loader | Stream large datasets in time-budgeted chunks |
 
 Plugins are registered via the engine's plugin API and can be installed or removed at runtime.
 

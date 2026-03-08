@@ -33,16 +33,37 @@ The history stack holds up to 100 commands by default. When the limit is reached
 
 ## Undo/Redo Buttons
 
-Expose undo and redo through toolbar buttons via ref:
+Expose undo and redo through toolbar buttons via ref. Use `commandExecute`, `commandUndo`, and `commandRedo` events to track state:
 
 ```tsx
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Spreadsheet, SpreadsheetRef } from '@witqq/spreadsheet-react';
 
 function App() {
   const ref = useRef<SpreadsheetRef>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+
+  useEffect(() => {
+    const engine = ref.current?.getInstance();
+    if (!engine) return;
+
+    const updateState = () => {
+      const cm = engine.getCommandManager();
+      setCanUndo(cm.canUndo());
+      setCanRedo(cm.canRedo());
+    };
+
+    engine.on('commandExecute', updateState);
+    engine.on('commandUndo', updateState);
+    engine.on('commandRedo', updateState);
+
+    return () => {
+      engine.off('commandExecute', updateState);
+      engine.off('commandUndo', updateState);
+      engine.off('commandRedo', updateState);
+    };
+  }, []);
 
   return (
     <>
@@ -63,10 +84,6 @@ function App() {
         columns={columns}
         data={data}
         editable={true}
-        onCommandExecuted={() => {
-          setCanUndo(ref.current?.getInstance().getCommandManager().canUndo() ?? false);
-          setCanRedo(ref.current?.getInstance().getCommandManager().canRedo() ?? false);
-        }}
       />
     </>
   );
@@ -80,8 +97,8 @@ function App() {
 | Method | Signature | Description |
 |---|---|---|
 | `execute` | `(command: Command) => void` | Execute and push to history |
-| `undo` | `() => void` | Undo last command |
-| `redo` | `() => void` | Redo last undone command |
+| `undo` | `() => Command \| undefined` | Undo last command |
+| `redo` | `() => Command \| undefined` | Redo last undone command |
 | `canUndo` | `() => boolean` | Whether undo is available |
 | `canRedo` | `() => boolean` | Whether redo is available |
 | `clear` | `() => void` | Clear entire history |
@@ -92,6 +109,6 @@ function App() {
 interface Command {
   execute(): void;
   undo(): void;
-  description: string;
+  readonly description: string;
 }
 ```

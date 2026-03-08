@@ -26,6 +26,7 @@ type CellType =
   | 'number'
   | 'boolean'
   | 'date'
+  | 'datetime'
   | 'select'
   | 'dynamicSelect'
   | 'formula'
@@ -65,6 +66,12 @@ interface CellTypeRenderer {
     height: number,
     theme: SpreadsheetTheme
   ) => void;
+  measureHeight?: (
+    ctx: CanvasRenderingContext2D,
+    value: CellValue,
+    width: number,
+    theme: SpreadsheetTheme
+  ) => number;
 }
 ```
 
@@ -73,6 +80,7 @@ interface CellTypeRenderer {
 | `format(value)` | Convert a `CellValue` to display string |
 | `align` | Text alignment within the cell |
 | `render` | Optional custom canvas drawing (bypasses default text rendering) |
+| `measureHeight` | Optional height measurement for auto row sizing |
 
 ## Built-in Renderers
 
@@ -81,7 +89,7 @@ interface CellTypeRenderer {
 | `string` | left | Returns value as-is (`String(value)`) |
 | `number` | right | Locale-formatted number (`toLocaleString()`) |
 | `boolean` | center | Renders a checkbox glyph via custom `render` |
-| `date` | left | `toLocaleDateString()` for Date values |
+| `date` | left | `toLocaleDateString()` for Date values. See [Date Editors](/guides/date-editors/) |
 
 ## CellTypeRegistry
 

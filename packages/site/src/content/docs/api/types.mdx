@@ -47,7 +47,7 @@ interface CellMetadata {
 
 ```typescript
 type CellType =
-  | 'string' | 'number' | 'boolean' | 'date'
+  | 'string' | 'number' | 'boolean' | 'date' | 'datetime'
   | 'select' | 'dynamicSelect' | 'formula'
   | 'link' | 'image' | 'progressBar' | 'rating' | 'badge'
   | 'custom';
@@ -149,6 +149,8 @@ interface ColumnDef {
   readonly editable?: boolean;   // Allow inline editing
   readonly resizable?: boolean;  // Allow drag-to-resize
   readonly hidden?: boolean;     // Hide from display and print
+  readonly wrapText?: boolean;   // Enable text wrapping
+  readonly validation?: SpreadsheetValidationRule[]; // Cell validation rules
 }
 ```
 
@@ -202,6 +204,14 @@ interface ValidationResult {
 }
 ```
 
+### SpreadsheetValidationRule
+
+```typescript
+type SpreadsheetValidationRule = RequiredRule | RangeRule | RegexRule | CustomRule;
+```
+
+Union of all built-in validation rule types. Used in `ColumnDef.validation` and the validation engine API.
+
 ## Theme Types
 
 ### SpreadsheetTheme
@@ -210,23 +220,37 @@ Theme controls all visual dimensions and colors. See [Themes & Styling](/concept
 
 ```typescript
 interface SpreadsheetTheme {
-  rowHeight: number;
-  headerHeight: number;
-  cellPadding: number;
-  rowNumberWidth: number;
+  name: string;
   colors: {
     background: string;
     cellText: string;
     cellBorder: string;
-    headerBg: string;
+    headerBackground: string;
     headerText: string;
-    selectionBg: string;
+    selectionFill: string;
     selectionBorder: string;
     // ... additional color tokens
   };
   fonts: {
     cell: string;
     header: string;
+    cellSize: number;
+    headerSize: number;
+  };
+  dimensions: {
+    rowHeight: number;
+    headerHeight: number;
+    cellPadding: number;
+    rowNumberWidth: number;
+    minColumnWidth: number;
+    scrollbarWidth: number;
+    borderWidth: number;
+  };
+  borders: {
+    gridLineWidth: number;
+    selectionWidth: number;
+    activeCellWidth: number;
+    frozenPaneWidth: number;
   };
 }
 ```
@@ -552,7 +576,7 @@ Top-level configuration for creating the `GridRenderer` render pipeline.
 type RenderMode = 'full' | 'light' | 'placeholder';
 ```
 
-Rendering fidelity level — `placeholder` during fast scroll, `full` when idle.
+Rendering fidelity level. Currently always `'full'`. The union type exists for future optimization.
 
 ### PaneRegion
 

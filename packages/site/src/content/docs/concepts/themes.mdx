@@ -108,11 +108,12 @@ const brandTheme: SpreadsheetTheme = {
     ...lightTheme.colors,
     headerBackground: '#1a365d',
     headerText: '#ffffff',
-    selectionBackground: 'rgba(66, 153, 225, 0.15)',
+    selectionFill: 'rgba(66, 153, 225, 0.15)',
     selectionBorder: '#3182ce',
     activeCellBorder: '#2b6cb0',
   },
   fonts: {
+    ...lightTheme.fonts,
     cell: '13px "IBM Plex Sans", sans-serif',
     header: 'bold 13px "IBM Plex Sans", sans-serif',
   },
@@ -159,6 +160,6 @@ engine.on('themeChange', ({ theme }) => {
 When creating custom themes, keep these in mind:
 
 - **Contrast**: Ensure at least 4.5:1 contrast ratio between text and background for WCAG AA compliance.
-- **Selection visibility**: The `selectionBackground` should be visible against both `cellBackground` and `alternateRowBackground`.
-- **Frozen pane border**: Use a distinct color for `frozenPaneBorder` to clearly separate frozen and scrollable regions.
+- **Selection visibility**: The `selectionFill` should be visible against both `background` and `alternateRowBackground`.
+- **Frozen pane border**: Use a distinct color for `frozenSeparator` to clearly separate frozen and scrollable regions.
 - **Grid lines**: Subtle grid lines (low contrast) reduce visual noise. Use `showGridLines: false` in config to hide them entirely.

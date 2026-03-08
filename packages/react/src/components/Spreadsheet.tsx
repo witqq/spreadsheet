@@ -8,7 +8,6 @@ import type {
   CellData,
   CellValue,
   Selection,
-  SpreadsheetTheme,
   SpreadsheetPlugin,
 } from '@witqq/spreadsheet';
 import type {
@@ -33,8 +32,7 @@ export interface SpreadsheetCallbacks {
 // ─── Props (generic over row type) ──────────────────────────
 
 export interface SpreadsheetProps<TRow extends Record<string, unknown> = Record<string, unknown>>
-  extends Omit<SpreadsheetEngineConfig, 'data'>,
-    SpreadsheetCallbacks {
+  extends Omit<SpreadsheetEngineConfig, 'data'>, SpreadsheetCallbacks {
   data?: TRow[];
   className?: string;
   style?: React.CSSProperties;
@@ -105,7 +103,8 @@ function SpreadsheetInner<TRow extends Record<string, unknown> = Record<string, 
   // Store callbacks in refs to avoid stale closures
   const callbackRefs = useRef<SpreadsheetCallbacks>({});
   for (const key of CALLBACK_KEYS) {
-    callbackRefs.current[key] = props[key];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (callbackRefs.current as any)[key] = props[key];
   }
 
   useImperativeHandle(ref, () => ({
@@ -166,7 +165,7 @@ function SpreadsheetInner<TRow extends Record<string, unknown> = Record<string, 
       onScroll: _5,
       onReady: _6,
       ...config
-    } = props;
+    } = props; // destructure callbacks to exclude from engine config
 
     const engine = new SpreadsheetEngine(config as SpreadsheetEngineConfig);
     engine.mount(containerRef.current);
@@ -193,7 +192,7 @@ function SpreadsheetInner<TRow extends Record<string, unknown> = Record<string, 
       engine.destroy();
       engineRef.current = null;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Prop update: theme (without remount)
   useEffect(() => {
@@ -217,7 +216,7 @@ function SpreadsheetInner<TRow extends Record<string, unknown> = Record<string, 
     engine.getCellStore().bulkLoad(data, columnKeys);
     engine.setRowCount(data.length);
     engine.requestRender();
-  }, [props.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [props.data]);
 
   return (
     <div

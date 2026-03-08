@@ -3,3 +3,9 @@
 
 export { ColumnResizeManager } from './column-resize-manager';
 export type { ColumnResizeManagerConfig } from './column-resize-manager';
+export { ColumnStretchManager } from './column-stretch-manager';
+export type {
+  ColumnStretchConfig,
+  StretchMode,
+  StretchApplyCallback,
+} from './column-stretch-manager';

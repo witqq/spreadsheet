@@ -55,9 +55,13 @@ export function PluginShowcaseDemo() {
         const formula = `=A${row + 1}+B${row + 1}`;
         engine.setCell(row, 2, formula);
         engine.getEventBus().emit('cellChange', {
-          row, col: 2, value: formula,
+          row,
+          col: 2,
+          value: formula,
           column: columns[2],
-          oldValue: '', newValue: formula, source: 'edit' as const,
+          oldValue: '',
+          newValue: formula,
+          source: 'edit' as const,
         });
       }
       engine.requestRender();
@@ -83,8 +87,8 @@ export function PluginShowcaseDemo() {
             { value: 0, color: '#ef4444' },
             { value: 50, color: '#eab308' },
             { value: 100, color: '#22c55e' },
-          ]
-        )
+          ],
+        ),
       );
       condFormatPluginRef.current = plugin;
       engine.requestRender();
@@ -100,31 +104,23 @@ export function PluginShowcaseDemo() {
     >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <DemoToolbar>
-          <DemoButton
-            variant="toggle"
-            active={formulaEnabled}
-            onClick={toggleFormula}
-          >
+          <DemoButton variant="toggle" active={formulaEnabled} onClick={toggleFormula}>
             Formula Plugin: {formulaEnabled ? 'ON' : 'OFF'}
           </DemoButton>
-          <DemoButton
-            variant="toggle"
-            active={condFormatEnabled}
-            onClick={toggleCondFormat}
-          >
+          <DemoButton variant="toggle" active={condFormatEnabled} onClick={toggleCondFormat}>
             Conditional Formatting: {condFormatEnabled ? 'ON' : 'OFF'}
           </DemoButton>
         </DemoToolbar>
         <div style={{ flex: 1 }}>
           <Spreadsheet
-        theme={witTheme}
-        ref={tableRef}
-        columns={columns}
-        data={initialData}
-        editable={true}
-        showRowNumbers={true}
-        style={{ width: '100%', height: '100%' }}
-      />
+            theme={witTheme}
+            ref={tableRef}
+            columns={columns}
+            data={initialData}
+            editable={true}
+            showRowNumbers={true}
+            style={{ width: '100%', height: '100%' }}
+          />
         </div>
       </div>
     </DemoWrapper>

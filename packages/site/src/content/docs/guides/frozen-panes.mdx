@@ -1,13 +1,13 @@
 ---
 title: Frozen Rows & Columns
-description: Pin rows and columns with FrozenPaneManager for fixed headers, sidebars, and 4-region viewport rendering.
+description: Pin rows and columns for fixed headers, sidebars, and 4-region viewport rendering.
 ---
 
 import { FrozenPanesDemo } from '../../../components/demos/FrozenPanesDemo';
 import frozenPanesSource from '../../../components/demos/FrozenPanesDemo.tsx?raw';
 import { Code } from '@astrojs/starlight/components';
 
-Spreadsheet supports freezing rows and columns via `FrozenPaneManager`. Frozen rows stay pinned at the top and frozen columns stay pinned on the left as the user scrolls. The renderer splits the viewport into four independent regions: corner (frozen rows + frozen cols), frozen-row strip, frozen-col strip, and main scrollable content.
+Spreadsheet supports freezing rows and columns. Frozen rows stay pinned at the top and frozen columns stay pinned on the left as the user scrolls. The renderer splits the viewport into four independent regions: corner (frozen rows + frozen cols), frozen-row strip, frozen-col strip, and main scrollable content.
 
 Merged regions cannot span across frozen boundaries — a merge must be entirely within frozen or unfrozen space.
 

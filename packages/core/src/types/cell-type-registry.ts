@@ -37,6 +37,18 @@ export interface CellTypeRenderer {
     height: number,
     theme: SpreadsheetTheme,
   ) => void;
+  /**
+   * Optional height measurement for auto row sizing.
+   * Returns the desired row height in pixels for a given cell value,
+   * considering the available column width and theme.
+   * When not provided, the default row height is used.
+   */
+  measureHeight?: (
+    ctx: CanvasRenderingContext2D,
+    value: CellValue,
+    width: number,
+    theme: SpreadsheetTheme,
+  ) => number;
 }
 
 const stringRenderer: CellTypeRenderer = {
@@ -102,6 +114,7 @@ const dateRenderer: CellTypeRenderer = {
 
 export class CellTypeRegistry {
   private readonly renderers = new Map<CellType, CellTypeRenderer>();
+  private formatLocale: string = 'en-US';
 
   constructor() {
     // Register built-in types
@@ -119,6 +132,37 @@ export class CellTypeRegistry {
   /** Register a custom cell type renderer. */
   register(type: CellType, renderer: CellTypeRenderer): void {
     this.renderers.set(type, renderer);
+  }
+
+  /** Set the format locale for number and date renderers. */
+  setFormatLocale(locale: string): void {
+    this.formatLocale = locale;
+    const loc = locale;
+    this.renderers.set('number', {
+      format: (value) => {
+        if (value == null) return '';
+        if (typeof value === 'number') return value.toLocaleString(loc);
+        return String(value);
+      },
+      align: 'right',
+    });
+    this.renderers.set('date', {
+      format: (value) => {
+        if (value == null) return '';
+        if (value instanceof Date) return value.toLocaleDateString(loc);
+        if (typeof value === 'string') {
+          const parsed = new Date(value);
+          if (!isNaN(parsed.getTime())) return parsed.toLocaleDateString(loc);
+        }
+        return String(value);
+      },
+      align: 'left',
+    });
+  }
+
+  /** Get the current format locale. */
+  getFormatLocale(): string {
+    return this.formatLocale;
   }
 
   /**

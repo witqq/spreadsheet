@@ -51,33 +51,52 @@ export function ConditionalFormatDemo() {
     const plugin = new ConditionalFormattingPlugin();
     engine.installPlugin(plugin);
 
-    plugin.addRule(ConditionalFormattingPlugin.createGradientScale(
-      { startRow: 0, startCol: 1, endRow: 9, endCol: 1 },
-      [
-        { value: 0, color: '#ef4444' },
-        { value: 50, color: '#eab308' },
-        { value: 100, color: '#22c55e' },
-      ]
-    ));
+    plugin.addRule(
+      ConditionalFormattingPlugin.createGradientScale(
+        { startRow: 0, startCol: 1, endRow: 9, endCol: 1 },
+        [
+          { value: 0, color: '#ef4444' },
+          { value: 50, color: '#eab308' },
+          { value: 100, color: '#22c55e' },
+        ],
+      ),
+    );
 
-    plugin.addRule(ConditionalFormattingPlugin.createDataBar(
-      { startRow: 0, startCol: 2, endRow: 9, endCol: 2 },
-      '#3b82f6'
-    ));
+    plugin.addRule(
+      ConditionalFormattingPlugin.createDataBar(
+        { startRow: 0, startCol: 2, endRow: 9, endCol: 2 },
+        '#3b82f6',
+      ),
+    );
 
-    plugin.addRule(ConditionalFormattingPlugin.createIconSet(
-      { startRow: 0, startCol: 3, endRow: 9, endCol: 3 },
-      'arrows'
-    ));
+    plugin.addRule(
+      ConditionalFormattingPlugin.createIconSet(
+        { startRow: 0, startCol: 3, endRow: 9, endCol: 3 },
+        'arrows',
+      ),
+    );
 
     engine.requestRender();
     setStatus('Gradient: Math | Data Bars: Science | Icons: English');
   }, []);
 
   return (
-    <DemoWrapper title="Live Demo" description="Gradient scales on Math (red→yellow→green), data bars on Science (blue), and icon sets on English (arrows)." height={420}>
+    <DemoWrapper
+      title="Live Demo"
+      description="Gradient scales on Math (red→yellow→green), data bars on Science (blue), and icon sets on English (arrows)."
+      height={420}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #e2e8f0', flexShrink: 0, display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div
+          style={{
+            padding: '0.5rem 0.75rem',
+            borderBottom: '1px solid #e2e8f0',
+            flexShrink: 0,
+            display: 'flex',
+            gap: '0.5rem',
+            alignItems: 'center',
+          }}
+        >
           <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{status}</span>
         </div>
         <div style={{ flex: 1 }}>

@@ -20,11 +20,14 @@ interface SpreadsheetEngineConfig {
   sortable?: boolean;             // Enable column sorting. Default: false.
   frozenRows?: number;            // Number of rows to freeze at the top.
   frozenColumns?: number;         // Number of columns to freeze on the left.
-  rowHeight?: number;             // Row height in pixels. Default from theme.
+  rowHeight?: number;             // Row height in pixels. Default from theme (28).
   headerHeight?: number;          // Header row height in pixels. Default from theme.
   showGridLines?: boolean;        // Show cell grid lines. Default: true.
   showRowNumbers?: boolean;       // Show row number column. Default: true.
-  theme?: SpreadsheetTheme;               // Custom theme object.
+  theme?: SpreadsheetTheme;       // Custom theme object. Default: lightTheme.
+  autoRowHeight?: boolean | AutoRowSizeConfig; // Auto-calculate row heights from content. Default: false. See [Auto Row Height](/guides/auto-row-height/).
+  stretchColumns?: 'all' | 'last'; // Stretch columns to fill container width. See [Column Stretch](/guides/column-stretch/).
+  locale?: SpreadsheetLocale;     // Locale for number/date formatting and UI labels. See [Locale System](/guides/locale/).
 }
 ```
 
@@ -46,6 +49,8 @@ interface ColumnDef {
   editable?: boolean;   // Allow editing cells in this column. Overrides table-level setting.
   resizable?: boolean;  // Allow column width resizing via drag.
   hidden?: boolean;     // Hide this column from view.
+  wrapText?: boolean;   // Enable text wrapping in this column. See [Text Wrapping](/guides/text-wrapping/).
+  validation?: SpreadsheetValidationRule[]; // Column-level validation rules.
 }
 ```
 
@@ -58,7 +63,8 @@ The `type` field accepts one of these values:
 | `'string'` | Plain text (default) |
 | `'number'` | Numeric values with right-alignment |
 | `'boolean'` | Checkbox rendering |
-| `'date'` | Date values with locale formatting |
+| `'date'` | Date values with locale formatting. See [Date Editors](/guides/date-editors/) |
+| `'datetime'` | Date + time with calendar and time picker. See [Date Editors](/guides/date-editors/) |
 | `'select'` | Dropdown with predefined options |
 | `'dynamicSelect'` | Dropdown with runtime-resolved options |
 | `'formula'` | Computed cell (requires formula plugin) |
@@ -126,15 +132,18 @@ Column-level `sortable` and `filterable` override the table-level `sortable` set
 
 ## Spreadsheet React Props
 
-The React wrapper accepts all `SpreadsheetEngineConfig` fields as props, plus event callbacks:
+The React wrapper accepts all `SpreadsheetEngineConfig` fields as props, plus event callbacks, `className`, and `style`:
 
 ```tsx
 <Spreadsheet<TRow>
   // ... all SpreadsheetEngineConfig fields ...
+  className="my-table"
+  style={{ width: '100%', height: '600px' }}
   onCellChange={(event) => {}}
   onSelectionChange={(event) => {}}
   onSortChange={(event) => {}}
   onFilterChange={(event) => {}}
+  onScroll={(event) => {}}
   onReady={() => {}}
 />
 ```

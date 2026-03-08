@@ -66,13 +66,9 @@ export class CollaborationPlugin implements SpreadsheetPlugin {
 
   destroy(): void {
     if (this.api) {
-      this.api.engine
-        .getEventBus()
-        .off('cellChange', this.handleLocalCellChange);
+      this.api.engine.getEventBus().off('cellChange', this.handleLocalCellChange);
       if (this.config.sendCursor) {
-        this.api.engine
-          .getEventBus()
-          .off('selectionChange', this.handleSelectionChange);
+        this.api.engine.getEventBus().off('selectionChange', this.handleSelectionChange);
       }
       if (this.config.cursorLayer) {
         this.api.engine.removeRenderLayer(this.config.cursorLayer);
@@ -138,10 +134,7 @@ export class CollaborationPlugin implements SpreadsheetPlugin {
     const newPending: OTOperation[] = [];
     for (const pendingOp of this.pendingOps) {
       if (!remoteOp) break;
-      const [remoteTransformed, pendingTransformed] = transform(
-        remoteOp,
-        pendingOp,
-      );
+      const [remoteTransformed, pendingTransformed] = transform(remoteOp, pendingOp);
       remoteOp = remoteTransformed;
       if (pendingTransformed) {
         newPending.push(pendingTransformed);

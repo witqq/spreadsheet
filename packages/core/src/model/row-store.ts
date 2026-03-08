@@ -5,9 +5,14 @@
  * Row metadata storage: height overrides and hidden rows.
  * Rows without overrides use the default height from theme.
  * Tracks version for dirty region integration.
+ *
+ * Height overrides are separated into manual (user drag-resized) and
+ * auto (computed by measurement protocol). Manual overrides always
+ * take priority over auto-measured heights.
  */
 export class RowStore {
-  private readonly heightOverrides = new Map<number, number>();
+  private readonly manualHeightOverrides = new Map<number, number>();
+  private readonly autoHeightOverrides = new Map<number, number>();
   private readonly hiddenRows = new Set<number>();
   private _version = 0;
 
@@ -16,25 +21,96 @@ export class RowStore {
   }
 
   get overrideCount(): number {
-    return this.heightOverrides.size;
+    return this.manualHeightOverrides.size + this.autoHeightOverrides.size;
+  }
+
+  get manualOverrideCount(): number {
+    return this.manualHeightOverrides.size;
+  }
+
+  get autoOverrideCount(): number {
+    return this.autoHeightOverrides.size;
   }
 
   get hiddenCount(): number {
     return this.hiddenRows.size;
   }
 
+  /**
+   * Resolve height for a row. Priority: hidden → manual → auto → default.
+   */
   getHeight(row: number, defaultHeight: number): number {
     if (this.hiddenRows.has(row)) return 0;
-    return this.heightOverrides.get(row) ?? defaultHeight;
+    const manual = this.manualHeightOverrides.get(row);
+    if (manual !== undefined) return manual;
+    return this.autoHeightOverrides.get(row) ?? defaultHeight;
   }
 
+  /**
+   * Set a manual height override (from user interaction, e.g. drag resize).
+   * Manual overrides always take priority over auto-measured heights.
+   */
   setHeight(row: number, height: number): void {
-    this.heightOverrides.set(row, height);
+    this.manualHeightOverrides.set(row, height);
     this._version++;
   }
 
+  /**
+   * Set an auto-measured height override (from measurement protocol).
+   * Only effective when no manual override exists for the row.
+   */
+  setAutoHeight(row: number, height: number): void {
+    this.autoHeightOverrides.set(row, height);
+    this._version++;
+  }
+
+  /**
+   * Set auto-measured heights in batch. Only increments version once.
+   * Returns the set of row indices that actually changed effective height.
+   */
+  setAutoHeightsBatch(updates: Map<number, number>, defaultHeight: number): Set<number> {
+    const changed = new Set<number>();
+    for (const [row, height] of updates) {
+      // Skip rows with manual overrides — manual always wins
+      if (this.manualHeightOverrides.has(row)) continue;
+      const oldEffective = this.autoHeightOverrides.get(row) ?? defaultHeight;
+      if (Math.abs(oldEffective - height) > 0.01) {
+        this.autoHeightOverrides.set(row, height);
+        changed.add(row);
+      }
+    }
+    if (changed.size > 0) this._version++;
+    return changed;
+  }
+
+  /** Check if a row has a manual height override. */
+  isManual(row: number): boolean {
+    return this.manualHeightOverrides.has(row);
+  }
+
+  /** Check if a row has an auto height override. */
+  isAuto(row: number): boolean {
+    return this.autoHeightOverrides.has(row);
+  }
+
+  /** Clear manual height override for a row. */
   clearHeight(row: number): void {
-    if (this.heightOverrides.delete(row)) {
+    if (this.manualHeightOverrides.delete(row)) {
+      this._version++;
+    }
+  }
+
+  /** Clear auto height override for a row. */
+  clearAutoHeight(row: number): void {
+    if (this.autoHeightOverrides.delete(row)) {
+      this._version++;
+    }
+  }
+
+  /** Clear all auto height overrides. */
+  clearAllAutoHeights(): void {
+    if (this.autoHeightOverrides.size > 0) {
+      this.autoHeightOverrides.clear();
       this._version++;
     }
   }
@@ -60,10 +136,7 @@ export class RowStore {
    * Iterate visible row indices in the given range (inclusive).
    * Skips hidden rows.
    */
-  *visibleRowsInRange(
-    startRow: number,
-    endRow: number,
-  ): IterableIterator<number> {
+  *visibleRowsInRange(startRow: number, endRow: number): IterableIterator<number> {
     for (let row = startRow; row <= endRow; row++) {
       if (!this.hiddenRows.has(row)) {
         yield row;
@@ -76,15 +149,21 @@ export class RowStore {
    * Used when a row is deleted to keep height/hidden state aligned.
    */
   shiftRowsUp(deletedRow: number): void {
-    // Collect entries that need shifting
-    const newHeights = new Map<number, number>();
-    for (const [row, height] of this.heightOverrides) {
+    const newManual = new Map<number, number>();
+    for (const [row, height] of this.manualHeightOverrides) {
       if (row < deletedRow) {
-        newHeights.set(row, height);
+        newManual.set(row, height);
       } else if (row > deletedRow) {
-        newHeights.set(row - 1, height);
+        newManual.set(row - 1, height);
       }
-      // row === deletedRow is dropped
+    }
+    const newAuto = new Map<number, number>();
+    for (const [row, height] of this.autoHeightOverrides) {
+      if (row < deletedRow) {
+        newAuto.set(row, height);
+      } else if (row > deletedRow) {
+        newAuto.set(row - 1, height);
+      }
     }
     const newHidden = new Set<number>();
     for (const row of this.hiddenRows) {
@@ -95,12 +174,16 @@ export class RowStore {
       }
     }
     const changed =
-      this.heightOverrides.size !== newHeights.size ||
+      this.manualHeightOverrides.size !== newManual.size ||
+      this.autoHeightOverrides.size !== newAuto.size ||
       this.hiddenRows.size !== newHidden.size ||
-      newHeights.size > 0 ||
+      newManual.size > 0 ||
+      newAuto.size > 0 ||
       newHidden.size > 0;
-    this.heightOverrides.clear();
-    for (const [k, v] of newHeights) this.heightOverrides.set(k, v);
+    this.manualHeightOverrides.clear();
+    for (const [k, v] of newManual) this.manualHeightOverrides.set(k, v);
+    this.autoHeightOverrides.clear();
+    for (const [k, v] of newAuto) this.autoHeightOverrides.set(k, v);
     this.hiddenRows.clear();
     for (const v of newHidden) this.hiddenRows.add(v);
     if (changed) this._version++;
@@ -108,8 +191,11 @@ export class RowStore {
 
   clear(): void {
     const hadData =
-      this.heightOverrides.size > 0 || this.hiddenRows.size > 0;
-    this.heightOverrides.clear();
+      this.manualHeightOverrides.size > 0 ||
+      this.autoHeightOverrides.size > 0 ||
+      this.hiddenRows.size > 0;
+    this.manualHeightOverrides.clear();
+    this.autoHeightOverrides.clear();
     this.hiddenRows.clear();
     if (hadData) this._version++;
   }

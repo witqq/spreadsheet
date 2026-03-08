@@ -46,16 +46,7 @@ function App() {
 
 ## maxPrintRows
 
-Large datasets are capped at `maxPrintRows` (default: 10,000) to prevent browser freezes. When truncated, a notice is appended to the printed output indicating how many rows were omitted.
-
-```tsx
-<Spreadsheet
-  ref={ref}
-  columns={columns}
-  data={data}
-  maxPrintRows={5000}
-/>
-```
+Large datasets are capped at 10,000 rows by default to prevent browser freezes. When truncated, a notice is appended to the printed output indicating how many rows were omitted. Configurable via `PrintManagerConfig.maxPrintRows` at the engine level.
 
 ## How It Works
 
@@ -71,6 +62,6 @@ Large datasets are capped at `maxPrintRows` (default: 10,000) to prevent browser
 
 | Method | Signature | Description |
 |---|---|---|
-| `attach` | `(engine: SpreadsheetEngine) => void` | Attach to engine instance |
+| `attach` | `() => void` | Inject @media print CSS into document |
 | `detach` | `() => void` | Detach and clean up |
 | `print` | `() => void` | Generate DOM table and trigger print |

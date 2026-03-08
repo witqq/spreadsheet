@@ -80,29 +80,104 @@ Items appear based on their `contexts` array:
 |---|---|---|
 | `registerItem` | `(item: ContextMenuItem) => void` | Add menu item |
 | `unregisterItem` | `(id: string) => void` | Remove menu item |
+| `getItems` | `() => ReadonlyMap<string, ContextMenuItem>` | Get all registered items |
 | `close` | `() => void` | Programmatically close menu |
+| `isOpen` | `boolean` (getter) | Whether the menu is currently open |
 
 ### ContextMenuItem
 
 ```typescript
 interface ContextMenuItem {
-  id: string;
-  label: string;
-  icon?: string;
-  shortcut?: string;
-  contexts: Array<'cell' | 'header' | 'row-number' | 'corner'>;
-  action: (ctx: MenuContext) => void;
-  isDisabled?: (ctx: MenuContext) => boolean;
-  isVisible?: (ctx: MenuContext) => boolean;
+  readonly id: string;
+  readonly label: string;
+  readonly icon?: string;
+  readonly shortcut?: string;
+  readonly separator?: boolean;
+  readonly contexts: ReadonlyArray<'cell' | 'header' | 'row-number' | 'corner'>;
+  readonly submenu?: ReadonlyArray<ContextMenuItem>;
+  action?: (ctx: MenuActionContext) => void;
+  isDisabled?: (ctx: MenuActionContext) => boolean;
+  isVisible?: (ctx: MenuActionContext) => boolean;
 }
 ```
+
+### MenuActionContext
+
+The callback context passed to `action`, `isDisabled`, and `isVisible`:
+
+```typescript
+interface MenuActionContext {
+  readonly row: number;
+  readonly col: number;
+  readonly region: string;
+  readonly engine: SpreadsheetEngine;
+}
+```
+
+## Submenus
+
+Items with a `submenu` property render a nested menu panel. Submenus are recursive — each child can have its own `submenu`:
+
+```ts
+cm?.registerItem({
+  id: 'format-menu',
+  label: 'Format',
+  contexts: ['cell'],
+  submenu: [
+    {
+      id: 'format-bold',
+      label: 'Bold',
+      shortcut: 'Ctrl+B',
+      contexts: ['cell'],
+      action: (ctx) => { /* apply bold */ },
+    },
+    {
+      id: 'format-align',
+      label: 'Alignment',
+      contexts: ['cell'],
+      submenu: [
+        { id: 'align-left', label: 'Left', contexts: ['cell'], action: () => {} },
+        { id: 'align-center', label: 'Center', contexts: ['cell'], action: () => {} },
+        { id: 'align-right', label: 'Right', contexts: ['cell'], action: () => {} },
+      ],
+    },
+  ],
+});
+```
+
+Submenu items display a `▸` chevron; leaf items display their keyboard shortcut.
+
+### Submenu Positioning
+
+Submenus open to the **right** of the parent item. If there is not enough space on the right, they flip to the **left**. Vertical position is clamped to the container bounds.
+
+### Mouse Interaction
+
+- **Hover**: Opens the submenu after a 200ms delay. Moving to a sibling item closes deeper submenus immediately.
+- **Leave**: Closes the submenu after 150ms. Cancelled if the mouse enters the submenu panel.
+- **Click**: On a submenu parent, opens the submenu immediately. On a leaf item, executes the action and closes the entire menu.
+
+### Keyboard Navigation
+
+| Key | Behavior |
+|---|---|
+| Arrow Right | Open submenu of focused item, move focus to first child |
+| Arrow Left | Close current submenu, return focus to parent |
+| Arrow Down/Up | Move focus within current level (wraps around, skips disabled items) |
+| Escape | Close current submenu; if at root level, close entire menu |
+| Enter | Execute focused item action (or open submenu) |
+
+### Visibility
+
+Empty submenus (all children hidden via `isVisible` returning `false`) are automatically hidden from the menu.
 
 ## Plugin Integration
 
 When using the context menu as a plugin, use `createContextMenuPlugin` and its helper functions:
 
 ```typescript
-import { createContextMenuPlugin, createDefaultMenuItems } from '@witqq/spreadsheet-plugins';
+import { createContextMenuPlugin } from '@witqq/spreadsheet-plugins';
+import { createDefaultMenuItems } from '@witqq/spreadsheet';
 
 const plugin = createContextMenuPlugin();
 engine.installPlugin(plugin);

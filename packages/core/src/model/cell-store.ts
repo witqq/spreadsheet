@@ -63,9 +63,7 @@ export class CellStore {
    * Iterate cells within the given range (inclusive bounds).
    * Yields only cells that exist in the sparse map.
    */
-  *iterateRange(
-    range: CellRange,
-  ): IterableIterator<{ row: number; col: number; data: CellData }> {
+  *iterateRange(range: CellRange): IterableIterator<{ row: number; col: number; data: CellData }> {
     for (let row = range.startRow; row <= range.endRow; row++) {
       for (let col = range.startCol; col <= range.endCol; col++) {
         const data = this.cells.get(cellKey(row, col));
@@ -99,10 +97,7 @@ export class CellStore {
     }
   }
 
-  bulkLoad(
-    rows: ReadonlyArray<Record<string, unknown>>,
-    columnKeys: ReadonlyArray<string>,
-  ): void {
+  bulkLoad(rows: ReadonlyArray<Record<string, unknown>>, columnKeys: ReadonlyArray<string>): void {
     this.bulkLoadChunk(0, rows, columnKeys);
   }
 

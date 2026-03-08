@@ -12,7 +12,7 @@ The `@witqq/spreadsheet-widget` package provides an embeddable spreadsheet bundl
 ### CDN / Script Tag
 
 ```html
-<script src="https://unpkg.com/@witqq/spreadsheet-widget/dist/witqq-spreadsheet-widget.iife.js"></script>
+<script src="https://unpkg.com/@witqq/spreadsheet-widget/dist/witqq-spreadsheet-widget.umd.cjs"></script>
 ```
 
 The script registers a global `Spreadsheet` object with `create()` and `embed()` functions.
@@ -31,7 +31,6 @@ import { create, embed } from '@witqq/spreadsheet-widget';
 
 | Format | Size (gzip) |
 |---|---|
-| IIFE | < 36 KB |
 | UMD | < 36 KB |
 | ESM | < 34 KB |
 
@@ -43,7 +42,7 @@ Zero external dependencies — the entire core engine is bundled.
 <!DOCTYPE html>
 <html>
 <head>
-  <script src="https://unpkg.com/@witqq/spreadsheet-widget/dist/witqq-spreadsheet-widget.iife.js"></script>
+  <script src="https://unpkg.com/@witqq/spreadsheet-widget/dist/witqq-spreadsheet-widget.umd.cjs"></script>
 </head>
 <body>
   <div id="grid" style="width: 800px; height: 400px;"></div>
@@ -126,22 +125,27 @@ interface WidgetConfig extends SpreadsheetEngineConfig {
 | `columns` | `ColumnDef[]` | — | Column definitions (required) |
 | `data` | `Record<string, unknown>[]` | — | Row data |
 | `rowCount` | `number` | — | Total row count |
+| `width` | `number \| string` | — | Container width (pixels or CSS string) |
+| `height` | `number \| string` | — | Container height (pixels or CSS string) |
 | `theme` | `SpreadsheetTheme` | `lightTheme` | Theme object |
 | `frozenRows` | `number` | — | Frozen rows |
 | `frozenColumns` | `number` | — | Frozen columns |
-| `editable` | `boolean` | — | Enable editing |
-| `sortable` | `boolean` | — | Enable sorting |
-| `showGridLines` | `boolean` | — | Show grid lines |
-| `showRowNumbers` | `boolean` | — | Show row numbers |
+| `editable` | `boolean` | `false` | Enable editing |
+| `sortable` | `boolean` | `false` | Enable sorting |
+| `showGridLines` | `boolean` | `true` | Show grid lines |
+| `showRowNumbers` | `boolean` | `true` | Show row numbers |
 | `rowHeight` | `number` | — | Row height (px) |
 | `headerHeight` | `number` | — | Header height (px) |
+| `autoRowHeight` | `boolean \| AutoRowSizeConfig` | `false` | Auto-size row height based on content |
+| `stretchColumns` | `'all' \| 'last'` | — | Stretch columns to fill container width |
+| `locale` | `SpreadsheetLocale` | — | Locale for built-in UI strings |
 
 ## Themes
 
 The widget re-exports `lightTheme` and `darkTheme`:
 
 ```js
-// IIFE (global)
+// UMD (global)
 const engine = Spreadsheet.create('#grid', {
   columns: cols,
   data: rows,

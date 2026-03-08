@@ -114,7 +114,7 @@ The overlay supports both dark and light themes via `data-theme="light"` on the 
 | Method | Return | Description |
 |---|---|---|
 | `start()` | `void` | Begin progressive loading (no-op if already loading) |
-| `cancel()` | `void` | Cancel ongoing loading, remove overlay |
+| `cancel()` | `void` | Cancel ongoing loading, immediately remove overlay |
 | `getProgress()` | `number` | Fraction loaded: `0` → `1` |
 | `isLoading()` | `boolean` | Whether loading is in progress |
 | `getLoadedRows()` | `number` | Number of rows loaded so far |
@@ -122,13 +122,15 @@ The overlay supports both dark and light themes via `data-theme="light"` on the 
 ## Internal Loading Loop
 
 ```
+const BATCH_SIZE = 5000; // hardcoded
+
 while (loadedRows < totalRows) {
   if (cancelled) return;
   deadline = performance.now() + chunkBudgetMs;
 
-  while (row < totalRows && performance.now() < deadline) {
-    store.bulkGenerate(row, batchSize, columnKeys, generateRow);
-    row += batchSize;
+  while (loadedRows < totalRows && performance.now() < deadline) {
+    store.bulkGenerate(loadedRows, BATCH_SIZE, columnKeys, generateRow);
+    loadedRows += BATCH_SIZE;
   }
 
   engine.setRowCount(loadedRows);
@@ -140,7 +142,7 @@ while (loadedRows < totalRows) {
 }
 ```
 
-Each chunk uses `bulkGenerate` with a batch size of 5,000 rows for efficient CellStore writes. The engine re-renders and updates the overlay between chunks.
+Each chunk uses `bulkGenerate` with a fixed batch size of 5,000 rows for efficient CellStore writes. The engine re-renders and updates the overlay between chunks.
 
 ## Performance
 

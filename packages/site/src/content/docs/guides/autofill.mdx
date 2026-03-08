@@ -53,9 +53,6 @@ function App() {
       columns={columns}
       data={data}
       editable={true}
-      onAutofillComplete={(event) => {
-        console.log('Filled cells');
-      }}
     />
   );
 }
@@ -87,8 +84,8 @@ import { detectPattern, extendPattern } from '@witqq/spreadsheet';
 ```typescript
 interface DetectedPattern {
   type: 'number-sequence' | 'number-increment' | 'date-sequence' | 'text-repeat';
-  values: CellValue[];
-  step?: number;          // Increment for number sequences
+  sourceValues: readonly CellValue[];
+  step: number;             // Increment for number sequences, interval in ms for dates
 }
 ```
 
@@ -98,6 +95,6 @@ interface DetectedPattern {
 
 | Event | Payload | Description |
 |---|---|---|
-| `autofillStart` | `{ anchor, range }` | Drag started from fill handle |
-| `autofillPreview` | `{ range, values }` | Preview of values during drag |
-| `autofillComplete` | `{ filledCells }` | Fill operation completed |
+| `autofillStart` | `{ sourceRange: CellRange }` | Drag started from fill handle |
+| `autofillPreview` | `{ sourceRange: CellRange, fillRange: CellRange \| null, direction: FillDirection \| null }` | Preview of fill area during drag |
+| `autofillComplete` | `{ sourceRange: CellRange, fillRange: CellRange, direction: FillDirection }` | Fill operation completed |

@@ -8,7 +8,7 @@
  * via a custom render layer using destination-over compositing.
  */
 
-import type { SpreadsheetPlugin, PluginAPI, ConditionalFormatRule, ConditionalFormatCondition, CellRange } from '@witqq/spreadsheet';
+import type { SpreadsheetPlugin, PluginAPI, ConditionalFormatRule, CellRange } from '@witqq/spreadsheet';
 import { ConditionalFormatLayer } from './conditional-format-layer';
 
 export const CONDITIONAL_FORMAT_PLUGIN_NAME = 'conditional-format';

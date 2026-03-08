@@ -8,7 +8,17 @@ export class GridLinesLayer implements RenderLayer {
   constructor(private readonly dataView?: DataView) {}
 
   render(rc: RenderContext): void {
-    const { ctx, geometry, theme, canvasWidth, canvasHeight, viewport, scrollX, scrollY, mergeManager } = rc;
+    const {
+      ctx,
+      geometry,
+      theme,
+      canvasWidth,
+      canvasHeight,
+      viewport,
+      scrollX,
+      scrollY,
+      mergeManager,
+    } = rc;
     const colRects = geometry.computeColumnRects();
 
     ctx.strokeStyle = theme.colors.gridLine;
@@ -17,13 +27,19 @@ export class GridLinesLayer implements RenderLayer {
 
     // Collect merged regions for grid line suppression, translating physical→logical rows
     const rawRegions = mergeManager?.getAllRegions() ?? [];
-    const regions: Array<{ startRow: number; startCol: number; endRow: number; endCol: number }> = [];
+    const regions: Array<{ startRow: number; startCol: number; endRow: number; endCol: number }> =
+      [];
     if (this.dataView && !this.dataView.isPassthrough()) {
       for (const r of rawRegions) {
         const logStart = this.dataView.getLogicalRow(r.startRow);
         const logEnd = this.dataView.getLogicalRow(r.endRow);
         if (logStart !== undefined && logEnd !== undefined) {
-          regions.push({ startRow: logStart, startCol: r.startCol, endRow: logEnd, endCol: r.endCol });
+          regions.push({
+            startRow: logStart,
+            startCol: r.startCol,
+            endRow: logEnd,
+            endCol: r.endCol,
+          });
         }
       }
     } else {
@@ -49,7 +65,17 @@ export class GridLinesLayer implements RenderLayer {
       for (let r = viewport.startRow; r <= viewport.endRow + 1; r++) {
         const y = geometry.headerHeight + geometry.getRowY(r) - scrollY;
         // Draw line in segments, skipping merged region interiors
-        this.drawHLineWithMergeGaps(ctx, y, r, colRects, regions, scrollX, canvasWidth, viewport.startCol, viewport.endCol);
+        this.drawHLineWithMergeGaps(
+          ctx,
+          y,
+          r,
+          colRects,
+          regions,
+          scrollX,
+          canvasWidth,
+          viewport.startCol,
+          viewport.endCol,
+        );
       }
     }
 
@@ -141,7 +167,11 @@ export class GridLinesLayer implements RenderLayer {
     ctx: CanvasRenderingContext2D,
     x: number,
     c: number,
-    geometry: { headerHeight: number; getRowY: (r: number) => number; getRowHeight: (r: number) => number },
+    geometry: {
+      headerHeight: number;
+      getRowY: (r: number) => number;
+      getRowHeight: (r: number) => number;
+    },
     regions: ReadonlyArray<{ startRow: number; startCol: number; endRow: number; endCol: number }>,
     scrollY: number,
     canvasHeight: number,
@@ -170,7 +200,8 @@ export class GridLinesLayer implements RenderLayer {
 
     for (const gap of gaps) {
       const gapTopY = headerH + geometry.getRowY(gap.startRow) - scrollY;
-      const gapBottomY = headerH + geometry.getRowY(gap.endRow) + geometry.getRowHeight(gap.endRow) - scrollY;
+      const gapBottomY =
+        headerH + geometry.getRowY(gap.endRow) + geometry.getRowHeight(gap.endRow) - scrollY;
 
       if (currentY < gapTopY) {
         ctx.moveTo(x + 0.5, currentY);

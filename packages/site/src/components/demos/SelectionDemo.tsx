@@ -19,9 +19,21 @@ export function SelectionDemo() {
   };
 
   return (
-    <DemoWrapper title="Live Demo" description="Click cells, use Shift+Click for ranges, Ctrl+Click for multi-select." height={440}>
+    <DemoWrapper
+      title="Live Demo"
+      description="Click cells, use Shift+Click for ranges, Ctrl+Click for multi-select."
+      height={440}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: '#64748b', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+        <div
+          style={{
+            padding: '0.5rem 0.75rem',
+            fontSize: '0.8rem',
+            color: '#64748b',
+            borderBottom: '1px solid #e2e8f0',
+            flexShrink: 0,
+          }}
+        >
           {selection}
         </div>
         <div style={{ flex: 1 }}>

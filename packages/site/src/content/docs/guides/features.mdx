@@ -3,8 +3,6 @@ title: Features Overview
 description: "Complete feature map of @witqq/spreadsheet with links to detailed documentation."
 ---
 
-# Features Overview
-
 @witqq/spreadsheet is a canvas-based spreadsheet engine for the web. This page maps every capability to its documentation.
 
 ## Core Engine
@@ -13,7 +11,7 @@ description: "Complete feature map of @witqq/spreadsheet with links to detailed 
 |---|---|---|
 | Canvas 2D Rendering | Layer-based pipeline, 60 FPS at 100K+ rows | [Rendering](/concepts/rendering/) |
 | Data Model | Sparse CellStore, RowStore, ColStore, StylePool | [Data Model](/concepts/data-model/) |
-| Event System | Typed EventBus with 25+ events | [Events](/concepts/events/) |
+| Event System | Typed EventBus with 36 events | [Events](/concepts/events/) |
 | Themes | Light/dark themes, runtime switching, full customization | [Themes](/concepts/themes/) |
 | Architecture | Zero-dependency core, plugin system, framework wrappers | [Architecture](/concepts/architecture/) |
 
@@ -30,10 +28,12 @@ description: "Complete feature map of @witqq/spreadsheet with links to detailed 
 | Feature | Description | Docs |
 |---|---|---|
 | Inline Editor | Textarea overlay, F2/double-click open, Enter/Escape/Tab | [Editing](/guides/editing/) |
+| Date & DateTime Editors | Calendar overlay, time spinners, keyboard navigation | [Date Editors](/guides/date-editors/) |
+| Cell Editor Registry | Custom editors, matcher-based selection, editor lifecycle | [Cell Editor Registry](/guides/cell-editor-registry/) |
 | Undo & Redo | 100-step command stack, Ctrl+Z / Ctrl+Y | [Undo & Redo](/guides/undo-redo/) |
 | Clipboard | Copy/Cut/Paste, TSV + HTML formats, Excel/Sheets interop | [Clipboard](/guides/clipboard/) |
 | Drag-to-Fill | Pattern detection (numbers, dates, text), merge-aware | [Autofill](/guides/autofill/) |
-| Validation | Column/cell rules: required, min/max, regex, custom | [Validation](/guides/validation/) |
+| Validation | Column/cell rules: required, range, regex, custom | [Validation](/guides/validation/) |
 | Change Tracking | Cell status lifecycle: changed → saving → saved, error | [Change Tracking](/guides/change-tracking/) |
 
 ## Data Management
@@ -76,10 +76,14 @@ description: "Complete feature map of @witqq/spreadsheet with links to detailed 
 |---|---|---|
 | Performance | 100K rows default, 1M rows toggle, FPS counter, measureInitTime | [Performance](/getting-started/performance/) |
 | Column/Row Resize | Drag headers/row numbers, min/max constraints, undoable | [Resize](/guides/resize/) |
-| Context Menu | Right-click menu, extensible items, keyboard navigation | [Context Menu](/guides/context-menu/) |
+| Auto Row Height | Two-phase content measurement, per-row height calculation | [Auto Row Height](/guides/auto-row-height/) |
+| Text Wrapping | Word-wrap in columns, greedy line breaking, truncation | [Text Wrapping](/guides/text-wrapping/) |
+| Column Stretch | Fill container width — 'all' or 'last' mode | [Column Stretch](/guides/column-stretch/) |
+| Locale / i18n | Built-in locales, custom translations, runtime switching | [Locale System](/guides/locale/) |
+| Context Menu | Right-click menu, extensible items, submenus, keyboard navigation | [Context Menu](/guides/context-menu/) |
 | Accessibility | WCAG 2.1 AA, role=grid, aria-live announcements | [Accessibility](/guides/accessibility/) |
 | Print Support | @media print CSS, DOM table generation, maxPrintRows | [Print](/guides/print/) |
-| Cell Types | Built-in (string, number, boolean, date) + custom renderers | [Cell Types](/api/cell-types/) |
+| Cell Types | 14 cell types (string, number, boolean, date, datetime, select, etc.) with extensible renderers via CellTypeRegistry | [Cell Types](/api/cell-types/) |
 
 ## API Reference
 

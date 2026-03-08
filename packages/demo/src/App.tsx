@@ -2,9 +2,16 @@ import { useRef, useEffect, useCallback, useState } from 'react';
 import { Spreadsheet } from '@witqq/spreadsheet-react';
 import type { SpreadsheetRef } from '@witqq/spreadsheet-react';
 import type { ColumnDef } from '@witqq/spreadsheet';
-import { lightTheme, darkTheme, PivotEngine, StreamingAdapter } from '@witqq/spreadsheet';
+import { lightTheme, darkTheme, PivotEngine, StreamingAdapter, enLocale, ruLocale } from '@witqq/spreadsheet';
 import type { PivotColumnDef, CellEvent, PivotResult } from '@witqq/spreadsheet';
-import { createContextMenuPlugin, FormulaPlugin, ConditionalFormattingPlugin, ExcelPlugin } from '@witqq/spreadsheet-plugins';
+import {
+  createContextMenuPlugin,
+  FormulaPlugin,
+  ConditionalFormattingPlugin,
+  ExcelPlugin,
+  ProgressiveLoaderPlugin,
+} from '@witqq/spreadsheet-plugins';
+import type { ContextMenuItem } from '@witqq/spreadsheet';
 import { CollaborationPlugin } from '../../plugins/src/collaboration/collaboration-plugin';
 import { WebSocketTransport } from '../../plugins/src/collaboration/ws-transport';
 import type { WebSocketTransportConfig } from '../../plugins/src/collaboration/ws-transport';
@@ -24,6 +31,7 @@ const columns: ColumnDef[] = [
   { key: 'phone', title: 'Phone', width: 130 },
   { key: 'startDate', title: 'Start Date', width: 110, type: 'date' },
   { key: 'hireDate', title: 'Hire Date', width: 110, type: 'date' },
+  { key: 'lastLogin', title: 'Last Login', width: 160, type: 'datetime' },
   { key: 'active', title: 'Active', width: 60, type: 'boolean' },
   { key: 'status', title: 'Status', width: 80 },
   { key: 'rating', title: 'Rating', width: 70, type: 'number' },
@@ -32,7 +40,7 @@ const columns: ColumnDef[] = [
   { key: 'office', title: 'Office', width: 80 },
   { key: 'floor', title: 'Floor', width: 60, type: 'number' },
   { key: 'manager', title: 'Manager', width: 120 },
-  { key: 'notes', title: 'Notes', width: 200 },
+  { key: 'notes', title: 'Notes', width: 200, wrapText: true },
   { key: 'budget', title: 'Budget', width: 100, type: 'number' },
   { key: 'overtime', title: 'Overtime', width: 80, type: 'number' },
   { key: 'bonus', title: 'Bonus', width: 90, type: 'number' },
@@ -51,20 +59,71 @@ const columns: ColumnDef[] = [
   { key: 'os', title: 'OS', width: 80 },
   { key: 'monitor', title: 'Monitor Size', width: 100 },
   { key: 'languages', title: 'Languages', width: 120, type: 'number' },
-  { key: 'comments', title: 'Comments', width: 220 },
+  { key: 'comments', title: 'Comments', width: 220, wrapText: true },
 ];
 
-const firstNames = ['Alice', 'Bob', 'Carol', 'David', 'Eve', 'Frank', 'Grace', 'Henry', 'Ivy', 'Jack'];
-const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
-const departments = ['Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations', 'Legal', 'Support'];
-const titles = ['Engineer', 'Manager', 'Analyst', 'Designer', 'Coordinator', 'Director', 'Specialist', 'Lead'];
+const firstNames = [
+  'Alice',
+  'Bob',
+  'Carol',
+  'David',
+  'Eve',
+  'Frank',
+  'Grace',
+  'Henry',
+  'Ivy',
+  'Jack',
+];
+const lastNames = [
+  'Smith',
+  'Johnson',
+  'Williams',
+  'Brown',
+  'Jones',
+  'Garcia',
+  'Miller',
+  'Davis',
+  'Rodriguez',
+  'Martinez',
+];
+const departments = [
+  'Engineering',
+  'Marketing',
+  'Sales',
+  'HR',
+  'Finance',
+  'Operations',
+  'Legal',
+  'Support',
+];
+const titles = [
+  'Engineer',
+  'Manager',
+  'Analyst',
+  'Designer',
+  'Coordinator',
+  'Director',
+  'Specialist',
+  'Lead',
+];
 const cities = ['New York', 'London', 'Tokyo', 'Berlin', 'Paris', 'Sydney', 'Toronto', 'Singapore'];
 const countries = ['USA', 'UK', 'Japan', 'Germany', 'France', 'Australia', 'Canada', 'Singapore'];
 const statuses = ['Active', 'On Leave', 'Remote'];
 const teams = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon'];
 const offices = ['HQ', 'West', 'East', 'Remote'];
 const regions = ['North America', 'Europe', 'Asia Pacific', 'Latin America', 'Middle East'];
-const skills = ['TypeScript', 'Python', 'Java', 'Go', 'Rust', 'C++', 'Kotlin', 'Swift', 'Ruby', 'Scala'];
+const skills = [
+  'TypeScript',
+  'Python',
+  'Java',
+  'Go',
+  'Rust',
+  'C++',
+  'Kotlin',
+  'Swift',
+  'Ruby',
+  'Scala',
+];
 const laptops = ['MacBook Pro 16', 'MacBook Pro 14', 'ThinkPad X1', 'Dell XPS 15', 'Surface Pro'];
 const oses = ['macOS', 'Windows', 'Linux'];
 const monitors = ['27"', '32"', '34" UW', '24"', 'Dual 27"'];
@@ -88,6 +147,7 @@ function generateData(count: number): Record<string, unknown>[] {
       active: i % 3 !== 0,
       startDate: `2020-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
       hireDate: `2019-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
+      lastLogin: `2025-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}T${String(8 + (i % 12)).padStart(2, '0')}:${String((i * 7) % 60).padStart(2, '0')}`,
       status: statuses[i % statuses.length],
       rating: 1 + (i % 5),
       projects: 1 + (i % 10),
@@ -95,7 +155,7 @@ function generateData(count: number): Record<string, unknown>[] {
       office: offices[i % offices.length],
       floor: 1 + (i % 10),
       manager: `${firstNames[(i + 3) % firstNames.length]} ${lastNames[(i + 5) % lastNames.length]}`,
-      notes: `Employee #${i + 1} - ${departments[i % departments.length]} department`,
+      notes: `Employee #${i + 1} in ${departments[i % departments.length]} department. Key responsibilities include project coordination and team collaboration across ${regions[i % regions.length]} region.`,
       budget: 10000 + (i % 50) * 1000,
       overtime: i % 40,
       bonus: 500 + (i % 30) * 200,
@@ -114,13 +174,13 @@ function generateData(count: number): Record<string, unknown>[] {
       os: oses[i % oses.length],
       monitor: monitors[i % monitors.length],
       languages: 1 + (i % 5),
-      comments: `Review cycle ${(i % 4) + 1}Q - ${statuses[i % statuses.length].toLowerCase()} employee in ${cities[i % cities.length]}`,
+      comments: `Performance review cycle ${(i % 4) + 1}Q — ${statuses[i % statuses.length].toLowerCase()} employee based in ${cities[i % cities.length]}. Rated ${1 + (i % 5)}/5 stars with ${1 + (i % 10)} active projects.`,
     });
   }
   return rows;
 }
 
-const data100K = generateData(100_000);
+const data1K = generateData(1_000);
 
 export default function App() {
   const tableRef = useRef<SpreadsheetRef>(null);
@@ -128,8 +188,9 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [excelStatus, setExcelStatus] = useState('');
   const [isDark, setIsDark] = useState(false);
-  const [rowMode, setRowMode] = useState<'100k' | '1m'>('100k');
-  const [data, setData] = useState(data100K);
+  const [isRu, setIsRu] = useState(false);
+  const [rowMode, setRowMode] = useState<'1k' | '1m'>('1k');
+  const [data, setData] = useState(data1K);
   const [groupsEnabled, setGroupsEnabled] = useState(false);
   const [pivotMode, setPivotMode] = useState(false);
   const [pivotColumns, setPivotColumns] = useState<PivotColumnDef[]>([]);
@@ -145,14 +206,26 @@ export default function App() {
   const [streamingCount, setStreamingCount] = useState(0);
   const [collabMode, setCollabMode] = useState(false);
   const [collabStatus, setCollabStatus] = useState('');
-  const collabRef = useRef<{ plugin: CollaborationPlugin; transport: WebSocketTransport; cursorLayer: RemoteCursorLayer } | null>(null);
+  const [stretchMode, setStretchMode] = useState<'none' | 'all' | 'last'>('none');
+  const [autoRowHeightEnabled, setAutoRowHeightEnabled] = useState(true);
+  const [progressiveMode, setProgressiveMode] = useState(false);
+  const [progressPct, setProgressPct] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const collabRef = useRef<{
+    plugin: CollaborationPlugin;
+    transport: WebSocketTransport;
+    cursorLayer: RemoteCursorLayer;
+  } | null>(null);
   const pivotEngineRef = useRef(new PivotEngine());
-  const streamingRef = useRef<{ adapter: StreamingAdapter; interval: ReturnType<typeof setInterval> } | null>(null);
+  const streamingRef = useRef<{
+    adapter: StreamingAdapter;
+    interval: ReturnType<typeof setInterval>;
+  } | null>(null);
 
   // Expose engine for E2E testing — re-run when pivot mode or drill-down changes (key forces remount)
   useEffect(() => {
     const engine = tableRef.current?.getInstance() ?? null;
-    (window as any).__witEngine = engine;
+    (window as unknown as Record<string, unknown>).__witEngine = engine;
 
     // Install cellClick handler for pivot drill-down
     if (pivotMode && !drillDown && engine && pivotResult) {
@@ -161,7 +234,10 @@ export default function App() {
       const handleCellClick = (event: CellEvent) => {
         if (event.col < result.frozenColumns) return;
         const drillRows = pivotEngineRef.current.getDrillDownRows(
-          sourceData, result, event.row, event.col,
+          sourceData,
+          result,
+          event.row,
+          event.col,
         );
         if (drillRows.length === 0) return;
 
@@ -179,7 +255,7 @@ export default function App() {
         setDrillDown({ title, columns, rows: drillRows });
       };
       engine.on('cellClick', handleCellClick);
-      (window as any).__pivotResult = result;
+      (window as unknown as Record<string, unknown>).__pivotResult = result;
       return () => {
         engine.off('cellClick', handleCellClick);
       };
@@ -197,8 +273,58 @@ export default function App() {
         { type: 'range', min: 18, max: 65, message: 'Age must be between 18 and 65' },
       ]);
 
-      // Install context menu plugin
-      engine.installPlugin(createContextMenuPlugin());
+      // Install context menu plugin with submenu demo items
+      const menuItems: ContextMenuItem[] = [
+        {
+          id: 'insert-submenu',
+          label: 'Insert',
+          contexts: ['cell', 'header'],
+          submenu: [
+            { id: 'insert-row-above', label: 'Row Above', contexts: ['cell'], action: () => {} },
+            { id: 'insert-row-below', label: 'Row Below', contexts: ['cell'], action: () => {} },
+            { id: 'insert-col-left', label: 'Column Left', contexts: ['header'], action: () => {} },
+            {
+              id: 'insert-col-right',
+              label: 'Column Right',
+              contexts: ['header'],
+              action: () => {},
+            },
+          ],
+        },
+        {
+          id: 'format-submenu',
+          label: 'Format',
+          contexts: ['cell'],
+          submenu: [
+            {
+              id: 'format-bold',
+              label: 'Bold',
+              shortcut: 'Ctrl+B',
+              contexts: ['cell'],
+              action: () => {},
+            },
+            {
+              id: 'format-italic',
+              label: 'Italic',
+              shortcut: 'Ctrl+I',
+              contexts: ['cell'],
+              action: () => {},
+            },
+            {
+              id: 'format-align',
+              label: 'Alignment',
+              contexts: ['cell'],
+              submenu: [
+                { id: 'align-left', label: 'Left', contexts: ['cell'], action: () => {} },
+                { id: 'align-center', label: 'Center', contexts: ['cell'], action: () => {} },
+                { id: 'align-right', label: 'Right', contexts: ['cell'], action: () => {} },
+              ],
+            },
+          ],
+        },
+        // Copy/Paste/Cut already provided by engine's default context menu items
+      ];
+      engine.installPlugin(createContextMenuPlugin(menuItems));
 
       // Install formula plugin
       engine.installPlugin(new FormulaPlugin());
@@ -249,12 +375,12 @@ export default function App() {
       const excelPlugin = new ExcelPlugin();
       engine.installPlugin(excelPlugin);
       excelPluginRef.current = excelPlugin;
-      (window as any).__excelPlugin = excelPlugin;
+      (window as unknown as Record<string, unknown>).__excelPlugin = excelPlugin;
 
       // Demo: merge a 2×3 region (rows 3-4, cols 2-4) with explicit value
       engine.mergeCells({ startRow: 3, startCol: 2, endRow: 4, endCol: 4 }, 'Merged Cell');
     }
-  }, [pivotMode, drillDown]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pivotMode, drillDown]);
 
   const handleImport = useCallback(() => {
     fileInputRef.current?.click();
@@ -268,7 +394,9 @@ export default function App() {
       setExcelStatus('Importing...');
       const buffer = await file.arrayBuffer();
       const result = await excelPluginRef.current.importExcel(buffer);
-      setExcelStatus(`Imported "${result.sheetName}": ${result.rowCount} rows, ${result.columns.length} cols`);
+      setExcelStatus(
+        `Imported "${result.sheetName}": ${result.rowCount} rows, ${result.columns.length} cols`,
+      );
     } catch (err) {
       setExcelStatus(`Import error: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -282,8 +410,13 @@ export default function App() {
 
     try {
       setExcelStatus('Exporting...');
-      const buffer = await excelPluginRef.current.exportExcel({ sheetName: 'Spreadsheet Export', maxRows: 10000 });
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const buffer = await excelPluginRef.current.exportExcel({
+        sheetName: 'Spreadsheet Export',
+        maxRows: 10000,
+      });
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -300,14 +433,24 @@ export default function App() {
     setIsDark((prev) => !prev);
   }, []);
 
+  const handleToggleLocale = useCallback(() => {
+    setIsRu((prev) => {
+      const next = !prev;
+      const engine = tableRef.current?.getInstance();
+      if (engine) {
+        engine.setLocale(next ? ruLocale : enLocale);
+      }
+      return next;
+    });
+  }, []);
+
   const handleToggleRows = useCallback(() => {
-    const next = rowMode === '100k' ? '1m' : '100k';
+    const next = rowMode === '1k' ? '1m' : '1k';
     setRowMode(next);
 
     if (next === '1m') {
       // For 1M mode: set row count to 1M but only populate first 1000 rows
       // This tests LayoutEngine, viewport, and scroll at 1M scale
-      // without consuming GB of memory for cell data
       const engine = tableRef.current?.getInstance();
       if (engine) {
         const start = performance.now();
@@ -316,11 +459,11 @@ export default function App() {
         setExcelStatus(`Loaded 1M rows in ${elapsed.toFixed(0)}ms`);
       }
     } else {
-      // Back to 100K: restore full data
+      // Back to 1K: restore data
       const start = performance.now();
-      setData(data100K);
+      setData(data1K);
       const elapsed = performance.now() - start;
-      setExcelStatus(`Loaded 100K rows in ${elapsed.toFixed(0)}ms`);
+      setExcelStatus(`Loaded 1K rows in ${elapsed.toFixed(0)}ms`);
     }
   }, [rowMode]);
 
@@ -401,7 +544,7 @@ export default function App() {
         columnKeys: columns.map((c) => c.key),
         throttleMs: 100,
       });
-      (window as any).__streamingAdapter = adapter;
+      (window as unknown as Record<string, unknown>).__streamingAdapter = adapter;
       let counter = 0;
       const interval = setInterval(() => {
         const batch: Record<string, unknown>[] = [];
@@ -422,6 +565,7 @@ export default function App() {
             active: i % 3 !== 0,
             startDate: `2025-01-${String((i % 28) + 1).padStart(2, '0')}`,
             hireDate: `2024-06-${String((i % 28) + 1).padStart(2, '0')}`,
+            lastLogin: `2025-06-${String((i % 28) + 1).padStart(2, '0')}T${String(9 + (i % 10)).padStart(2, '0')}:${String((i * 3) % 60).padStart(2, '0')}`,
             status: statuses[i % statuses.length],
             rating: 1 + (i % 5),
             projects: 1 + (i % 10),
@@ -547,61 +691,191 @@ export default function App() {
     }
   }, [collabMode]);
 
+  const handleProgressiveLoad = useCallback(() => {
+    const engine = tableRef.current?.getInstance();
+    if (!engine || progressiveMode) return;
+
+    setProgressiveMode(true);
+    setProgressPct(0);
+
+    const loader = new ProgressiveLoaderPlugin({
+      totalRows: 50_000,
+      columnKeys: columns.map((c) => c.key),
+      generateRow: (i: number) => ({
+        id: i + 1,
+        firstName: firstNames[i % firstNames.length],
+        lastName: lastNames[i % lastNames.length],
+        email: `prog.${i}@example.com`,
+        age: 22 + (i % 40),
+        salary: 40000 + (i % 20) * 5000,
+        department: departments[i % departments.length],
+        title: titles[i % titles.length],
+        city: cities[i % cities.length],
+        country: countries[i % countries.length],
+        phone: `+1-555-${String(5000 + i).padStart(4, '0')}`,
+        active: i % 3 !== 0,
+        startDate: `2022-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
+        hireDate: `2021-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
+        lastLogin: `2025-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}T${String(7 + (i % 14)).padStart(2, '0')}:${String((i * 11) % 60).padStart(2, '0')}`,
+        status: statuses[i % statuses.length],
+        rating: 1 + (i % 5),
+        projects: 1 + (i % 10),
+        team: teams[i % teams.length],
+        office: offices[i % offices.length],
+        floor: 1 + (i % 10),
+        manager: `${firstNames[(i + 3) % firstNames.length]} ${lastNames[(i + 5) % lastNames.length]}`,
+        notes: `Progressive load row #${i + 1} — ${departments[i % departments.length]} dept with extended description for text wrapping demo.`,
+        budget: 10000 + (i % 50) * 1000,
+        overtime: i % 40,
+        bonus: 500 + (i % 30) * 200,
+        region: regions[i % regions.length],
+        skill1: skills[i % skills.length],
+        skill2: skills[(i + 4) % skills.length],
+        certifications: i % 8,
+        satisfaction: 1 + (i % 10),
+        tenure: (i % 20) + 1,
+        lastReview: `2025-03-15`,
+        nextReview: `2026-03-15`,
+        mentor: `${firstNames[(i + 7) % firstNames.length]} ${lastNames[(i + 2) % lastNames.length]}`,
+        building: buildings[i % buildings.length],
+        parking: `P-${100 + (i % 200)}`,
+        laptop: laptops[i % laptops.length],
+        os: oses[i % oses.length],
+        monitor: monitors[i % monitors.length],
+        languages: 1 + (i % 5),
+        comments: `Batch loaded employee ${i + 1}. Performance tracked across ${(i % 4) + 1} quarters.`,
+      }),
+      onProgress: (loaded, total) => {
+        setProgressPct(Math.round((loaded / total) * 100));
+      },
+      onComplete: (loadTimeMs) => {
+        setExcelStatus(`Progressive load: 50K rows in ${loadTimeMs.toFixed(0)}ms`);
+        setProgressiveMode(false);
+      },
+    });
+    engine.installPlugin(loader);
+    loader.start();
+  }, [progressiveMode]);
+
+  const handleCycleStretch = useCallback(() => {
+    const modes: Array<'none' | 'all' | 'last'> = ['none', 'all', 'last'];
+    setStretchMode((prev) => {
+      const idx = modes.indexOf(prev);
+      return modes[(idx + 1) % modes.length];
+    });
+  }, []);
+
+  const bg = isDark ? '#1a1a2e' : '#f8f9fa';
+  const cardBg = isDark ? '#16213e' : '#ffffff';
+  const borderColor = isDark ? '#2a2a4a' : '#e0e0e0';
+  const accentColor = '#4361ee';
+  const textMuted = isDark ? '#8888aa' : '#6c757d';
+  const sectionTitle = {
+    fontSize: 11,
+    fontWeight: 700 as const,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em',
+    color: textMuted,
+    margin: '0 0 8px 0',
+  };
+  const btnBase = {
+    padding: '6px 12px',
+    cursor: 'pointer',
+    border: `1px solid ${borderColor}`,
+    borderRadius: 6,
+    fontSize: 13,
+    backgroundColor: cardBg,
+    color: isDark ? '#d4d4d4' : '#1f1f1f',
+    transition: 'background-color 0.15s',
+  };
+  const btnActive = {
+    ...btnBase,
+    backgroundColor: accentColor,
+    color: '#fff',
+    borderColor: accentColor,
+  };
+  const badge = (text: string, color: string) => (
+    <span
+      style={{
+        fontSize: 11,
+        padding: '2px 8px',
+        borderRadius: 10,
+        backgroundColor: color + '22',
+        color,
+        fontWeight: 600,
+      }}
+    >
+      {text}
+    </span>
+  );
+
   return (
-    <div style={{
-      padding: 16, height: '100vh', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      backgroundColor: isDark ? '#1e1e1e' : '#ffffff', color: isDark ? '#d4d4d4' : '#1f1f1f',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 12px 0', flexShrink: 0 }}>
-        <h1 style={{ margin: 0, fontSize: 20 }}>witqq spreadsheet demo</h1>
-        <button onClick={handleToggleTheme} data-testid="theme-toggle" style={{ padding: '4px 12px', cursor: 'pointer' }}>
-          {isDark ? '☀️ Light' : '🌙 Dark'}
+    <div
+      style={{
+        height: '100vh',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        backgroundColor: bg,
+        color: isDark ? '#d4d4d4' : '#1f1f1f',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '12px 20px',
+          borderBottom: `1px solid ${borderColor}`,
+          backgroundColor: cardBg,
+          flexShrink: 0,
+        }}
+      >
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          style={{ ...btnBase, padding: '4px 8px', fontSize: 16, lineHeight: 1 }}
+        >
+          ☰
         </button>
-        <button onClick={handleToggleRows} data-testid="row-toggle" style={{ padding: '4px 12px', cursor: 'pointer' }}>
-          {rowMode === '100k' ? '📊 1M Rows' : '📊 100K Rows'}
-        </button>
-        <button onClick={handleImport} data-testid="import-btn" style={{ padding: '4px 12px', cursor: 'pointer' }}>
-          📥 Import Excel
-        </button>
-        <button onClick={handleExport} data-testid="export-btn" style={{ padding: '4px 12px', cursor: 'pointer' }}>
-          📤 Export Excel
-        </button>
-        <button onClick={handlePrint} data-testid="print-btn" style={{ padding: '4px 12px', cursor: 'pointer' }}>
-          🖨️ Print
-        </button>
-        <button onClick={handleToggleGroups} data-testid="group-toggle" style={{ padding: '4px 12px', cursor: 'pointer' }}>
-          {groupsEnabled ? '📂 Clear Groups' : '📁 Group Rows'}
-        </button>
-        <button onClick={handleTogglePivot} data-testid="pivot-toggle" style={{ padding: '4px 12px', cursor: 'pointer' }}>
-          {pivotMode ? '📋 Table View' : '📊 Pivot'}
-        </button>
-        <button onClick={handleToggleStreaming} data-testid="streaming-toggle" style={{ padding: '4px 12px', cursor: 'pointer' }}>
-          {streaming ? '⏹ Stop Stream' : '📡 Stream'}
-        </button>
-        <button onClick={handleToggleCollab} data-testid="collab-toggle" style={{ padding: '4px 12px', cursor: 'pointer' }}>
-          {collabMode ? '🔴 Disconnect' : '👥 Collaborate'}
-        </button>
-        {streaming && (
-          <span data-testid="streaming-count" style={{ fontSize: 13, fontWeight: 'bold' }}>
-            +{streamingCount} rows
-          </span>
-        )}
-        {collabStatus && (
-          <span data-testid="collab-status" style={{ fontSize: 13, color: collabMode ? '#2ecc71' : '#e74c3c' }}>
-            {collabStatus}
-          </span>
-        )}
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 18,
+            fontWeight: 700,
+            background: 'linear-gradient(135deg, #4361ee, #7209b7)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          witqq spreadsheet
+        </h1>
+        <span style={{ fontSize: 12, color: textMuted }}>Interactive Demo</span>
+        <div style={{ flex: 1 }} />
+        {streaming && badge(`+${streamingCount} rows`, '#2ecc71')}
+        {progressiveMode && badge(`Loading ${progressPct}%`, accentColor)}
+        {collabStatus && badge(collabStatus, collabMode ? '#2ecc71' : '#e74c3c')}
         {drillDown && (
-          <button onClick={() => setDrillDown(null)} data-testid="drill-down-back" style={{ padding: '4px 12px', cursor: 'pointer' }}>
-            ← Back to Pivot
-          </button>
+          <>
+            <button
+              onClick={() => setDrillDown(null)}
+              data-testid="drill-down-back"
+              style={btnBase}
+            >
+              ← Back to Pivot
+            </button>
+            <span data-testid="drill-down-title" style={{ fontSize: 13, fontWeight: 600 }}>
+              {drillDown.title} ({drillDown.rows.length} rows)
+            </span>
+          </>
         )}
-        {drillDown && (
-          <span data-testid="drill-down-title" style={{ fontSize: 13, fontWeight: 'bold' }}>
-            {drillDown.title} ({drillDown.rows.length} rows)
+        {excelStatus && (
+          <span data-testid="excel-status" style={{ fontSize: 12, color: textMuted }}>
+            {excelStatus}
           </span>
         )}
-        {excelStatus && <span data-testid="excel-status" style={{ fontSize: 13, color: '#666' }}>{excelStatus}</span>}
         <input
           ref={fileInputRef}
           type="file"
@@ -611,16 +885,180 @@ export default function App() {
           data-testid="file-input"
         />
       </div>
-      <Spreadsheet
-        key={drillDown ? 'drilldown' : pivotMode ? 'pivot' : 'table'}
-        ref={tableRef}
-        columns={(drillDown ? drillDown.columns : pivotMode ? pivotColumns : columns) as ColumnDef[]}
-        data={drillDown ? drillDown.rows : pivotMode ? pivotData : data}
-        theme={isDark ? darkTheme : lightTheme}
-        frozenRows={drillDown ? 1 : pivotMode ? 1 : 2}
-        frozenColumns={drillDown ? 0 : pivotMode ? pivotFrozen : 1}
-        style={{ width: '100%', flex: 1, minHeight: 0 }}
-      />
+
+      {/* Main content area */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        {/* Sidebar */}
+        {sidebarOpen && (
+          <div
+            style={{
+              width: 240,
+              flexShrink: 0,
+              borderRight: `1px solid ${borderColor}`,
+              backgroundColor: cardBg,
+              overflowY: 'auto',
+              padding: '16px 12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 20,
+            }}
+          >
+            {/* Display */}
+            <div>
+              <p style={sectionTitle}>Display</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <button onClick={handleToggleTheme} data-testid="theme-toggle" style={btnBase}>
+                  {isDark ? '☀️ Light Theme' : '🌙 Dark Theme'}
+                </button>
+                <button onClick={handleToggleLocale} data-testid="locale-toggle" style={isRu ? btnActive : btnBase}>
+                  {isRu ? '🇷🇺 Русский' : '🇬🇧 English'}
+                </button>
+                <button
+                  onClick={handleCycleStretch}
+                  data-testid="stretch-toggle"
+                  style={stretchMode !== 'none' ? btnActive : btnBase}
+                >
+                  ↔ Stretch: {stretchMode}
+                </button>
+                <button
+                  onClick={() => setAutoRowHeightEnabled(!autoRowHeightEnabled)}
+                  data-testid="autoheight-toggle"
+                  style={autoRowHeightEnabled ? btnActive : btnBase}
+                >
+                  ↕ Auto Row Height: {autoRowHeightEnabled ? 'ON' : 'OFF'}
+                </button>
+              </div>
+            </div>
+
+            {/* Data */}
+            <div>
+              <p style={sectionTitle}>Data</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <button onClick={handleToggleRows} data-testid="row-toggle" style={btnBase}>
+                  📊 {rowMode === '1k' ? '→ 1M Rows' : '→ 1K Rows'}
+                </button>
+                <button
+                  onClick={handleProgressiveLoad}
+                  data-testid="progressive-toggle"
+                  style={progressiveMode ? btnActive : btnBase}
+                  disabled={progressiveMode}
+                >
+                  ⏳ Progressive Load 50K
+                </button>
+                <button
+                  onClick={handleToggleStreaming}
+                  data-testid="streaming-toggle"
+                  style={streaming ? btnActive : btnBase}
+                >
+                  {streaming ? '⏹ Stop Stream' : '📡 Stream 1K/sec'}
+                </button>
+              </div>
+            </div>
+
+            {/* Views */}
+            <div>
+              <p style={sectionTitle}>Views</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <button
+                  onClick={handleToggleGroups}
+                  data-testid="group-toggle"
+                  style={groupsEnabled ? btnActive : btnBase}
+                >
+                  {groupsEnabled ? '📂 Clear Groups' : '📁 Row Grouping'}
+                </button>
+                <button
+                  onClick={handleTogglePivot}
+                  data-testid="pivot-toggle"
+                  style={pivotMode ? btnActive : btnBase}
+                >
+                  {pivotMode ? '📋 Table View' : '📊 Pivot Table'}
+                </button>
+              </div>
+            </div>
+
+            {/* I/O */}
+            <div>
+              <p style={sectionTitle}>Import / Export</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <button onClick={handleImport} data-testid="import-btn" style={btnBase}>
+                  📥 Import Excel
+                </button>
+                <button onClick={handleExport} data-testid="export-btn" style={btnBase}>
+                  📤 Export Excel
+                </button>
+                <button onClick={handlePrint} data-testid="print-btn" style={btnBase}>
+                  🖨️ Print
+                </button>
+              </div>
+            </div>
+
+            {/* Collaboration */}
+            <div>
+              <p style={sectionTitle}>Collaboration</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <button
+                  onClick={handleToggleCollab}
+                  data-testid="collab-toggle"
+                  style={collabMode ? btnActive : btnBase}
+                >
+                  {collabMode ? '🔴 Disconnect' : '👥 Real-time Collab'}
+                </button>
+              </div>
+            </div>
+
+            {/* Features info */}
+            <div
+              style={{ marginTop: 'auto', paddingTop: 12, borderTop: `1px solid ${borderColor}` }}
+            >
+              <p style={sectionTitle}>Active Features</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {badge('Formulas', '#4361ee')}
+                {badge('Context Menu', '#7209b7')}
+                {badge('Submenus', '#7209b7')}
+                {badge('Cond. Format', '#f72585')}
+                {badge('Cell Validation', '#e67e22')}
+                {badge('Merged Cells', '#3a86a7')}
+                {badge('Frozen Panes', '#2d6a4f')}
+                {badge('Date Picker', '#d63384')}
+                {badge('Text Wrap', '#0077b6')}
+                {autoRowHeightEnabled && badge('Auto Height', '#0096c7')}
+                {stretchMode !== 'none' && badge(`Stretch: ${stretchMode}`, '#4895ef')}
+              </div>
+              <p style={{ fontSize: 11, color: textMuted, margin: '8px 0 0 0' }}>
+                Right-click cells to see context menu with submenus. Double-click date columns to
+                open date picker, or datetime columns for the combined date+time picker.
+                Notes &amp; Comments columns have text wrapping enabled.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Spreadsheet */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          <Spreadsheet
+            key={
+              drillDown
+                ? 'drilldown'
+                : pivotMode
+                  ? 'pivot'
+                  : `table-${stretchMode}-${autoRowHeightEnabled}`
+            }
+            ref={tableRef}
+            columns={
+              (drillDown ? drillDown.columns : pivotMode ? pivotColumns : columns) as ColumnDef[]
+            }
+            data={drillDown ? drillDown.rows : pivotMode ? pivotData : data}
+            theme={isDark ? darkTheme : lightTheme}
+            locale={isRu ? ruLocale : enLocale}
+            frozenRows={drillDown ? 1 : pivotMode ? 1 : 2}
+            frozenColumns={drillDown ? 0 : pivotMode ? pivotFrozen : 1}
+            editable
+            stretchColumns={stretchMode === 'none' ? undefined : stretchMode}
+            autoRowHeight={autoRowHeightEnabled}
+            style={{ width: '100%', flex: 1, minHeight: 0 }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

@@ -36,9 +36,6 @@ function App() {
     <Spreadsheet
       columns={columns}
       data={data}
-      onColumnResize={(col, width) => {
-        console.log(`Column ${col} resized to ${width}px`);
-      }}
     />
   );
 }
@@ -46,26 +43,31 @@ function App() {
 
 ## Resize Events
 
-Listen to resize lifecycle events for custom behavior:
+Listen to resize lifecycle events via the engine's EventBus:
 
 ```tsx
-<Spreadsheet
-  columns={columns}
-  data={data}
-  onColumnResizeStart={(col, startWidth) => {
-    console.log('Resize started:', col);
-  }}
-  onColumnResizeEnd={(col, newWidth) => {
-    // Persist new width to backend
-    saveColumnWidth(col, newWidth);
-  }}
-  onRowResizeStart={(row, startHeight) => {
-    console.log('Row resize started:', row);
-  }}
-  onRowResizeEnd={(row, newHeight) => {
-    saveRowHeight(row, newHeight);
-  }}
-/>
+import { useRef, useEffect } from 'react';
+import { Spreadsheet } from '@witqq/spreadsheet-react';
+import type { SpreadsheetRef } from '@witqq/spreadsheet-react';
+
+function App() {
+  const ref = useRef<SpreadsheetRef>(null);
+
+  useEffect(() => {
+    const engine = ref.current?.getInstance();
+    if (!engine) return;
+
+    engine.on('columnResizeEnd', (event) => {
+      // Persist new width to backend
+      saveColumnWidth(event.colIndex, event.newWidth);
+    });
+    engine.on('rowResizeEnd', (event) => {
+      saveRowHeight(event.rowIndex, event.newHeight);
+    });
+  }, []);
+
+  return <Spreadsheet ref={ref} columns={columns} data={data} />;
+}
 ```
 
 ## API Reference

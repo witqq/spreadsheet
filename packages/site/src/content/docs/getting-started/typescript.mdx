@@ -50,6 +50,8 @@ const columns = [
 Event callbacks receive typed parameters:
 
 ```tsx
+import type { CellChangeEvent, SelectionChangeEvent, SortChangeEvent, FilterChangeEvent } from '@witqq/spreadsheet';
+
 <Spreadsheet<Product>
   columns={columns}
   data={products}
@@ -108,8 +110,8 @@ interface SpreadsheetRef {
   focus(): void;                  // Focus the table canvas
   getSelection(): Selection;      // Current selection state
   selectCell(row: number, col: number): void;
-  getCell(row: number, col: number): unknown;
-  setCell(row: number, col: number, value: unknown): void;
+  getCell(row: number, col: number): CellData | undefined;
+  setCell(row: number, col: number, value: CellValue): void;
   undo(): void;
   redo(): void;
   scrollTo(x: number, y: number): void;
@@ -131,9 +133,9 @@ const engine = tableRef.current?.getInstance();
 if (engine) {
   const cell: CellData | undefined = engine.getCellStore().get(0, 0);
   if (cell) {
-    console.log(cell.value);        // CellValue (string | number | boolean | Date | null)
-    console.log(cell.displayValue); // Formatted string for rendering
-    console.log(cell.type);         // CellType
+    console.log(cell.value);         // CellValue (string | number | boolean | Date | null)
+    console.log(cell.displayValue);  // string | undefined — formatted string for rendering
+    console.log(cell.type);          // CellType | undefined
   }
 }
 ```

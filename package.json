@@ -19,6 +19,7 @@
     "dev:remote": "infra-tools auto --server witqq",
     "build": "npm run build -w packages/core && npm run build -w packages/react && npm run build -w packages/plugins",
     "test": "vitest run",
+    "benchmark": "vitest run packages/core/tests/benchmark-suite.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:remote": "BASE_URL=http://testold:3150 playwright test",
     "typecheck": "tsc --build",
@@ -36,6 +37,7 @@
     "prettier": "^3.0.0",
     "typedoc": "^0.28.17",
     "typescript": "^5.7.0",
+    "typescript-eslint": "^8.56.1",
     "vitest": "^3.0.0"
   },
   "engines": {
