@@ -16,7 +16,6 @@
     "dev": "DOCKER_BUILDKIT=1 docker compose up --build -d && echo 'http://localhost:3150'",
     "dev:stop": "docker compose down",
     "dev:logs": "docker compose logs -f witqq spreadsheet",
-    "dev:remote": "infra-tools auto --server witqq",
     "build": "npm run build -w packages/core && npm run build -w packages/react && npm run build -w packages/plugins",
     "test": "vitest run",
     "benchmark": "vitest run packages/core/tests/benchmark-suite.test.ts",
@@ -25,7 +24,8 @@
     "typecheck": "tsc --build",
     "lint": "eslint packages/*/src",
     "format": "prettier --write \"packages/*/src/**/*.{ts,tsx}\"",
-    "docs": "typedoc"
+    "docs": "typedoc",
+    "deploy": "infra-tools auto --server witqq --config .deploy-config.json"
   },
   "devDependencies": {
     "@playwright/test": "^1.50.0",
