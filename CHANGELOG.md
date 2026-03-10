@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-03-11
+
 ### Added
 - Cell Decorator API: `CellDecorator`, `CellDecoratorPosition`, `CellDecoratorRegistration` interfaces for composable rendering addons
 - `CellTypeRegistry.addDecorator()` and `removeDecorator()` for managing cell decorators with `appliesTo` predicates
