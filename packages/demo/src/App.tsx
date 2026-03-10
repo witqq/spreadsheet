@@ -1,8 +1,15 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Spreadsheet } from '@witqq/spreadsheet-react';
 import type { SpreadsheetRef } from '@witqq/spreadsheet-react';
-import type { ColumnDef } from '@witqq/spreadsheet';
-import { lightTheme, darkTheme, PivotEngine, StreamingAdapter, enLocale, ruLocale } from '@witqq/spreadsheet';
+import type { ColumnDef, CellDecoratorRegistration } from '@witqq/spreadsheet';
+import {
+  lightTheme,
+  darkTheme,
+  PivotEngine,
+  StreamingAdapter,
+  enLocale,
+  ruLocale,
+} from '@witqq/spreadsheet';
 import type { PivotColumnDef, CellEvent, PivotResult } from '@witqq/spreadsheet';
 import {
   createContextMenuPlugin,
@@ -379,6 +386,25 @@ export default function App() {
 
       // Demo: merge a 2×3 region (rows 3-4, cols 2-4) with explicit value
       engine.mergeCells({ startRow: 3, startCol: 2, endRow: 4, endCol: 4 }, 'Merged Cell');
+
+      // Cell decorator demo: status indicator dot on Status column (col 15)
+      const statusDecorator: CellDecoratorRegistration = {
+        decorator: {
+          id: 'status-indicator',
+          position: 'left',
+          getWidth: () => 16,
+          render: (ctx, cellData, x, y, width, height) => {
+            const val = String(cellData.value ?? '');
+            const color = val === 'Active' ? '#63be7b' : val === 'Remote' ? '#5b9bd5' : '#f8696b';
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x + width / 2, y + height / 2, 4, 0, Math.PI * 2);
+            ctx.fill();
+          },
+        },
+        appliesTo: (_row, col) => col === 15,
+      };
+      engine.getCellTypeRegistry().addDecorator(statusDecorator);
     }
   }, [pivotMode, drillDown]);
 
@@ -910,7 +936,11 @@ export default function App() {
                 <button onClick={handleToggleTheme} data-testid="theme-toggle" style={btnBase}>
                   {isDark ? '☀️ Light Theme' : '🌙 Dark Theme'}
                 </button>
-                <button onClick={handleToggleLocale} data-testid="locale-toggle" style={isRu ? btnActive : btnBase}>
+                <button
+                  onClick={handleToggleLocale}
+                  data-testid="locale-toggle"
+                  style={isRu ? btnActive : btnBase}
+                >
                   {isRu ? '🇷🇺 Русский' : '🇬🇧 English'}
                 </button>
                 <button
@@ -1026,8 +1056,8 @@ export default function App() {
               </div>
               <p style={{ fontSize: 11, color: textMuted, margin: '8px 0 0 0' }}>
                 Right-click cells to see context menu with submenus. Double-click date columns to
-                open date picker, or datetime columns for the combined date+time picker.
-                Notes &amp; Comments columns have text wrapping enabled.
+                open date picker, or datetime columns for the combined date+time picker. Notes &amp;
+                Comments columns have text wrapping enabled.
               </p>
             </div>
           </div>

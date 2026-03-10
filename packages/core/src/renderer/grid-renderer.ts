@@ -76,7 +76,7 @@ export class GridRenderer {
     });
 
     this.pipeline = new RenderPipeline(this.geometry, config.theme);
-    this.pipeline.addLayer(new BackgroundLayer());
+    this.pipeline.addLayer(new BackgroundLayer(config.cellStore, config.dataView));
     this.pipeline.addLayer(
       new CellTextLayer(
         config.cellStore,
@@ -90,7 +90,7 @@ export class GridRenderer {
     this.pipeline.addLayer(this.emptyStateLayer);
     // GridLines renders after cell content so it's always on top of plugin fills
     if (config.showGridLines) {
-      this.gridLinesLayer = new GridLinesLayer(config.dataView);
+      this.gridLinesLayer = new GridLinesLayer(config.cellStore, config.dataView);
       this.pipeline.addLayer(this.gridLinesLayer);
     }
     // Headers render after grid lines so header backgrounds cover grid lines cleanly

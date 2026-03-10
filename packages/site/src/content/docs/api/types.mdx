@@ -718,6 +718,90 @@ type HitRegion =
 
 Region of the grid where a mouse event occurred.
 
+### HitZone
+
+```typescript
+interface HitZone {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly cursor?: string;
+}
+```
+
+Declares a rectangular interactive zone within a cell for sub-cell hit testing. Coordinates are relative to the cell content area. Returned by `CellTypeRenderer.getHitZones()`.
+
+### CellDecoratorPosition
+
+```typescript
+type CellDecoratorPosition = 'left' | 'right' | 'overlay' | 'underlay';
+```
+
+Where a cell decorator renders relative to cell content. `left`/`right` reserve horizontal space, shifting text inward. `overlay` renders on top of text, `underlay` renders behind.
+
+### CellDecorator
+
+```typescript
+interface CellDecorator {
+  readonly id: string;
+  readonly position: CellDecoratorPosition;
+  getWidth?(cellData: CellData, cellHeight: number, ctx?: CanvasRenderingContext2D, theme?: SpreadsheetTheme): number;
+  render(ctx: CanvasRenderingContext2D, cellData: CellData, x: number, y: number, width: number, height: number, theme: SpreadsheetTheme): void;
+  getHitZones?(width: number, height: number, cellData: CellData): HitZone[];
+}
+```
+
+Composable rendering addon for cells. Decorators augment the default text rendering pipeline without replacing it. Register via `CellTypeRegistry.addDecorator()`.
+
+- `getWidth` — compute reserved width for left/right decorators. Ignored for overlay/underlay.
+- `render` — draw the decorator in its allocated area.
+- `getHitZones` — optional interactive zones within the decorator's area.
+
+### CellDecoratorRegistration
+
+```typescript
+interface CellDecoratorRegistration {
+  decorator: CellDecorator;
+  appliesTo: (row: number, col: number, cellData: CellData) => boolean;
+}
+```
+
+Links a decorator to a predicate that controls which cells it applies to. The `appliesTo` function receives the cell's row, column, and full `CellData`.
+
+#### Decorator Usage Example
+
+```typescript
+import type { CellDecoratorRegistration } from '@witqq/spreadsheet';
+
+// Status indicator: colored dot on the left side of cells
+const statusDecorator: CellDecoratorRegistration = {
+  decorator: {
+    id: 'status-indicator',
+    position: 'left',
+    getWidth: () => 16,
+    render: (ctx, cellData, x, y, width, height) => {
+      const val = String(cellData.value ?? '');
+      const color = val === 'Active' ? '#63be7b'
+        : val === 'Remote' ? '#5b9bd5' : '#f8696b';
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x + width / 2, y + height / 2, 4, 0, Math.PI * 2);
+      ctx.fill();
+    },
+  },
+  appliesTo: (_row, col) => col === 15, // Status column
+};
+
+engine.getCellTypeRegistry().addDecorator(statusDecorator);
+
+// Remove decorator later:
+engine.getCellTypeRegistry().removeDecorator('status-indicator');
+```
+
+Render order: underlay → left → right → text/custom → overlay. Left/right decorators shift text inward by their reserved width.
+
 ### HitTestResult
 
 ```typescript
@@ -725,10 +809,12 @@ interface HitTestResult {
   readonly region: HitRegion;
   readonly row: number;   // -1 if not applicable
   readonly col: number;   // -1 if not applicable
+  readonly hitZone?: string;       // Hit zone ID if point is inside a declared zone
+  readonly hitZoneCursor?: string; // Cursor style from the matched hit zone
 }
 ```
 
-Result of coordinate-to-cell hit testing.
+Result of coordinate-to-cell hit testing. When a cell type renderer declares hit zones via `getHitZones()`, `hitZone` contains the matched zone ID and `hitZoneCursor` the zone's cursor style.
 
 ### Command
 

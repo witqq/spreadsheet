@@ -185,3 +185,37 @@ See [Event System](/concepts/events/) for a full list of events.
 | `getConfig` | `() => SpreadsheetEngineConfig` | Get engine configuration |
 | `getCanvasElement` | `() => HTMLCanvasElement \| null` | Get the canvas DOM element |
 | `getCellTypeRegistry` | `() => CellTypeRegistry` | Access cell type registry |
+
+## Decorators
+
+Register decorators via `getCellTypeRegistry()` to render icons or indicators around cell text.
+
+```ts
+engine.getCellTypeRegistry().addDecorator({
+  decorator: {
+    id: 'status-dot',
+    position: 'left',
+    getWidth: () => 16,
+    render: (ctx, cellData, x, y, w, h) => {
+      ctx.beginPath();
+      ctx.arc(x + w / 2, y + h / 2, 4, 0, Math.PI * 2);
+      ctx.fillStyle = cellData.value === 'Active' ? '#63be7b' : '#999';
+      ctx.fill();
+    },
+    getHitZones: (w, h) => [{ id: 'dot', x: 0, y: 0, width: w, height: h, cursor: 'pointer' }],
+  },
+  appliesTo: (row, col) => col === 5,
+});
+
+engine.getCellTypeRegistry().removeDecorator('status-dot');
+```
+
+Cell events include `hitZone` and `hitZoneCursor` when the click lands on a decorator or renderer hit zone:
+
+```ts
+engine.on('cellClick', (event) => {
+  if (event.hitZone === 'dot') {
+    console.log('Decorator clicked at row', event.row);
+  }
+});
+```

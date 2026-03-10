@@ -444,7 +444,7 @@ interface CellStyle {
   readonly borderBottom?: BorderStyle;
   readonly borderLeft?: BorderStyle;
   readonly numberFormat?: string;               // e.g. "#,##0.00"
-  readonly textWrap?: boolean;                  // Note: use ColumnDef.wrapText instead for rendering
+  readonly textWrap?: boolean;                  // Per-cell wrap override (priority: cellStyle > ColumnDef.wrapText)
   readonly indent?: number;
 }
 
@@ -455,7 +455,7 @@ interface BorderStyle {
 }
 ```
 
-**Important:** `CellStyle.textWrap` is defined in the interface but the renderer reads `ColumnDef.wrapText` instead. Use `ColumnDef.wrapText: true` to enable text wrapping.
+**Text wrapping priority:** `cellStyle?.textWrap ?? ColumnDef.wrapText ?? false`. Per-cell `textWrap` overrides the column setting bidirectionally — set `textWrap: true` to enable wrapping for a single cell, or `textWrap: false` to disable it even when the column has `wrapText: true`.
 
 ### Geometry Types
 
@@ -640,6 +640,11 @@ interface CellTypeRenderer {
     width: number,
     theme: SpreadsheetTheme,
   ) => number;
+  getHitZones?: (                              // Optional sub-cell interactive zones
+    value: CellValue,
+    width: number, height: number,
+    theme?: SpreadsheetTheme,
+  ) => HitZone[];
 }
 ```
 
@@ -668,6 +673,24 @@ engine.getCellTypeRegistry().getFormatLocale();  // 'de-DE'
 // Detect type from value
 engine.getCellTypeRegistry().detectType(42);   // 'number'
 engine.getCellTypeRegistry().detectType(true); // 'boolean'
+
+// Decorators — composable rendering addons around cell text
+engine.getCellTypeRegistry().addDecorator({
+  decorator: {
+    id: 'status-dot',
+    position: 'left',              // 'left' | 'right' | 'overlay' | 'underlay'
+    getWidth: () => 16,
+    render: (ctx, cellData, x, y, w, h) => {
+      ctx.beginPath();
+      ctx.arc(x + w / 2, y + h / 2, 4, 0, Math.PI * 2);
+      ctx.fillStyle = cellData.value === 'Active' ? '#63be7b' : '#999';
+      ctx.fill();
+    },
+    getHitZones: (w, h) => [{ id: 'dot', x: 0, y: 0, width: w, height: h, cursor: 'pointer' }],
+  },
+  appliesTo: (row, col) => col === 5,
+});
+engine.getCellTypeRegistry().removeDecorator('status-dot');
 ```
 
 ---
@@ -1463,13 +1486,13 @@ import type {
 
 **`HitRegion`** — `'cell' | 'header' | 'header-sort-icon' | 'header-filter-icon' | 'row-number' | 'row-group-toggle' | 'corner' | 'outside'`
 
-**`HitTestResult`** — `{ readonly region: HitRegion; readonly row: number; readonly col: number }`
+**`HitTestResult`** — `{ readonly region: HitRegion; readonly row: number; readonly col: number; readonly hitZone?: string; readonly hitZoneCursor?: string }`
 
 **`GridMouseEvent`** extends `HitTestResult` — `{ readonly originalEvent: MouseEvent; readonly shiftKey: boolean; readonly ctrlKey: boolean }`
 
 **`GridKeyboardEvent`** — `{ readonly originalEvent: KeyboardEvent; readonly key: string; readonly shiftKey: boolean; readonly ctrlKey: boolean }`
 
-**`CellEvent`** — `{ row: number; col: number; value: CellValue; column: ColumnDef }`
+**`CellEvent`** — `{ row: number; col: number; value: CellValue; column: ColumnDef; hitZone?: string; hitZoneCursor?: string }`
 
 **`CellChangeEvent`** extends `CellEvent` — `{ oldValue: CellValue; newValue: CellValue; source: string }`
 

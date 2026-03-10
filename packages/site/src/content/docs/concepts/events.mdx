@@ -39,8 +39,9 @@ engine.off('cellChange', handler);
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `cellClick` | `{ row, col, value, column }` | Single click on a cell |
-| `cellDoubleClick` | `{ row, col, value, column }` | Double-click on a cell (opens editor) |
+| `cellClick` | `{ row, col, value, column, hitZone? }` | Single click on a cell |
+| `cellDoubleClick` | `{ row, col, value, column, hitZone? }` | Double-click on a cell (opens editor) |
+| `cellHover` | `{ row, col, value, column, hitZone? }` | Mouse moves over a cell (no buttons pressed) |
 | `cellChange` | `{ row, col, value, column, oldValue, newValue, source }` | Cell value changed after edit commit |
 | `cellStatusChange` | `{ row, col, oldStatus, newStatus, errorMessage? }` | Cell status lifecycle: changed → saving → saved, error |
 | `cellValidation` | `{ row, col, result }` | Validation result after cell edit |
@@ -126,7 +127,7 @@ TypeScript interfaces for all event payloads. Import from `@witqq/spreadsheet`.
 
 ### CellEvent
 
-Fired on `cellClick` and `cellDoubleClick`.
+Fired on `cellClick`, `cellDoubleClick`, and `cellHover`. When a cell type renderer declares hit zones via `getHitZones()`, the `hitZone` field contains the matched zone ID.
 
 ```ts
 interface CellEvent {
@@ -134,6 +135,7 @@ interface CellEvent {
   col: number;
   value: CellValue;
   column: ColumnDef;
+  hitZone?: string;
 }
 ```
 

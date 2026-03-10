@@ -159,7 +159,9 @@ export class PrintManager {
       footCell.style.fontStyle = 'italic';
       footCell.style.textAlign = 'center';
       const tpl = this.locale?.print?.showingRows ?? 'Showing {shown} of {total} rows';
-      footCell.textContent = tpl.replace('{shown}', rowCount.toLocaleString()).replace('{total}', totalVisibleRows.toLocaleString());
+      footCell.textContent = tpl
+        .replace('{shown}', rowCount.toLocaleString())
+        .replace('{total}', totalVisibleRows.toLocaleString());
       footRow.appendChild(footCell);
       tfoot.appendChild(footRow);
       table.appendChild(tfoot);

@@ -11,7 +11,12 @@
 import type { SpreadsheetTheme } from '../themes/theme-types';
 import type { ResolvedLocale } from '../locale/resolve-locale';
 import type { EditorCloseReason } from './inline-editor';
-import type { CellEditor, CellEditorContext, CellEditorCommit, CellEditorClose } from './cell-editor';
+import type {
+  CellEditor,
+  CellEditorContext,
+  CellEditorCommit,
+  CellEditorClose,
+} from './cell-editor';
 import { DatePickerOverlay } from './date-picker-overlay';
 
 export class DatePickerEditor implements CellEditor {

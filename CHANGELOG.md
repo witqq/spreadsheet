@@ -8,6 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Cell Decorator API: `CellDecorator`, `CellDecoratorPosition`, `CellDecoratorRegistration` interfaces for composable rendering addons
+- `CellTypeRegistry.addDecorator()` and `removeDecorator()` for managing cell decorators with `appliesTo` predicates
+- `CellTypeRegistry.getDecorators()` returns applicable decorators for a given cell
+- Decorator rendering pipeline in `CellTextLayer`: underlay → left → right → text/custom → overlay position order
+- Left/right decorators reserve horizontal width, shifting cell text inward; `measureHeights()` accounts for decorator widths
+- Decorator hit zone resolution in `EventTranslator.resolveHitZone()` with position-aware coordinate translation
+- Sub-cell hit testing API: `HitZone` interface for declaring interactive zones within cells
+- `CellTypeRenderer.getHitZones()` optional method for cell types to declare rectangular hit zones with custom cursor styles
+- `HitTestResult.hitZone` and `HitTestResult.hitZoneCursor` fields for sub-cell zone identification
+- `CellEvent.hitZone` optional field on `cellClick`, `cellDoubleClick`, and `cellHover` events
+- `cellHover` public event emitted on mousemove over cells (no buttons pressed)
+- `EventTranslator.resolveHitZone()` — point-in-rect resolution using cell-relative coordinates
+- Cursor management: hit zones with `cursor` property automatically set the container cursor on hover
+- Per-cell `bgColor` rendering in `BackgroundLayer` with lazy clipping and merged cell support
+- Per-cell `textColor` and font properties (`fontFamily`, `fontSize`, `fontWeight`, `fontStyle`) rendering in `CellTextLayer`
+- Per-cell `textAlign` (`left`/`center`/`right`) rendering in `CellTextLayer`, overriding cell type defaults
+- Per-cell `verticalAlign` (`top`/`middle`/`bottom`) rendering in `CellTextLayer` for single-line and wrapped text
+- Per-cell `textWrap` bidirectional override in `CellTextLayer` — cell-level wrap enables or disables wrapping regardless of `ColumnDef.wrapText`
+- Per-cell `indent` rendering in `CellTextLayer` — shifts text position and reduces available width
+- Per-cell border rendering in `GridLinesLayer` — `borderTop`, `borderRight`, `borderBottom`, `borderLeft` with color, width, and line style (solid/dashed/dotted)
+- Shared border conflict resolution: thicker border wins; equal thickness → rightmost/bottommost cell takes precedence
+- `ConditionalFormatLayer` now renders `textColor` from conditional format rules
+- E2E Playwright tests for per-cell style rendering (`tests/e2e/per-cell-style.test.ts`)
 - Comprehensive API reference in all package READMEs (`packages/*/README.md`) for LLM/agent consumption from node_modules — 325 exports documented across core (220), react (18), vue (19), angular (13), plugins (40), widget (12), server (3)
 - Root README rewritten as LLM navigation hub with package decision tree and API overview
 - Re-exported `CellStyleRef`, `SelectionType`, `BorderStyle` types from `packages/core/src/index.ts`

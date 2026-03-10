@@ -125,7 +125,7 @@ export class ConditionalFormatLayer implements RenderLayer {
 
       switch (condition.type) {
         case 'value':
-          applied = this.renderValueCondition(ctx, cellValue, condition, rule, x, y, w, h);
+          applied = this.renderValueCondition(ctx, cellValue, condition, rule, x, y, w, h, bgColor);
           break;
         case 'gradientScale':
           applied = this.renderGradientScale(ctx, cellValue, condition, x, y, w, h);
@@ -158,6 +158,7 @@ export class ConditionalFormatLayer implements RenderLayer {
     y: number,
     w: number,
     h: number,
+    bgColor: string,
   ): boolean {
     if (!evaluateComparison(cellValue, condition.operator, condition.value, condition.value2)) {
       return false;
@@ -166,9 +167,15 @@ export class ConditionalFormatLayer implements RenderLayer {
       ctx.fillStyle = rule.style.bgColor;
       ctx.fillRect(x, y, w, h);
     }
-    if (rule.style?.textColor) {
-      // Text color is handled by CellTextLayer reading the applied style;
-      // for now we just mark as applied
+    if (rule.style?.textColor && cellValue != null) {
+      // Clear cell area and re-render text with conditional format color
+      ctx.clearRect(x, y, w, h);
+      ctx.fillStyle = rule.style.bgColor ?? bgColor;
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = rule.style.textColor;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'left';
+      ctx.fillText(String(cellValue), x + 4, y + h / 2);
     }
     return true;
   }

@@ -406,6 +406,8 @@ export class SpreadsheetEngine {
       dataView: this.dataView,
       columns: this.config.columns,
       rowGroupManager: this.rowGroupManager,
+      cellTypeRegistry: this.cellTypeRegistry,
+      getTheme: () => this.currentTheme,
     });
     this.eventTranslator.attach();
     this.eventTranslator.setFrozenConfig(
@@ -525,7 +527,8 @@ export class SpreadsheetEngine {
       selectionManager: this.selectionManager,
       commandManager: this.commandManager,
       eventBus: this.eventBus,
-      isEditing: () => (this.inlineEditor?.isEditing ?? false) || (this.activeOverlayEditor?.isOpen ?? false),
+      isEditing: () =>
+        (this.inlineEditor?.isEditing ?? false) || (this.activeOverlayEditor?.isOpen ?? false),
       onDataChange: () => {
         if (this.dirtyTracker) this.dirtyTracker.markDirty('cell-update');
         if (this.renderScheduler) this.renderScheduler.requestRender();
@@ -793,7 +796,7 @@ export class SpreadsheetEngine {
     this._isDraggingSelection = false;
   };
 
-  /** Handle mouse hover for cursor changes on header icons. */
+  /** Handle mouse hover for cursor changes on header icons and sub-cell hit zones. */
   private handleGridMouseHover = (event: GridMouseEvent): void => {
     const el = this.scrollManager?.getElement();
     if (!el) return;
@@ -803,6 +806,8 @@ export class SpreadsheetEngine {
       event.region === 'row-group-toggle'
     ) {
       el.style.cursor = 'pointer';
+    } else if (event.hitZoneCursor) {
+      el.style.cursor = event.hitZoneCursor;
     } else {
       el.style.cursor = '';
     }

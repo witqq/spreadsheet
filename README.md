@@ -79,6 +79,8 @@ Key areas:
 | Theming | `SpreadsheetTheme`, `lightTheme`, `darkTheme` | Theme definitions, built-in themes |
 | Localization | `SpreadsheetLocale`, `enLocale`, `ruLocale`, `resolveLocale` | i18n, locale packs, partial overrides |
 | Editing | `CellEditor`, `CellEditorRegistry`, `InlineEditor` | Cell editing, custom editors, date pickers |
+| Styling | `CellStyle`, `BorderStyle`, `StylePool` | Per-cell font, color, alignment, borders |
+| Decorators | `CellDecorator`, `CellDecoratorRegistration` | Composable cell icons/indicators with hit zones |
 | Layout | `LayoutEngine`, `ViewportManager` | Float64Array positions, virtualized scrolling |
 
 ## Performance

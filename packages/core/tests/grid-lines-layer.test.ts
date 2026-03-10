@@ -17,7 +17,13 @@ function createMockCtx() {
   } as unknown as CanvasRenderingContext2D;
 }
 
-function createMockGeometry(opts: { headerHeight: number; colWidths: number[]; rowHeight: number; rowCount: number; rowNumberWidth?: number }): GridGeometry {
+function createMockGeometry(opts: {
+  headerHeight: number;
+  colWidths: number[];
+  rowHeight: number;
+  rowCount: number;
+  rowNumberWidth?: number;
+}): GridGeometry {
   const { headerHeight, colWidths, rowHeight, rowCount, rowNumberWidth = 0 } = opts;
   return {
     headerHeight,
@@ -37,7 +43,14 @@ function createMockGeometry(opts: { headerHeight: number; colWidths: number[]; r
 
 function createRenderContext(
   ctx: CanvasRenderingContext2D,
-  opts: { geometry: GridGeometry; mergeManager?: MergeManager; startRow?: number; endRow?: number; startCol?: number; endCol?: number },
+  opts: {
+    geometry: GridGeometry;
+    mergeManager?: MergeManager;
+    startRow?: number;
+    endRow?: number;
+    startCol?: number;
+    endCol?: number;
+  },
 ): RenderContext {
   return {
     ctx,
@@ -63,7 +76,12 @@ describe('GridLinesLayer', () => {
   it('renders without DataView (passthrough)', () => {
     const layer = new GridLinesLayer();
     const ctx = createMockCtx();
-    const geometry = createMockGeometry({ headerHeight: 30, colWidths: [100, 100], rowHeight: 28, rowCount: 10 });
+    const geometry = createMockGeometry({
+      headerHeight: 30,
+      colWidths: [100, 100],
+      rowHeight: 28,
+      rowCount: 10,
+    });
     const mm = new MergeManager();
     mm.merge({ startRow: 0, startCol: 0, endRow: 1, endCol: 1 });
 
@@ -82,9 +100,14 @@ describe('GridLinesLayer', () => {
     const dv = new DataView({ totalRowCount: 5 });
     dv.recompute([0, 3, 4]);
 
-    const layer = new GridLinesLayer(dv);
+    const layer = new GridLinesLayer(undefined, dv);
     const ctx = createMockCtx();
-    const geometry = createMockGeometry({ headerHeight: 30, colWidths: [100, 100], rowHeight: 28, rowCount: 3 });
+    const geometry = createMockGeometry({
+      headerHeight: 30,
+      colWidths: [100, 100],
+      rowHeight: 28,
+      rowCount: 3,
+    });
     const mm = new MergeManager();
     mm.merge({ startRow: 3, startCol: 0, endRow: 4, endCol: 1 });
 
@@ -106,9 +129,14 @@ describe('GridLinesLayer', () => {
     const dv = new DataView({ totalRowCount: 5 });
     dv.recompute([0, 3, 4]); // physical 1, 2 not visible
 
-    const layer = new GridLinesLayer(dv);
+    const layer = new GridLinesLayer(undefined, dv);
     const ctx = createMockCtx();
-    const geometry = createMockGeometry({ headerHeight: 30, colWidths: [100, 100], rowHeight: 28, rowCount: 3 });
+    const geometry = createMockGeometry({
+      headerHeight: 30,
+      colWidths: [100, 100],
+      rowHeight: 28,
+      rowCount: 3,
+    });
     const mm = new MergeManager();
     mm.merge({ startRow: 1, startCol: 0, endRow: 2, endCol: 1 });
 
@@ -124,9 +152,14 @@ describe('GridLinesLayer', () => {
     const dv = new DataView({ totalRowCount: 5 });
     // No recompute — passthrough mode
 
-    const layer = new GridLinesLayer(dv);
+    const layer = new GridLinesLayer(undefined, dv);
     const ctx = createMockCtx();
-    const geometry = createMockGeometry({ headerHeight: 30, colWidths: [100, 100], rowHeight: 28, rowCount: 5 });
+    const geometry = createMockGeometry({
+      headerHeight: 30,
+      colWidths: [100, 100],
+      rowHeight: 28,
+      rowCount: 5,
+    });
     const mm = new MergeManager();
     mm.merge({ startRow: 1, startCol: 0, endRow: 2, endCol: 1 });
 

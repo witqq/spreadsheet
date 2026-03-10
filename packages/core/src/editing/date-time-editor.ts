@@ -13,7 +13,12 @@ import type { ScrollManager } from '../renderer/scroll-manager';
 import type { SpreadsheetTheme } from '../themes/theme-types';
 import type { CellValue } from '../types/interfaces';
 import type { EditorCloseReason } from './inline-editor';
-import type { CellEditor, CellEditorContext, CellEditorCommit, CellEditorClose } from './cell-editor';
+import type {
+  CellEditor,
+  CellEditorContext,
+  CellEditorCommit,
+  CellEditorClose,
+} from './cell-editor';
 import type { ResolvedLocale } from '../locale/resolve-locale';
 
 const DAYS_IN_WEEK = 7;
@@ -490,20 +495,17 @@ export class DateTimeEditor implements CellEditor {
     footer.style.padding = '4px 8px 8px';
     footer.style.borderTop = `1px solid ${theme.colors.gridLine}`;
 
-    const nowBtn = this.createFooterButton(
-      this.locale?.dateTimePicker?.now ?? 'Now',
-      () => {
-        const n = new Date();
-        this.viewYear = n.getFullYear();
-        this.viewMonth = n.getMonth();
-        this.focusedDay = n.getDate();
-        this.hour = n.getHours();
-        this.minute = n.getMinutes();
-        this.selectedDate = n;
-        this.rebuildCalendar();
-        this.overlay?.focus();
-      },
-    );
+    const nowBtn = this.createFooterButton(this.locale?.dateTimePicker?.now ?? 'Now', () => {
+      const n = new Date();
+      this.viewYear = n.getFullYear();
+      this.viewMonth = n.getMonth();
+      this.focusedDay = n.getDate();
+      this.hour = n.getHours();
+      this.minute = n.getMinutes();
+      this.selectedDate = n;
+      this.rebuildCalendar();
+      this.overlay?.focus();
+    });
 
     const okBtn = this.createFooterButton('OK', () => {
       this.commitValue();

@@ -13,10 +13,79 @@
  * the default text rendering path in CellTextLayer.
  */
 
-import type { CellType, CellValue } from './interfaces';
+import type { CellType, CellValue, CellData } from './interfaces';
 import type { SpreadsheetTheme } from '../themes/theme-types';
 
 export type CellAlignment = 'left' | 'center' | 'right';
+
+/** Position of a cell decorator relative to cell content. */
+export type CellDecoratorPosition = 'left' | 'right' | 'overlay' | 'underlay';
+
+/**
+ * A composable rendering addon for cells. Decorators augment the default
+ * text rendering pipeline without replacing it.
+ *
+ * - `left`/`right`: reserve horizontal space, shifting text inward.
+ * - `overlay`: renders on top of text.
+ * - `underlay`: renders behind text.
+ */
+export interface CellDecorator {
+  /** Unique identifier for this decorator. */
+  readonly id: string;
+  /** Where the decorator renders relative to cell content. */
+  readonly position: CellDecoratorPosition;
+  /**
+   * Compute reserved width in pixels for left/right decorators.
+   * Ignored for overlay/underlay decorators.
+   * The ctx parameter is optional — during hit testing no canvas is available.
+   * Decorators with fixed widths can ignore ctx entirely.
+   */
+  getWidth?(
+    cellData: CellData,
+    cellHeight: number,
+    ctx?: CanvasRenderingContext2D,
+    theme?: SpreadsheetTheme,
+  ): number;
+  /** Render the decorator in its allocated area. */
+  render(
+    ctx: CanvasRenderingContext2D,
+    cellData: CellData,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    theme: SpreadsheetTheme,
+  ): void;
+  /** Optional hit zones relative to the decorator's allocated area. */
+  getHitZones?(width: number, height: number, cellData: CellData): HitZone[];
+}
+
+/**
+ * Links a decorator to an applicability predicate that determines
+ * which cells the decorator applies to.
+ */
+export interface CellDecoratorRegistration {
+  /** The decorator instance. */
+  decorator: CellDecorator;
+  /** Returns true if this decorator should apply to the given cell. */
+  appliesTo: (row: number, col: number, cellData: CellData) => boolean;
+}
+
+/** A rectangular interactive area within a cell for sub-cell hit testing. */
+export interface HitZone {
+  /** Unique identifier for this zone within the cell. */
+  readonly id: string;
+  /** X position relative to cell left edge in pixels. */
+  readonly x: number;
+  /** Y position relative to cell top edge in pixels. */
+  readonly y: number;
+  /** Zone width in pixels. */
+  readonly width: number;
+  /** Zone height in pixels. */
+  readonly height: number;
+  /** Optional CSS cursor style when hovering this zone. */
+  readonly cursor?: string;
+}
 
 export interface CellTypeRenderer {
   /** Format a cell value for text display. */
@@ -49,6 +118,17 @@ export interface CellTypeRenderer {
     width: number,
     theme: SpreadsheetTheme,
   ) => number;
+  /**
+   * Optional sub-cell hit zones. Returns interactive zones within a cell
+   * for sub-cell hit testing. Each zone has an ID, position/size relative
+   * to the cell origin, and an optional cursor style.
+   */
+  getHitZones?: (
+    value: CellValue,
+    width: number,
+    height: number,
+    theme?: SpreadsheetTheme,
+  ) => HitZone[];
 }
 
 const stringRenderer: CellTypeRenderer = {
@@ -114,6 +194,7 @@ const dateRenderer: CellTypeRenderer = {
 
 export class CellTypeRegistry {
   private readonly renderers = new Map<CellType, CellTypeRenderer>();
+  private readonly decoratorRegistrations: CellDecoratorRegistration[] = [];
   private formatLocale: string = 'en-US';
 
   constructor() {
@@ -174,5 +255,30 @@ export class CellTypeRegistry {
     if (typeof value === 'boolean') return 'boolean';
     if (value instanceof Date) return 'date';
     return 'string';
+  }
+
+  /** Add a cell decorator with an applicability predicate. Replaces existing decorator with same ID. */
+  addDecorator(registration: CellDecoratorRegistration): void {
+    const existingIdx = this.decoratorRegistrations.findIndex(
+      (r) => r.decorator.id === registration.decorator.id,
+    );
+    if (existingIdx >= 0) {
+      this.decoratorRegistrations[existingIdx] = registration;
+    } else {
+      this.decoratorRegistrations.push(registration);
+    }
+  }
+
+  /** Remove a decorator by its ID. */
+  removeDecorator(id: string): void {
+    const idx = this.decoratorRegistrations.findIndex((r) => r.decorator.id === id);
+    if (idx >= 0) this.decoratorRegistrations.splice(idx, 1);
+  }
+
+  /** Get decorators applicable to a specific cell. */
+  getDecorators(row: number, col: number, cellData: CellData): CellDecorator[] {
+    return this.decoratorRegistrations
+      .filter((r) => r.appliesTo(row, col, cellData))
+      .map((r) => r.decorator);
   }
 }

@@ -60,7 +60,7 @@ Orchestrates layer rendering. Layers are stored in an ordered array.
 2. CellTextLayer — cell values, formatted text
 3. CellStatusLayer — validation icons, status indicators
 4. EmptyStateLayer — placeholder when no data
-5. GridLinesLayer — grid borders (if enabled)
+5. GridLinesLayer — grid borders (if enabled), per-cell border overrides (solid/dashed/dotted with conflict resolution)
 6. HeaderLayer — column/row headers
 7. RowNumberLayer — row numbers (if enabled)
 8. SelectionOverlayLayer — selection highlight, active cell (always last)
@@ -86,16 +86,24 @@ Cache invalidation occurs on theme change, data change, or structural change (co
 
 ### Key Layer Implementations
 
-**BackgroundLayer** (`background-layer.ts`) — fills entire canvas with `theme.colors.background`. Always the first layer.
+**BackgroundLayer** (`background-layer.ts`) — fills entire canvas with `theme.colors.background`, then renders per-cell `bgColor` from `CellStyle`. Uses lazy clipping (only clips when drawing individual cell backgrounds) and supports merged cells by drawing backgrounds for the full merged region at the anchor cell. Always the first layer.
 
 **CellTextLayer** (`cell-text-layer.ts`) — the most complex layer:
 1. Clips to cell area (excluding headers and row number gutter)
 2. Collects visible cells, handling merge anchors that may be off-screen
 3. For each cell, resolves the cell type from column definition, cell data, or auto-detection
-4. Custom renderer path: delegates to `renderer.render()` if the cell type provides one
-5. Wrap text path: uses `TextMeasureCache.getWrappedLines()` for word breaking, draws each line with proper alignment and vertical centering
-6. Single-line path: uses `TextMeasureCache.truncateText()` with ellipsis, draws via `ctx.fillText()`
-7. Also provides `measureHeights()` for the auto row-size system
+4. Applies per-cell `textColor` and font properties (`fontFamily`, `fontSize`, `fontWeight`, `fontStyle`) from `CellStyle`, falling back to theme defaults
+5. Applies per-cell `textAlign` (`left`/`center`/`right`) from `CellStyle`, falling back to `renderer.align` (cell type default)
+6. Applies per-cell `verticalAlign` (`top`/`middle`/`bottom`) by computing text Y position within the cell
+7. Applies per-cell `textWrap` from `CellStyle` with bidirectional override: `cellStyle?.textWrap ?? col.wrapText ?? false` — per-cell can enable or disable wrapping regardless of column setting
+8. Applies per-cell `indent` — shifts text position and reduces available width by `indent * padding` pixels
+9. Collects applicable `CellDecorator` instances from `CellTypeRegistry.getDecorators()` and renders in order: underlay → left → right → text/custom → overlay. Left/right decorators reserve horizontal space, shifting text inward.
+10. Custom renderer path: delegates to `renderer.render()` if the cell type provides one
+11. Wrap text path: uses `TextMeasureCache.getWrappedLines()` for word breaking, draws each line with proper alignment and vertical alignment
+12. Single-line path: uses `TextMeasureCache.truncateText()` with ellipsis, draws via `ctx.fillText()`
+13. Also provides `measureHeights()` for the auto row-size system, accounting for per-cell textWrap, indent, decorator widths, and custom fonts
+
+**GridLinesLayer** (`grid-lines-layer.ts`) — draws uniform grid lines for all visible rows/columns, skipping segments inside merged regions. After the default grid stroke, iterates visible cells and draws per-cell border overrides (`borderTop`, `borderRight`, `borderBottom`, `borderLeft`) from `CellStyle`. Each border specifies `width`, `color`, and line `style` (`solid`/`dashed`/`dotted`). Shared borders between adjacent cells are resolved: thicker border wins; equal thickness → rightmost/bottommost cell's border takes precedence. Edges are grouped by visual style to minimise canvas state changes.
 
 **SelectionOverlayLayer** (`selection-overlay-layer.ts`) — draws selection fills (translucent rectangles) and borders for each range, plus the active cell border with merge-awareness.
 
@@ -354,12 +362,20 @@ The `Set` storage provides O(1) add/delete and prevents double-registration. Emi
 
 Bridges DOM events to grid-domain events. Attaches 9 DOM listeners on the scroll container: `mousedown`, `mousemove`, `mouseup`, `dblclick`, `keydown`, `contextmenu`, `touchstart`, `touchmove`, `touchend`.
 
-**Core method — `hitTest(offsetX, offsetY)`:** Converts pixel coordinates to `{ region, row, col }`:
+**Core method — `hitTest(offsetX, offsetY)`:** Converts pixel coordinates to `{ region, row, col, hitZone?, hitZoneCursor? }`:
 1. Reads scroll position and frozen pane boundaries
 2. Determines region by quadrant: header, row-number, corner, or cell
 3. Header region further subdivides into `header-sort-icon` / `header-filter-icon` by checking the rightmost 28px
 4. Row-number region checks for row-group-toggle via RowGroupManager
 5. Cell region delegates to `layoutEngine.getRowAtY()` / `getColAtX()`
+6. For cell hits, resolves sub-cell hit zones via `resolveHitZone()` if CellTypeRegistry is provided
+
+**Sub-cell hit zone resolution — `resolveHitZone(row, col, contentX, contentY)`:**
+1. Looks up cell type renderer via CellTypeRegistry
+2. Calls `renderer.getHitZones(value, width, height, theme)` if defined
+3. Converts content coordinates to cell-relative coordinates
+4. Tests point-in-rect against each declared zone
+5. Returns `{ id, cursor }` of the matching zone, or undefined
 
 **Hit regions:** `'cell' | 'header' | 'header-sort-icon' | 'header-filter-icon' | 'row-number' | 'row-group-toggle' | 'corner' | 'outside'`
 
@@ -369,7 +385,7 @@ Bridges DOM events to grid-domain events. Attaches 9 DOM listeners on the scroll
 
 | Category | Events |
 |----------|--------|
-| Public | `cellClick`, `cellDoubleClick`, `cellChange`, `selectionChange`, `scroll`, `ready`, `destroy` |
+| Public | `cellClick`, `cellDoubleClick`, `cellHover`, `cellChange`, `selectionChange`, `scroll`, `ready`, `destroy` |
 | Command | `commandExecute`, `commandUndo`, `commandRedo` |
 | Clipboard | `clipboardCopy`, `clipboardCut`, `clipboardPaste` |
 | Resize | `columnResize`/`Start`/`End`, `rowResize`/`Start`/`End` |
@@ -449,7 +465,7 @@ Each plugin receives a `PluginAPI` instance with:
 |---------|--------|-------------|
 | Auto Row Height | `auto-row-size/` | Measures text and adjusts row heights automatically |
 | Column Stretch | `resize/column-stretch-manager.ts` | Stretches columns to fill container width |
-| Text Wrapping | Via AutoRowSize | Word wrap with automatic row height calculation |
+| Text Wrapping | Via AutoRowSize | Word wrap with automatic row height calculation, per-cell or per-column |
 | Merge Cells | `merge/` | Cell merging with MergeManager |
 | Frozen Panes | `viewport/frozen-panes.ts` | Freeze rows/columns |
 | Sorting | `sort/` | Column sort with SortEngine |
@@ -521,6 +537,27 @@ engine.getCellTypeRegistry().register('progressBar', {
 });
 ```
 
+**Sub-cell hit zones:**
+```typescript
+engine.getCellTypeRegistry().register('boolean', {
+  format: (v) => String(v),
+  align: 'center',
+  render: (ctx, value, x, y, w, h, theme) => { /* draw checkbox */ },
+  getHitZones: (value, width, height, theme) => {
+    const size = Math.min(14, height - 6);
+    return [{
+      id: 'checkbox',
+      x: (width - size) / 2,
+      y: (height - size) / 2,
+      width: size,
+      height: size,
+      cursor: 'pointer',
+    }];
+  },
+});
+// cellClick/cellHover events include hitZone: 'checkbox' when zone is hit
+```
+
 **Custom editing:** Via `CellEditorRegistry.registerForType(editor, 'progressBar')` or `register(editor, matcherFn, priority)` for arbitrary predicate matching.
 
 ### Rendering Dispatch
@@ -531,7 +568,7 @@ In CellTextLayer:
   - **Wrap text path:** `TextMeasureCache.getWrappedLines()` → multi-line with vertical centering
   - **Single-line path:** `TextMeasureCache.truncateText()` with ellipsis → `ctx.fillText()`
 
-Alignment is driven by `renderer.align` → sets `ctx.textAlign` + computes x-position.
+Alignment is driven by per-cell `cellStyle?.textAlign`, falling back to `renderer.align` → sets `ctx.textAlign` + computes x-position. Vertical alignment (`cellStyle?.verticalAlign`) adjusts text Y position within the cell for both single-line and wrapped modes. Indent shifts the text start position and reduces available width.
 
 ### Locale-aware Formatting
 

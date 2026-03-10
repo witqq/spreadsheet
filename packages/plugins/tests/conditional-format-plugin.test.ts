@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SpreadsheetEngine } from '@witqq/spreadsheet';
+import { SpreadsheetEngine, CellStore, DataView, GridGeometry, lightTheme } from '@witqq/spreadsheet';
 import type { ColumnDef, ConditionalFormatRule } from '@witqq/spreadsheet';
 import {
   ConditionalFormattingPlugin,
+  ConditionalFormatLayer,
   CONDITIONAL_FORMAT_PLUGIN_NAME,
   toNumber,
   evaluateComparison,
@@ -335,5 +336,107 @@ describe('interpolateColor', () => {
 
   it('returns single stop color', () => {
     expect(interpolateColor(50, [{ value: 0, color: '#aabbcc' }])).toBe('#aabbcc');
+  });
+});
+
+describe('ConditionalFormatLayer textColor rendering', () => {
+  it('renders text with conditional format textColor', () => {
+    const ctx = createMockCtx();
+
+    const columns: ColumnDef[] = [
+      { key: 'a', title: 'A', width: 100, type: 'number' },
+    ];
+    const cellStore = new CellStore();
+    cellStore.set(0, 0, { value: 75 });
+
+    const dataView = new DataView({ totalRowCount: 10 });
+    const layer = new ConditionalFormatLayer(cellStore, dataView);
+    const geometry = new GridGeometry({
+      columns,
+      theme: lightTheme,
+      showRowNumbers: false,
+    });
+
+    layer.setRules([{
+      id: 'r1',
+      priority: 1,
+      range: { startRow: 0, endRow: 9, startCol: 0, endCol: 0 },
+      condition: { type: 'value' as const, operator: 'greaterThan' as const, value: 50 },
+      style: { textColor: '#ff0000' },
+      stopIfTrue: false,
+    }]);
+
+    const rc = {
+      ctx,
+      geometry,
+      theme: lightTheme,
+      canvasWidth: 800,
+      canvasHeight: 600,
+      viewport: { startRow: 0, endRow: 0, startCol: 0, endCol: 0, visibleRowCount: 1, visibleColCount: 1 },
+      scrollX: 0,
+      scrollY: 0,
+      renderMode: 'full' as const,
+      paneRegion: 'full' as const,
+    };
+
+    layer.render(rc);
+
+    // textColor should trigger fillText with the cell value
+    const fillTextCalls = (ctx.fillText as ReturnType<typeof vi.fn>).mock.calls;
+    expect(fillTextCalls.length).toBeGreaterThan(0);
+    // The text drawn should be the cell value as string
+    expect(fillTextCalls.some(([text]: [string]) => text === '75')).toBe(true);
+    // fillStyle should have been set to the textColor
+    expect(ctx.fillStyle).toBe('#ff0000');
+  });
+
+  it('applies both bgColor and textColor together', () => {
+    const ctx = createMockCtx();
+
+    const columns: ColumnDef[] = [
+      { key: 'a', title: 'A', width: 100, type: 'number' },
+    ];
+    const cellStore = new CellStore();
+    cellStore.set(0, 0, { value: 75 });
+
+    const dataView = new DataView({ totalRowCount: 10 });
+    const layer = new ConditionalFormatLayer(cellStore, dataView);
+    const geometry = new GridGeometry({
+      columns,
+      theme: lightTheme,
+      showRowNumbers: false,
+    });
+
+    layer.setRules([{
+      id: 'r1',
+      priority: 1,
+      range: { startRow: 0, endRow: 9, startCol: 0, endCol: 0 },
+      condition: { type: 'value' as const, operator: 'greaterThan' as const, value: 50 },
+      style: { bgColor: '#ffee00', textColor: '#0000ff' },
+      stopIfTrue: false,
+    }]);
+
+    const rc = {
+      ctx,
+      geometry,
+      theme: lightTheme,
+      canvasWidth: 800,
+      canvasHeight: 600,
+      viewport: { startRow: 0, endRow: 0, startCol: 0, endCol: 0, visibleRowCount: 1, visibleColCount: 1 },
+      scrollX: 0,
+      scrollY: 0,
+      renderMode: 'full' as const,
+      paneRegion: 'full' as const,
+    };
+
+    layer.render(rc);
+
+    // Should have fillRect calls (bg) and fillText call (text)
+    const fillRectCalls = (ctx.fillRect as ReturnType<typeof vi.fn>).mock.calls;
+    const fillTextCalls = (ctx.fillText as ReturnType<typeof vi.fn>).mock.calls;
+    expect(fillRectCalls.length).toBeGreaterThan(0);
+    expect(fillTextCalls.length).toBeGreaterThan(0);
+    // Last fillStyle should be the textColor since it's set last
+    expect(ctx.fillStyle).toBe('#0000ff');
   });
 });

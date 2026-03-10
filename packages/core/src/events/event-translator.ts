@@ -18,8 +18,9 @@ import type { LayoutEngine } from '../renderer/layout-engine';
 import type { ScrollManager } from '../renderer/scroll-manager';
 import type { CellStore } from '../model/cell-store';
 import type { DataView } from '../dataview/data-view';
-import type { ColumnDef } from '../types/interfaces';
+import type { ColumnDef, CellType, CellValue } from '../types/interfaces';
 import type { RowGroupManager } from '../grouping/row-group-manager';
+import type { CellTypeRegistry } from '../types/cell-type-registry';
 
 export interface EventTranslatorConfig {
   /** Scroll container element to attach listeners to. */
@@ -38,6 +39,10 @@ export interface EventTranslatorConfig {
   columns: ColumnDef[];
   /** Optional RowGroupManager for detecting group toggle clicks. */
   rowGroupManager?: RowGroupManager;
+  /** Optional CellTypeRegistry for sub-cell hit zone resolution. */
+  cellTypeRegistry?: CellTypeRegistry;
+  /** Optional theme getter for hit zone resolution. */
+  getTheme?: () => import('../themes/theme-types').SpreadsheetTheme;
 }
 
 export class EventTranslator {
@@ -49,6 +54,8 @@ export class EventTranslator {
   private readonly dataView: DataView;
   private readonly columns: ColumnDef[];
   private readonly rowGroupManager?: RowGroupManager;
+  private readonly cellTypeRegistry?: CellTypeRegistry;
+  private readonly getTheme?: () => import('../themes/theme-types').SpreadsheetTheme;
   private attached = false;
   private frozenRows = 0;
   private frozenColumns = 0;
@@ -76,6 +83,8 @@ export class EventTranslator {
     this.dataView = config.dataView;
     this.columns = config.columns;
     this.rowGroupManager = config.rowGroupManager;
+    this.cellTypeRegistry = config.cellTypeRegistry;
+    this.getTheme = config.getTheme;
   }
 
   /** Update frozen pane configuration for hit-testing. */
@@ -211,7 +220,153 @@ export class EventTranslator {
       return { region: 'outside', row: -1, col: -1 };
     }
 
-    return { region: 'cell', row, col };
+    // Sub-cell hit zone resolution
+    const zoneResult = this.resolveHitZone(row, col, contentX, contentY);
+
+    return { region: 'cell', row, col, hitZone: zoneResult?.id, hitZoneCursor: zoneResult?.cursor };
+  }
+
+  /**
+   * Resolve which sub-cell hit zone (if any) the point falls within.
+   * Converts content coordinates to cell-relative coordinates and tests
+   * against zones declared by the cell type renderer.
+   */
+  resolveHitZone(
+    row: number,
+    col: number,
+    contentX: number,
+    contentY: number,
+  ): { id: string; cursor?: string } | undefined {
+    if (!this.cellTypeRegistry) return undefined;
+
+    const visibleCols = this.columns.filter((c) => !c.hidden);
+    const column = visibleCols[col];
+    if (!column) return undefined;
+
+    const physRow = this.dataView.getPhysicalRow(row);
+    const cellData = this.cellStore.get(physRow, col);
+    const value = cellData?.value ?? null;
+    const nullCellData = { value: null as CellValue };
+    const safeCellData = cellData ?? nullCellData;
+
+    const cellX = this.layoutEngine.getColumnX(col);
+    const cellY = this.layoutEngine.getRowY(row);
+    const cellW = this.layoutEngine.getColumnWidth(col);
+    const cellH = this.layoutEngine.getRowHeight(row);
+
+    // Convert to cell-relative coordinates
+    const relX = contentX - cellX;
+    const relY = contentY - cellY;
+
+    // Get current theme from getter if available
+    const theme = this.getTheme?.();
+
+    // Check cell type renderer hit zones
+    const cellType: CellType =
+      column.type ?? cellData?.type ?? this.cellTypeRegistry.detectType(value);
+    const renderer = this.cellTypeRegistry.get(cellType);
+
+    if (renderer.getHitZones) {
+      try {
+        const zones = renderer.getHitZones(value, cellW, cellH, theme);
+        if (zones && zones.length > 0) {
+          for (const zone of zones) {
+            if (
+              relX >= zone.x &&
+              relX <= zone.x + zone.width &&
+              relY >= zone.y &&
+              relY <= zone.y + zone.height
+            ) {
+              return { id: zone.id, cursor: zone.cursor };
+            }
+          }
+        }
+      } catch {
+        /* skip broken hit zone provider */
+      }
+    }
+
+    // Check decorator hit zones
+    const decorators = this.cellTypeRegistry.getDecorators(physRow, col, safeCellData);
+    if (decorators.length > 0) {
+      // Compute decorator offsets to translate zone coordinates
+      let leftOffset = 0;
+      for (const dec of decorators) {
+        if (dec.position === 'left') {
+          try {
+            const w = dec.getWidth?.(safeCellData, cellH, undefined, theme) ?? 0;
+            if (dec.getHitZones) {
+              const zones = dec.getHitZones(w, cellH, safeCellData);
+              for (const zone of zones) {
+                const zoneX = leftOffset + zone.x;
+                const zoneY = zone.y;
+                if (
+                  relX >= zoneX &&
+                  relX <= zoneX + zone.width &&
+                  relY >= zoneY &&
+                  relY <= zoneY + zone.height
+                ) {
+                  return { id: zone.id, cursor: zone.cursor };
+                }
+              }
+            }
+            leftOffset += w;
+          } catch {
+            /* skip broken decorator */
+          }
+        }
+      }
+
+      let rightOffset = 0;
+      for (const dec of decorators) {
+        if (dec.position === 'right') {
+          try {
+            const w = dec.getWidth?.(safeCellData, cellH, undefined, theme) ?? 0;
+            rightOffset += w;
+            if (dec.getHitZones) {
+              const zones = dec.getHitZones(w, cellH, safeCellData);
+              for (const zone of zones) {
+                const zoneX = cellW - rightOffset + zone.x;
+                const zoneY = zone.y;
+                if (
+                  relX >= zoneX &&
+                  relX <= zoneX + zone.width &&
+                  relY >= zoneY &&
+                  relY <= zoneY + zone.height
+                ) {
+                  return { id: zone.id, cursor: zone.cursor };
+                }
+              }
+            }
+          } catch {
+            /* skip broken decorator */
+          }
+        }
+      }
+
+      // Overlay/underlay decorators — zones relative to cell origin
+      for (const dec of decorators) {
+        if ((dec.position === 'overlay' || dec.position === 'underlay') && dec.getHitZones) {
+          try {
+            const zones = dec.getHitZones(cellW, cellH, safeCellData);
+            for (const zone of zones) {
+              if (
+                relX >= zone.x &&
+                relX <= zone.x + zone.width &&
+                relY >= zone.y &&
+                relY <= zone.y + zone.height
+              ) {
+                return { id: zone.id, cursor: zone.cursor };
+              }
+            }
+          } catch {
+            /* skip broken decorator */
+          }
+        }
+      }
+    }
+
+    return undefined;
   }
 
   private translateMouseEvent(e: MouseEvent): GridMouseEvent {
@@ -239,9 +394,14 @@ export class EventTranslator {
 
   private handleMouseMove = (e: MouseEvent): void => {
     if (e.buttons === 0) {
-      // No button pressed — emit hover event for tooltips
+      // No button pressed — emit hover event for tooltips/cursor
       const gridEvent = this.translateMouseEvent(e);
       this.eventBus.emit('gridMouseHover', gridEvent);
+
+      // Dispatch public cellHover for cell-region hovers
+      if (gridEvent.region === 'cell' && gridEvent.row >= 0 && gridEvent.col >= 0) {
+        this.emitCellHover(gridEvent);
+      }
       return;
     }
     const gridEvent = this.translateMouseEvent(e);
@@ -365,6 +525,7 @@ export class EventTranslator {
       col: gridEvent.col,
       value: cellData?.value ?? null,
       column,
+      hitZone: gridEvent.hitZone,
     });
   }
 
@@ -379,6 +540,22 @@ export class EventTranslator {
       col: gridEvent.col,
       value: cellData?.value ?? null,
       column,
+      hitZone: gridEvent.hitZone,
+    });
+  }
+
+  private emitCellHover(gridEvent: GridMouseEvent): void {
+    const visibleCols = this.columns.filter((c) => !c.hidden);
+    const column = visibleCols[gridEvent.col];
+    if (!column) return;
+
+    const cellData = this.cellStore.get(this.dataView.getPhysicalRow(gridEvent.row), gridEvent.col);
+    this.eventBus.emit('cellHover', {
+      row: gridEvent.row,
+      col: gridEvent.col,
+      value: cellData?.value ?? null,
+      column,
+      hitZone: gridEvent.hitZone,
     });
   }
 }

@@ -2,6 +2,8 @@
   "serviceName": "witqq-spreadsheet",
   "dockerComposePath": "docker-compose.remote.yml",
   "dockerfile": "config/Dockerfile",
+  "buildContext": ".",
+  "platform": "linux/amd64",
   "remoteDir": "/opt/witqq-spreadsheet",
   "imageName": "witqq-spreadsheet",
   "projectDir": "/Users/mike/WebstormProjects/wit-table",

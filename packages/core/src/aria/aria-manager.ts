@@ -143,7 +143,12 @@ export class AriaManager {
     const displayValue = value === '' ? emptyLabel : String(value);
 
     const tpl = this.locale?.aria?.cellAnnouncement ?? '{column}, Row {row}: {value}';
-    this.announce(tpl.replace('{column}', colName).replace('{row}', String(row + 1)).replace('{value}', displayValue));
+    this.announce(
+      tpl
+        .replace('{column}', colName)
+        .replace('{row}', String(row + 1))
+        .replace('{value}', displayValue),
+    );
   };
 
   private handleSortChange = (event: SortChangeEvent): void => {
@@ -172,7 +177,9 @@ export class AriaManager {
       this.announce(this.locale?.aria?.filterCleared ?? 'Filter cleared, showing all rows');
     } else {
       const tpl = this.locale?.aria?.filterActive ?? 'Filtered: {visible} of {total} rows visible';
-      this.announce(tpl.replace('{visible}', String(visibleRowCount)).replace('{total}', String(totalRowCount)));
+      this.announce(
+        tpl.replace('{visible}', String(visibleRowCount)).replace('{total}', String(totalRowCount)),
+      );
     }
   };
 

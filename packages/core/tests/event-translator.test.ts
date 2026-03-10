@@ -6,7 +6,10 @@ import { LayoutEngine } from '../src/renderer/layout-engine';
 import { ScrollManager } from '../src/renderer/scroll-manager';
 import { CellStore } from '../src/model/cell-store';
 import { DataView } from '../src/dataview/data-view';
+import { CellTypeRegistry } from '../src/types/cell-type-registry';
+import type { CellTypeRenderer, HitZone } from '../src/types/cell-type-registry';
 import type { ColumnDef } from '../src/types/interfaces';
+import type { CellEvent } from '../src/events/event-types';
 
 function makeColumns(): ColumnDef[] {
   return [
@@ -17,7 +20,12 @@ function makeColumns(): ColumnDef[] {
 }
 
 /** Create a MouseEvent with specific offsetX/offsetY. */
-function mouseEvent(type: string, offsetX: number, offsetY: number, opts?: { shiftKey?: boolean; ctrlKey?: boolean }): MouseEvent {
+function mouseEvent(
+  type: string,
+  offsetX: number,
+  offsetY: number,
+  opts?: { shiftKey?: boolean; ctrlKey?: boolean },
+): MouseEvent {
   const e = new MouseEvent(type, {
     bubbles: true,
     cancelable: true,
@@ -49,7 +57,17 @@ describe('EventTranslator', () => {
   beforeEach(() => {
     container = document.createElement('div');
     Object.defineProperty(container, 'getBoundingClientRect', {
-      value: () => ({ width: 800, height: 600, top: 0, left: 0, right: 800, bottom: 600, x: 0, y: 0, toJSON: () => {} }),
+      value: () => ({
+        width: 800,
+        height: 600,
+        top: 0,
+        left: 0,
+        right: 800,
+        bottom: 600,
+        x: 0,
+        y: 0,
+        toJSON: () => {},
+      }),
     });
     document.body.appendChild(container);
 
@@ -72,10 +90,7 @@ describe('EventTranslator', () => {
 
     eventBus = new EventBus();
     cellStore = new CellStore();
-    cellStore.bulkLoad(
-      [{ name: 'Alice', age: 30, city: 'NYC' }],
-      ['name', 'age', 'city'],
-    );
+    cellStore.bulkLoad([{ name: 'Alice', age: 30, city: 'NYC' }], ['name', 'age', 'city']);
 
     translator = new EventTranslator({
       scrollContainer,
@@ -209,9 +224,7 @@ describe('EventTranslator', () => {
       const handler = vi.fn();
       eventBus.on('gridMouseDown', handler);
 
-      scrollContainer.dispatchEvent(
-        mouseEvent('mousedown', rowNumberWidth + 10, headerHeight + 5),
-      );
+      scrollContainer.dispatchEvent(mouseEvent('mousedown', rowNumberWidth + 10, headerHeight + 5));
 
       expect(handler).toHaveBeenCalledOnce();
       expect(handler.mock.calls[0][0].region).toBe('cell');
@@ -224,9 +237,7 @@ describe('EventTranslator', () => {
       const handler = vi.fn();
       eventBus.on('cellClick', handler);
 
-      scrollContainer.dispatchEvent(
-        mouseEvent('mousedown', rowNumberWidth + 10, headerHeight + 5),
-      );
+      scrollContainer.dispatchEvent(mouseEvent('mousedown', rowNumberWidth + 10, headerHeight + 5));
 
       expect(handler).toHaveBeenCalledOnce();
       expect(handler.mock.calls[0][0].row).toBe(0);
@@ -240,9 +251,7 @@ describe('EventTranslator', () => {
       const handler = vi.fn();
       eventBus.on('cellDoubleClick', handler);
 
-      scrollContainer.dispatchEvent(
-        mouseEvent('dblclick', rowNumberWidth + 10, headerHeight + 5),
-      );
+      scrollContainer.dispatchEvent(mouseEvent('dblclick', rowNumberWidth + 10, headerHeight + 5));
 
       expect(handler).toHaveBeenCalledOnce();
       expect(handler.mock.calls[0][0].row).toBe(0);
@@ -317,9 +326,7 @@ describe('EventTranslator', () => {
 
       translator.detach();
 
-      scrollContainer.dispatchEvent(
-        mouseEvent('mousedown', rowNumberWidth + 10, headerHeight + 5),
-      );
+      scrollContainer.dispatchEvent(mouseEvent('mousedown', rowNumberWidth + 10, headerHeight + 5));
 
       expect(handler).not.toHaveBeenCalled();
     });
@@ -397,7 +404,11 @@ describe('EventTranslator', () => {
   });
 
   describe('touch event handling', () => {
-    function touchEvent(type: 'touchstart' | 'touchmove' | 'touchend', clientX: number, clientY: number): TouchEvent {
+    function touchEvent(
+      type: 'touchstart' | 'touchmove' | 'touchend',
+      clientX: number,
+      clientY: number,
+    ): TouchEvent {
       const touch = {
         clientX,
         clientY,
@@ -426,7 +437,17 @@ describe('EventTranslator', () => {
       translator.attach();
       // Mock getBoundingClientRect so touch offsets compute correctly
       Object.defineProperty(scrollContainer, 'getBoundingClientRect', {
-        value: () => ({ top: 0, left: 0, width: 800, height: 600, right: 800, bottom: 600, x: 0, y: 0, toJSON: () => {} }),
+        value: () => ({
+          top: 0,
+          left: 0,
+          width: 800,
+          height: 600,
+          right: 800,
+          bottom: 600,
+          x: 0,
+          y: 0,
+          toJSON: () => {},
+        }),
         configurable: true,
       });
     });
@@ -561,6 +582,218 @@ describe('EventTranslator', () => {
       scrollContainer.dispatchEvent(touchEvent('touchend', x, y));
 
       expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('sub-cell hit zone resolution', () => {
+    const booleanWithZones: CellTypeRenderer = {
+      format: (v) => String(v),
+      align: 'center',
+      getHitZones: (_value, width, height) => {
+        const size = Math.min(14, height - 6);
+        const zoneX = (width - size) / 2;
+        const zoneY = (height - size) / 2;
+        return [
+          { id: 'checkbox', x: zoneX, y: zoneY, width: size, height: size, cursor: 'pointer' },
+        ];
+      },
+    };
+
+    // Columns with a boolean type for hit zone testing
+    const hitZoneColumns: ColumnDef[] = [
+      { key: 'name', title: 'Name', width: 120 },
+      { key: 'active', title: 'Active', width: 80, type: 'boolean' },
+      { key: 'city', title: 'City', width: 100 },
+    ];
+
+    let registryTranslator: EventTranslator;
+    let registry: CellTypeRegistry;
+    let hitZoneLayout: LayoutEngine;
+
+    beforeEach(() => {
+      registry = new CellTypeRegistry();
+      registry.register('boolean', booleanWithZones);
+
+      hitZoneLayout = new LayoutEngine({
+        columns: hitZoneColumns,
+        rowCount: 100,
+        rowHeight,
+        headerHeight,
+        rowNumberWidth,
+      });
+
+      registryTranslator = new EventTranslator({
+        scrollContainer,
+        layoutEngine: hitZoneLayout,
+        scrollManager,
+        eventBus,
+        cellStore,
+        dataView: new DataView({ totalRowCount: 1 }),
+        columns: hitZoneColumns,
+        cellTypeRegistry: registry,
+      });
+    });
+
+    afterEach(() => {
+      registryTranslator.detach();
+    });
+
+    it('resolves hit zone when click is inside zone bounds', () => {
+      // Column 1 (age) is boolean type, width=80, starts at x=120
+      // Row 0, height=28
+      // Checkbox zone: size=14, x=(80-14)/2=33, y=(28-14)/2=7
+      // Cell origin: contentX=120, contentY=0
+      // Target: contentX = 120 + 33 + 5 = 158, contentY = 0 + 7 + 5 = 12
+      // offsetX = contentX + rowNumberWidth = 158 + 50 = 208
+      // offsetY = contentY + headerHeight = 12 + 32 = 44
+      cellStore.set(0, 1, { value: true });
+      const result = registryTranslator.hitTest(208, 44);
+
+      expect(result.region).toBe('cell');
+      expect(result.row).toBe(0);
+      expect(result.col).toBe(1);
+      expect(result.hitZone).toBe('checkbox');
+      expect(result.hitZoneCursor).toBe('pointer');
+    });
+
+    it('returns undefined hitZone when click is outside zone bounds', () => {
+      // Click at left edge of age column (far from checkbox center)
+      cellStore.set(0, 1, { value: true });
+      const result = registryTranslator.hitTest(rowNumberWidth + 121, headerHeight + 1);
+
+      expect(result.region).toBe('cell');
+      expect(result.row).toBe(0);
+      expect(result.col).toBe(1);
+      expect(result.hitZone).toBeUndefined();
+      expect(result.hitZoneCursor).toBeUndefined();
+    });
+
+    it('returns undefined hitZone for cell types without getHitZones', () => {
+      // Column 0 (name) is string type — no getHitZones
+      const result = registryTranslator.hitTest(rowNumberWidth + 10, headerHeight + 5);
+      expect(result.region).toBe('cell');
+      expect(result.hitZone).toBeUndefined();
+    });
+
+    it('carries hitZone in cellClick event', () => {
+      cellStore.set(0, 1, { value: true });
+      registryTranslator.attach();
+      const handler = vi.fn<[CellEvent]>();
+      eventBus.on('cellClick', handler);
+
+      // Click inside checkbox zone
+      scrollContainer.dispatchEvent(mouseEvent('mousedown', 208, 44));
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(handler.mock.calls[0][0].hitZone).toBe('checkbox');
+    });
+
+    it('carries hitZone in cellDoubleClick event', () => {
+      cellStore.set(0, 1, { value: true });
+      registryTranslator.attach();
+      const handler = vi.fn<[CellEvent]>();
+      eventBus.on('cellDoubleClick', handler);
+
+      scrollContainer.dispatchEvent(mouseEvent('dblclick', 208, 44));
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(handler.mock.calls[0][0].hitZone).toBe('checkbox');
+    });
+
+    it('emits cellHover on mousemove with no buttons pressed', () => {
+      cellStore.set(0, 1, { value: true });
+      registryTranslator.attach();
+      const handler = vi.fn<[CellEvent]>();
+      eventBus.on('cellHover', handler);
+
+      // mousemove with buttons=0 (hover, not drag)
+      const e = new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 208,
+        clientY: 44,
+      });
+      Object.defineProperty(e, 'offsetX', { value: 208 });
+      Object.defineProperty(e, 'offsetY', { value: 44 });
+      Object.defineProperty(e, 'buttons', { value: 0 });
+      scrollContainer.dispatchEvent(e);
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(handler.mock.calls[0][0].hitZone).toBe('checkbox');
+      expect(handler.mock.calls[0][0].row).toBe(0);
+      expect(handler.mock.calls[0][0].col).toBe(1);
+    });
+
+    it('cellHover has no hitZone when not over a zone', () => {
+      registryTranslator.attach();
+      const handler = vi.fn<[CellEvent]>();
+      eventBus.on('cellHover', handler);
+
+      // Hover over string column (no zones)
+      const e = new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: rowNumberWidth + 10,
+        clientY: headerHeight + 5,
+      });
+      Object.defineProperty(e, 'offsetX', { value: rowNumberWidth + 10 });
+      Object.defineProperty(e, 'offsetY', { value: headerHeight + 5 });
+      Object.defineProperty(e, 'buttons', { value: 0 });
+      scrollContainer.dispatchEvent(e);
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(handler.mock.calls[0][0].hitZone).toBeUndefined();
+    });
+
+    it('gridMouseHover carries hitZoneCursor for cursor management', () => {
+      cellStore.set(0, 1, { value: true });
+      registryTranslator.attach();
+      const handler = vi.fn();
+      eventBus.on('gridMouseHover', handler);
+
+      const e = new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 208,
+        clientY: 44,
+      });
+      Object.defineProperty(e, 'offsetX', { value: 208 });
+      Object.defineProperty(e, 'offsetY', { value: 44 });
+      Object.defineProperty(e, 'buttons', { value: 0 });
+      scrollContainer.dispatchEvent(e);
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(handler.mock.calls[0][0].hitZoneCursor).toBe('pointer');
+    });
+
+    it('does not crash when cellTypeRegistry is not provided', () => {
+      // Original translator without registry
+      const result = translator.hitTest(rowNumberWidth + 130, headerHeight + 5);
+      expect(result.region).toBe('cell');
+      expect(result.hitZone).toBeUndefined();
+    });
+
+    it('handles renderer returning empty zones array', () => {
+      const emptyRenderer: CellTypeRenderer = {
+        format: (v) => String(v),
+        align: 'center',
+        getHitZones: () => [],
+      };
+      const customRegistry = new CellTypeRegistry();
+      customRegistry.register('number', emptyRenderer);
+
+      const customTranslator = new EventTranslator({
+        scrollContainer,
+        layoutEngine,
+        scrollManager,
+        eventBus,
+        cellStore,
+        dataView: new DataView({ totalRowCount: 1 }),
+        columns,
+        cellTypeRegistry: customRegistry,
+      });
+
+      cellStore.set(0, 1, { value: 42 });
+      const result = customTranslator.hitTest(rowNumberWidth + 130, headerHeight + 5);
+      expect(result.hitZone).toBeUndefined();
+      customTranslator.detach();
     });
   });
 });

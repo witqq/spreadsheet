@@ -20,6 +20,8 @@ export interface CellEvent {
   col: number;
   value: CellValue;
   column: ColumnDef;
+  /** Sub-cell hit zone ID, if the click/hover landed on a declared zone. */
+  hitZone?: string;
 }
 
 /** Event payload when a cell value changes (via editing, paste, or autofill). */
@@ -60,6 +62,10 @@ export interface HitTestResult {
   readonly row: number;
   /** Column index (-1 if not applicable, e.g. row-number click). */
   readonly col: number;
+  /** Sub-cell hit zone ID, if the hit landed on a declared zone. */
+  readonly hitZone?: string;
+  /** CSS cursor style for the hit zone, if the zone declares one. */
+  readonly hitZoneCursor?: string;
 }
 
 export interface GridMouseEvent extends HitTestResult {
@@ -199,6 +205,7 @@ export interface SpreadsheetEvents {
   // Public events
   cellClick: (event: CellEvent) => void;
   cellDoubleClick: (event: CellEvent) => void;
+  cellHover: (event: CellEvent) => void;
   cellChange: (event: CellChangeEvent) => void;
   selectionChange: (event: SelectionChangeEvent) => void;
   scroll: (event: ScrollEvent) => void;

@@ -72,6 +72,12 @@ interface CellTypeRenderer {
     width: number,
     theme: SpreadsheetTheme
   ) => number;
+  getHitZones?: (
+    value: CellValue,
+    width: number,
+    height: number,
+    theme?: SpreadsheetTheme
+  ) => HitZone[];
 }
 ```
 
@@ -81,6 +87,7 @@ interface CellTypeRenderer {
 | `align` | Text alignment within the cell |
 | `render` | Optional custom canvas drawing (bypasses default text rendering) |
 | `measureHeight` | Optional height measurement for auto row sizing |
+| `getHitZones` | Optional sub-cell interactive zone declarations for hit testing |
 
 ## Built-in Renderers
 
@@ -98,12 +105,18 @@ class CellTypeRegistry {
   get(type: CellType): CellTypeRenderer;
   register(type: CellType, renderer: CellTypeRenderer): void;
   detectType(value: CellValue): CellType;
+  addDecorator(registration: CellDecoratorRegistration): void;
+  removeDecorator(id: string): void;
+  getDecorators(row: number, col: number, cellData: CellData): CellDecorator[];
 }
 ```
 
 - **`get(type)`** — returns the renderer for a type (falls back to `string` if not found)
 - **`register(type, renderer)`** — register or override a type renderer
 - **`detectType(value)`** — auto-detect type from a value (number, boolean, Date, or string)
+- **`addDecorator(registration)`** — register a cell decorator. Replaces existing decorator with same ID
+- **`removeDecorator(id)`** — remove a decorator by ID
+- **`getDecorators(row, col, cellData)`** — get all decorators that apply to a cell
 
 ## Custom Progress Bar Type
 

@@ -194,7 +194,14 @@ export type { KeyboardNavigatorConfig } from './selection/keyboard-navigator';
 
 // Cell Types
 export { CellTypeRegistry } from './types/cell-type-registry';
-export type { CellTypeRenderer, CellAlignment } from './types/cell-type-registry';
+export type {
+  CellTypeRenderer,
+  CellAlignment,
+  HitZone,
+  CellDecorator,
+  CellDecoratorPosition,
+  CellDecoratorRegistration,
+} from './types/cell-type-registry';
 
 // Themes
 export type { SpreadsheetTheme } from './themes/theme-types';
