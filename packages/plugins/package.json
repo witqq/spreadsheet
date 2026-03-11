@@ -1,6 +1,6 @@
 {
   "name": "@witqq/spreadsheet-plugins",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Official plugins for witqq spreadsheet",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -25,7 +25,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@witqq/spreadsheet": "^0.3.0"
+    "@witqq/spreadsheet": "^0.4.0"
   },
   "devDependencies": {
     "vite": "^6.0.0",
