@@ -212,6 +212,7 @@ Renders cell backgrounds, data bars, and icon sets based on rules. Uses a custom
 
 ```typescript
 import { ConditionalFormattingPlugin } from '@witqq/spreadsheet-plugins';
+import type { ConditionalFormatRule } from '@witqq/spreadsheet';
 
 const plugin = new ConditionalFormattingPlugin();
 engine.installPlugin(plugin);

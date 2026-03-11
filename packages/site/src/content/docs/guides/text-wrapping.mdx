@@ -19,8 +19,8 @@ const columns: ColumnDef[] = [
 ];
 ```
 
-:::note
-`CellStyle.textWrap` is defined in the interface but is not currently read by the renderer. Use `ColumnDef.wrapText` for wrapping control.
+:::tip
+Per-cell text wrapping is also available via `CellStyle.textWrap`. Cell-level style takes priority over `ColumnDef.wrapText`. See [Per-Cell Styling](/guides/styling/) for details.
 :::
 
 ## Wrapping Behavior

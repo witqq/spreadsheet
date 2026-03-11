@@ -28,7 +28,7 @@ function App() {
 
 | Package | Path | npm | Description |
 |---------|------|-----|-------------|
-| [`@witqq/spreadsheet`](packages/core/README.md) | `packages/core/` | [![npm](https://img.shields.io/npm/v/@witqq/spreadsheet.svg)](https://www.npmjs.com/package/@witqq/spreadsheet) | Canvas engine — rendering, editing, selection, data model, commands, theming, localization. 220 exports. |
+| [`@witqq/spreadsheet`](packages/core/README.md) | `packages/core/` | [![npm](https://img.shields.io/npm/v/@witqq/spreadsheet.svg)](https://www.npmjs.com/package/@witqq/spreadsheet) | Canvas engine — rendering, editing, selection, data model, commands, theming, localization. 224 exports. |
 | [`@witqq/spreadsheet-react`](packages/react/README.md) | `packages/react/` | [![npm](https://img.shields.io/npm/v/@witqq/spreadsheet-react.svg)](https://www.npmjs.com/package/@witqq/spreadsheet-react) | React wrapper component. 18 exports. |
 | [`@witqq/spreadsheet-vue`](packages/vue/README.md) | `packages/vue/` | [![npm](https://img.shields.io/npm/v/@witqq/spreadsheet-vue.svg)](https://www.npmjs.com/package/@witqq/spreadsheet-vue) | Vue 3 wrapper component. 19 exports. |
 | [`@witqq/spreadsheet-angular`](packages/angular/README.md) | `packages/angular/` | [![npm](https://img.shields.io/npm/v/@witqq/spreadsheet-angular.svg)](https://www.npmjs.com/package/@witqq/spreadsheet-angular) | Angular wrapper component. 13 exports. |
@@ -63,7 +63,7 @@ All framework wrappers re-export core types (`ColumnDef`, `CellData`, `Spreadshe
 
 ## Core API Overview
 
-The core package (`@witqq/spreadsheet`) provides `SpreadsheetEngine` — the main class that manages the entire spreadsheet lifecycle. See [packages/core/README.md](packages/core/README.md) for the full 220-export API reference.
+The core package (`@witqq/spreadsheet`) provides `SpreadsheetEngine` — the main class that manages the entire spreadsheet lifecycle. See [packages/core/README.md](packages/core/README.md) for the full 224-export API reference.
 
 Key areas:
 

@@ -946,3 +946,426 @@ interface CustomRule {
 ```
 
 Validation rule with a user-supplied validation function.
+
+## Editor Types
+
+### CellEditorClose
+
+```typescript
+type CellEditorClose = (reason: EditorCloseReason) => void;
+```
+
+Callback to close an active cell editor with a specified reason.
+
+### CellEditorMatcher
+
+```typescript
+type CellEditorMatcher = (column: ColumnDef, value: CellValue) => boolean;
+```
+
+Predicate that determines whether a custom cell editor applies to a given column and value.
+
+### CellEditorRegistration
+
+```typescript
+interface CellEditorRegistration {
+  editor: CellEditor;
+  matcher: CellEditorMatcher;
+  priority: number;
+}
+```
+
+Links a `CellEditor` to a matcher predicate. Higher `priority` values take precedence when multiple editors match.
+
+### DatePickerConfig
+
+```typescript
+interface DatePickerConfig {
+  container: HTMLElement;
+  scrollContainer: HTMLElement;
+  layoutEngine: LayoutEngine;
+  scrollManager: ScrollManager;
+  theme: SpreadsheetTheme;
+  onCommit: (row: number, col: number, oldValue: CellValue, newValue: CellValue) => void;
+  onClose: (reason: EditorCloseReason) => void;
+  frozenRows?: number;
+  frozenColumns?: number;
+}
+```
+
+Configuration for `DatePickerOverlay`. Requires DOM containers, layout references, and commit/close callbacks.
+
+## Conditional Format Types
+
+### ConditionalFormatCondition
+
+```typescript
+type ConditionalFormatCondition =
+  | ValueCondition
+  | GradientScaleCondition
+  | DataBarCondition
+  | IconSetCondition;
+```
+
+Union of all supported conditional format condition types.
+
+### ConditionalFormatRule
+
+```typescript
+interface ConditionalFormatRule {
+  readonly id: string;
+  readonly priority: number;
+  readonly range: CellRange;
+  readonly condition: ConditionalFormatCondition;
+  readonly style?: Partial<CellStyle>;
+  readonly stopIfTrue?: boolean;
+}
+```
+
+A conditional formatting rule applied to a cell range. Rules are evaluated in `priority` order. When `stopIfTrue` is set, lower-priority rules are skipped if this rule matches.
+
+## Sort & Stretch Types
+
+### SortDirection
+
+```typescript
+type SortDirection = 'asc' | 'desc';
+```
+
+Sort order for column sorting.
+
+### StretchMode
+
+```typescript
+type StretchMode = 'all' | 'last';
+```
+
+Column stretch strategy: `all` distributes extra width across all columns; `last` assigns it to the last column.
+
+## Additional Config Types
+
+### ChangeTrackerConfig
+
+```typescript
+interface ChangeTrackerConfig {
+  cellStore: CellStore;
+  eventBus: EventBus;
+}
+```
+
+Configuration for `ChangeTracker`. Requires access to cell store and event bus.
+
+### CellChange
+
+```typescript
+interface CellChange {
+  readonly row: number;
+  readonly col: number;
+  readonly oldValue: CellValue;
+  readonly newValue: CellValue;
+  readonly timestamp: number;
+  readonly userId?: string;
+  readonly source: string;
+}
+```
+
+Record of a single cell value change. Used by `ChangeTracker` for audit trails and collaboration conflict resolution.
+
+### ColumnStretchConfig
+
+```typescript
+interface ColumnStretchConfig {
+  mode: StretchMode;
+}
+```
+
+Configuration for column stretch behavior.
+
+### FilterPanelConfig
+
+```typescript
+interface FilterPanelConfig {
+  container: HTMLElement;
+  scrollContainer: HTMLElement;
+  layoutEngine: LayoutEngine;
+  scrollManager: ScrollManager;
+  theme: SpreadsheetTheme;
+  onApply: (col: number, operator: FilterOperator, value: string, valueTo?: string) => void;
+  onClear: (col: number) => void;
+}
+```
+
+Configuration for the filter panel overlay.
+
+### FrozenPaneConfig
+
+```typescript
+interface FrozenPaneConfig {
+  frozenRows: number;
+  frozenColumns: number;
+  layoutEngine: LayoutEngine;
+  frozenRanges: FrozenViewportRanges;
+}
+```
+
+Configuration for frozen pane rendering regions.
+
+### TooltipManagerConfig
+
+```typescript
+interface TooltipManagerConfig {
+  container: HTMLElement;
+  eventBus: EventBus;
+  cellStore: CellStore;
+  dataView: DataView;
+  layoutEngine: LayoutEngine;
+  scrollManager: ScrollManager;
+  theme: SpreadsheetTheme;
+}
+```
+
+Configuration for the tooltip manager.
+
+## Rendering & Layer Classes
+
+### AutoRowSizeManager
+
+```typescript
+class AutoRowSizeManager {
+  constructor(config: AutoRowSizeConfig, applyHeights: ApplyHeightsCallback);
+  setLayers(layers: RenderLayer[]): void;
+  markDirtyRows(rows: Iterable<number>): void;
+  markAllDirty(): void;
+  clearDirty(): void;
+}
+```
+
+Measures cell content height and applies automatic row sizing. Operates on dirty rows and delegates height updates through `ApplyHeightsCallback`.
+
+### ApplyHeightsCallback
+
+```typescript
+type ApplyHeightsCallback = (updates: Map<number, number>) => void;
+```
+
+Callback receiving a map of row index → computed height for automatic row sizing.
+
+### FillHandleLayer
+
+```typescript
+class FillHandleLayer implements RenderLayer {
+  render(rc: RenderContext): void;
+}
+```
+
+Render layer that draws the autofill drag handle at the bottom-right corner of the selection.
+
+### RowGroupToggleLayer
+
+```typescript
+class RowGroupToggleLayer implements RenderLayer {
+  render(rc: RenderContext): void;
+}
+```
+
+Render layer that draws expand/collapse toggle icons in the row number area for grouped rows.
+
+### DatePickerOverlay
+
+```typescript
+class DatePickerOverlay {
+  constructor(config: DatePickerConfig);
+  get isOpen(): boolean;
+  get editingRow(): number;
+  get editingCol(): number;
+}
+```
+
+Calendar overlay for date cell editing. Positioned over the active cell and commits values through the configured callback.
+
+### LINE_HEIGHT_MULTIPLIER
+
+```typescript
+const LINE_HEIGHT_MULTIPLIER = 1.2;
+```
+
+Default multiplier applied to font size when computing line height for text rendering.
+
+## Events
+
+### SpreadsheetEvents
+
+```typescript
+interface SpreadsheetEvents {
+  cellClick: (event: CellEvent) => void;
+  cellDoubleClick: (event: CellEvent) => void;
+  cellHover: (event: CellEvent) => void;
+  cellChange: (event: CellChangeEvent) => void;
+  selectionChange: (event: SelectionChangeEvent) => void;
+  scroll: (event: ScrollEvent) => void;
+  ready: () => void;
+  destroy: () => void;
+  commandExecute: (event: CommandEvent) => void;
+  commandUndo: (event: CommandEvent) => void;
+  commandRedo: (event: CommandEvent) => void;
+  clipboardCopy: (event: ClipboardDataEvent) => void;
+  clipboardCut: (event: ClipboardDataEvent) => void;
+  clipboardPaste: (event: ClipboardDataEvent) => void;
+  columnResize: (event: ColumnResizeEvent) => void;
+  columnResizeStart: (event: { colIndex: number }) => void;
+  columnResizeEnd: (event: ColumnResizeEvent) => void;
+  rowResize: (event: RowResizeEvent) => void;
+  rowResizeStart: (event: { rowIndex: number }) => void;
+  rowResizeEnd: (event: RowResizeEvent) => void;
+  cellStatusChange: (event: CellStatusChangeEvent) => void;
+  cellValidation: (event: CellValidationEvent) => void;
+  autofillStart: (event: AutofillStartEvent) => void;
+  autofillPreview: (event: AutofillPreviewEvent) => void;
+  autofillComplete: (event: AutofillCompleteEvent) => void;
+  sortChange: (event: SortChangeEvent) => void;
+  sortRejected: (event: SortRejectedEvent) => void;
+  filterChange: (event: FilterChangeEvent) => void;
+  rowGroupToggle: (event: RowGroupToggleEvent) => void;
+  rowGroupChange: (event: RowGroupChangeEvent) => void;
+  themeChange: (event: { theme: SpreadsheetTheme }) => void;
+}
+```
+
+Map of all public events emitted by `SpreadsheetEngine`. Use `engine.on(eventName, handler)` to subscribe.
+
+## Benchmark Types
+
+### BenchmarkRunner
+
+```typescript
+class BenchmarkRunner {
+  record(name: string, dataset: string, stats: RunStats, unit?: string): void;
+  toJSON(): BenchmarkSuiteResult;
+  reset(): void;
+}
+```
+
+Collects benchmark metrics and serializes results.
+
+### BenchmarkMetric
+
+```typescript
+interface BenchmarkMetric {
+  name: string;
+  dataset: string;
+  stats: RunStats;
+  unit: string;
+}
+```
+
+A single benchmark measurement with statistical summary.
+
+### BenchmarkResult
+
+```typescript
+interface BenchmarkResult {
+  initTimeMs: number;
+  memoryMB?: number;
+  rowCount: number;
+  columnCount: number;
+}
+```
+
+Initialization benchmark result capturing startup time and optional memory usage.
+
+### BenchmarkSuiteResult
+
+```typescript
+interface BenchmarkSuiteResult {
+  timestamp: string;
+  metrics: BenchmarkMetric[];
+}
+```
+
+Complete benchmark suite output with timestamp and all collected metrics.
+
+### RunStats
+
+```typescript
+interface RunStats {
+  medianMs: number;
+  meanMs: number;
+  minMs: number;
+  maxMs: number;
+  cv: number;
+  runs: number[];
+}
+```
+
+Statistical summary of multiple benchmark runs. `cv` is the coefficient of variation.
+
+### TimingResult
+
+```typescript
+interface TimingResult {
+  timeMs: number;
+}
+```
+
+Single timing measurement result.
+
+### computeStats
+
+```typescript
+function computeStats(times: number[]): RunStats;
+```
+
+Computes statistical summary from an array of timing measurements.
+
+### measureMultiRun
+
+```typescript
+function measureMultiRun(fn: () => void, runs?: number): RunStats;
+```
+
+Executes a function multiple times and returns aggregated statistics. Defaults to 3 runs.
+
+### measureThroughput
+
+```typescript
+function measureThroughput(
+  fn: () => void,
+  iterations: number,
+): { opsPerSec: number; totalMs: number };
+```
+
+Measures operations per second by running a function for the specified number of iterations.
+
+### measureInitTime
+
+```typescript
+function measureInitTime(factory: () => void): TimingResult;
+```
+
+Measures the time to execute a factory function once and returns a `TimingResult`.
+
+### FPSCounter
+
+```typescript
+class FPSCounter {
+  start(): void;
+  tick(): void;
+  stop(): FPSResult;
+}
+```
+
+Measures rendering frame rate. Call `start()` before the loop, `tick()` on each frame, and `stop()` to get the result.
+
+### FPSResult
+
+```typescript
+interface FPSResult {
+  avgFPS: number;
+  minFPS: number;
+  maxFPS: number;
+  frameCount: number;
+  durationMs: number;
+}
+```
+
+Frame rate measurement result from `FPSCounter.stop()`.
