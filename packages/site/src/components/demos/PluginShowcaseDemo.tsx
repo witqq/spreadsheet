@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import { Spreadsheet } from '@witqq/spreadsheet-react';
 import type { SpreadsheetRef } from '@witqq/spreadsheet-react';
 import type { ColumnDef } from '@witqq/spreadsheet';

@@ -149,6 +149,31 @@ export class CellStore {
   }
 
   /**
+   * Bulk load complete CellData objects from a 2D array.
+   * Position [i][j] maps to row (startRow + i), column j.
+   * Stores value, type, style, metadata, and custom fields in one pass.
+   * Null/undefined entries are skipped (sparse data supported).
+   * Single version bump for the entire operation.
+   */
+  bulkLoadCellData(
+    data: ReadonlyArray<ReadonlyArray<CellData | null | undefined>>,
+    startRow = 0,
+  ): void {
+    for (let i = 0; i < data.length; i++) {
+      const rowData = data[i];
+      if (!rowData) continue;
+      const row = startRow + i;
+      for (let col = 0; col < rowData.length; col++) {
+        const cellData = rowData[col];
+        if (cellData != null) {
+          this.cells.set(`${row}:${col}`, cellData);
+        }
+      }
+    }
+    this._version++;
+  }
+
+  /**
    * Iterate all entries in the store. Each entry has parsed row/col and data.
    * Order is not guaranteed.
    */

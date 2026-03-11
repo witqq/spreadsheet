@@ -59,6 +59,7 @@ interface CellData {
   readonly style?: CellStyleRef;        // Reference to a shared style in the StylePool
   readonly type?: CellType;             // Overrides column-level type
   readonly metadata?: CellMetadata;     // Status indicators, links, comments
+  readonly custom?: Record<string, unknown>;  // Extensible user-defined data
 }
 ```
 

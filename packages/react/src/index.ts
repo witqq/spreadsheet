@@ -23,9 +23,22 @@ export type {
 
 // Re-export event types used in callbacks
 export type {
+  CellEvent,
   CellChangeEvent,
   SelectionChangeEvent,
-  SortChangeEvent,
-  FilterChangeEvent,
   ScrollEvent,
+  CommandEvent,
+  ClipboardDataEvent,
+  ColumnResizeEvent,
+  RowResizeEvent,
+  CellStatusChangeEvent,
+  CellValidationEvent,
+  AutofillStartEvent,
+  AutofillPreviewEvent,
+  AutofillCompleteEvent,
+  SortChangeEvent,
+  SortRejectedEvent,
+  FilterChangeEvent,
+  RowGroupToggleEvent,
+  RowGroupChangeEvent,
 } from '@witqq/spreadsheet';

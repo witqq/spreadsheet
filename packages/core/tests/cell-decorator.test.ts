@@ -652,4 +652,175 @@ describe('Cell Decorator API', () => {
       expect(result.hitZone).toBeUndefined();
     });
   });
+
+  describe('decorator row/col parameters', () => {
+    let cellStore: CellStore;
+    let registry: CellTypeRegistry;
+    let ctx: CanvasRenderingContext2D;
+    let dataView: DataView;
+    let measureCache: TextMeasureCache;
+
+    beforeEach(() => {
+      cellStore = new CellStore();
+      registry = new CellTypeRegistry();
+      dataView = new DataView({ totalRowCount: 10 });
+      measureCache = new TextMeasureCache();
+      ctx = {
+        save: vi.fn(),
+        restore: vi.fn(),
+        beginPath: vi.fn(),
+        rect: vi.fn(),
+        clip: vi.fn(),
+        fillText: vi.fn(),
+        fillStyle: '',
+        textBaseline: '',
+        textAlign: '',
+        font: '',
+        measureText: vi.fn(() => ({ width: 30 })),
+      } as unknown as CanvasRenderingContext2D;
+    });
+
+    function makeGeometry(columns: ColumnDef[]) {
+      return {
+        getVisibleColumns: () => columns,
+        computeColumnRects: () =>
+          columns.map((col, i) => ({
+            x: 50 + columns.slice(0, i).reduce((s, c) => s + c.width, 0),
+            width: col.width,
+          })),
+        getRowY: (r: number) => r * 28,
+        getRowHeight: () => 28,
+        headerHeight: 32,
+        cellPadding: 6,
+        rowNumberWidth: 50,
+      };
+    }
+
+    it('render() receives row and col parameters', () => {
+      cellStore.set(2, 1, { value: 'test' });
+
+      const renderSpy = vi.fn();
+      const dec: CellDecorator = {
+        id: 'row-col-render',
+        position: 'overlay',
+        render: renderSpy,
+      };
+      registry.addDecorator({ decorator: dec, appliesTo: () => true });
+
+      const columns = makeColumns();
+      const layer = new CellTextLayer(cellStore, dataView, measureCache, registry);
+
+      layer.render({
+        ctx,
+        geometry: makeGeometry(columns),
+        theme: {
+          fonts: { cell: 'Arial', cellSize: 13 },
+          colors: { cellText: '#000' },
+        },
+        viewport: { startRow: 2, endRow: 2, startCol: 0, endCol: 1 },
+        scrollX: 0,
+        scrollY: 2 * 28,
+        canvasWidth: 800,
+        canvasHeight: 600,
+        mergeManager: undefined,
+      } as never);
+
+      expect(renderSpy).toHaveBeenCalled();
+      const callArgs = renderSpy.mock.calls[0];
+      // render(ctx, cellData, x, y, w, h, theme, row, col)
+      expect(callArgs[7]).toBe(2); // row
+      expect(callArgs[8]).toBe(1); // col
+    });
+
+    it('getWidth() receives row and col parameters', () => {
+      cellStore.set(3, 0, { value: 'test' });
+
+      const getWidthSpy = vi.fn(() => 20);
+      const dec: CellDecorator = {
+        id: 'row-col-width',
+        position: 'left',
+        getWidth: getWidthSpy,
+        render: vi.fn(),
+      };
+      registry.addDecorator({ decorator: dec, appliesTo: () => true });
+
+      const columns = makeColumns();
+      const layer = new CellTextLayer(cellStore, dataView, measureCache, registry);
+
+      layer.render({
+        ctx,
+        geometry: makeGeometry(columns),
+        theme: {
+          fonts: { cell: 'Arial', cellSize: 13 },
+          colors: { cellText: '#000' },
+        },
+        viewport: { startRow: 3, endRow: 3, startCol: 0, endCol: 1 },
+        scrollX: 0,
+        scrollY: 3 * 28,
+        canvasWidth: 800,
+        canvasHeight: 600,
+        mergeManager: undefined,
+      } as never);
+
+      expect(getWidthSpy).toHaveBeenCalled();
+      const callArgs = getWidthSpy.mock.calls[0];
+      // getWidth(cellData, cellHeight, ctx, theme, row, col)
+      expect(callArgs[4]).toBe(3); // row
+      expect(callArgs[5]).toBe(0); // col
+    });
+
+    it('getHitZones() receives row and col via EventTranslator', () => {
+      cellStore.set(0, 0, { value: 'test' });
+      const columns = makeColumns();
+
+      const getHitZonesSpy = vi.fn(() => [{ id: 'zone1', x: 0, y: 0, width: 20, height: 28 }]);
+      const dec: CellDecorator = {
+        id: 'row-col-zones',
+        position: 'left',
+        getWidth: () => 20,
+        render: vi.fn(),
+        getHitZones: getHitZonesSpy,
+      };
+      registry.addDecorator({ decorator: dec, appliesTo: () => true });
+
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const eventBus = new EventBus();
+      const layoutEngine = new LayoutEngine({
+        columns,
+        rowHeight: 28,
+        rowCount: 10,
+        headerHeight: 32,
+        rowNumberWidth: 50,
+      });
+      const scrollManager = new ScrollManager({
+        container,
+        totalWidth: layoutEngine.totalWidth,
+        totalHeight: layoutEngine.totalHeight,
+        onScroll: () => {},
+      });
+
+      const translator = new EventTranslator({
+        scrollContainer: scrollManager.getElement(),
+        layoutEngine,
+        scrollManager,
+        eventBus,
+        columns,
+        dataView,
+        cellStore,
+        cellTypeRegistry: registry,
+      });
+
+      // Hit inside cell (0,0) at left decorator zone
+      translator.hitTest(55, 42);
+
+      expect(getHitZonesSpy).toHaveBeenCalled();
+      const callArgs = getHitZonesSpy.mock.calls[0];
+      // getHitZones(width, height, cellData, row, col)
+      expect(callArgs[3]).toBe(0); // row (physRow)
+      expect(callArgs[4]).toBe(0); // col
+
+      container.remove();
+    });
+  });
 });

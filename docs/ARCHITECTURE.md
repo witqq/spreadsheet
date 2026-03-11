@@ -139,6 +139,7 @@ Sparse map storage: `Map<string, CellData>` keyed by `"row:col"` string (e.g. `"
 - `style?: CellStyleRef` — `{ ref: string, style: CellStyle }`
 - `type?: CellType` — rendering/editing behavior
 - `metadata?: CellMetadata` — status, errors, links, comments
+- `custom?: Record<string, unknown>` — extensible user-defined data
 
 All CellData fields are `readonly`.
 

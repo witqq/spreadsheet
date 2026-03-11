@@ -24,6 +24,11 @@ export interface CellData {
   readonly type?: CellType;
   /** Optional metadata (status indicators, links, comments). */
   readonly metadata?: CellMetadata;
+  /**
+   * Extensible custom data slot for consumer-defined per-cell data.
+   * Preserved through all get/set/merge operations. Not used by the engine.
+   */
+  readonly custom?: Record<string, unknown>;
 }
 
 /** Optional metadata attached to a cell. */

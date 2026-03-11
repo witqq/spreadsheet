@@ -268,7 +268,7 @@ export class EventTranslator {
 
     if (renderer.getHitZones) {
       try {
-        const zones = renderer.getHitZones(value, cellW, cellH, theme);
+        const zones = renderer.getHitZones(safeCellData, cellW, cellH, theme, physRow, col);
         if (zones && zones.length > 0) {
           for (const zone of zones) {
             if (
@@ -294,9 +294,9 @@ export class EventTranslator {
       for (const dec of decorators) {
         if (dec.position === 'left') {
           try {
-            const w = dec.getWidth?.(safeCellData, cellH, undefined, theme) ?? 0;
+            const w = dec.getWidth?.(safeCellData, cellH, undefined, theme, physRow, col) ?? 0;
             if (dec.getHitZones) {
-              const zones = dec.getHitZones(w, cellH, safeCellData);
+              const zones = dec.getHitZones(w, cellH, safeCellData, physRow, col);
               for (const zone of zones) {
                 const zoneX = leftOffset + zone.x;
                 const zoneY = zone.y;
@@ -321,10 +321,10 @@ export class EventTranslator {
       for (const dec of decorators) {
         if (dec.position === 'right') {
           try {
-            const w = dec.getWidth?.(safeCellData, cellH, undefined, theme) ?? 0;
+            const w = dec.getWidth?.(safeCellData, cellH, undefined, theme, physRow, col) ?? 0;
             rightOffset += w;
             if (dec.getHitZones) {
-              const zones = dec.getHitZones(w, cellH, safeCellData);
+              const zones = dec.getHitZones(w, cellH, safeCellData, physRow, col);
               for (const zone of zones) {
                 const zoneX = cellW - rightOffset + zone.x;
                 const zoneY = zone.y;
@@ -348,7 +348,7 @@ export class EventTranslator {
       for (const dec of decorators) {
         if ((dec.position === 'overlay' || dec.position === 'underlay') && dec.getHitZones) {
           try {
-            const zones = dec.getHitZones(cellW, cellH, safeCellData);
+            const zones = dec.getHitZones(cellW, cellH, safeCellData, physRow, col);
             for (const zone of zones) {
               if (
                 relX >= zone.x &&

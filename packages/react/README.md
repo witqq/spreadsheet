@@ -38,11 +38,24 @@ import type {
 
 // Re-exported event types (convenience — also available from @witqq/spreadsheet)
 import type {
+  CellEvent,
   CellChangeEvent,
   SelectionChangeEvent,
-  SortChangeEvent,
-  FilterChangeEvent,
   ScrollEvent,
+  CommandEvent,
+  ClipboardDataEvent,
+  ColumnResizeEvent,
+  RowResizeEvent,
+  CellStatusChangeEvent,
+  CellValidationEvent,
+  AutofillStartEvent,
+  AutofillPreviewEvent,
+  AutofillCompleteEvent,
+  SortChangeEvent,
+  SortRejectedEvent,
+  FilterChangeEvent,
+  RowGroupToggleEvent,
+  RowGroupChangeEvent,
 } from '@witqq/spreadsheet-react';
 ```
 
@@ -152,27 +165,102 @@ All fields from `SpreadsheetEngineConfig` (except `data`, which is replaced by t
 
 ## SpreadsheetCallbacks
 
+All public engine events are exposed as React callback props. Callbacks are stored in refs internally, so they do not cause re-subscription when the function identity changes.
+
 ```ts
 interface SpreadsheetCallbacks {
+  // Cell events
+  onCellClick?: (event: CellEvent) => void;
+  onCellDoubleClick?: (event: CellEvent) => void;
+  onCellHover?: (event: CellEvent) => void;
   onCellChange?: (event: CellChangeEvent) => void;
+
+  // Selection & scroll
   onSelectionChange?: (event: SelectionChangeEvent) => void;
-  onSortChange?: (event: SortChangeEvent) => void;
-  onFilterChange?: (event: FilterChangeEvent) => void;
   onScroll?: (event: ScrollEvent) => void;
+
+  // Lifecycle
   onReady?: () => void;
+  onDestroy?: () => void;
+
+  // Command events
+  onCommandExecute?: (event: CommandEvent) => void;
+  onCommandUndo?: (event: CommandEvent) => void;
+  onCommandRedo?: (event: CommandEvent) => void;
+
+  // Clipboard events
+  onClipboardCopy?: (event: ClipboardDataEvent) => void;
+  onClipboardCut?: (event: ClipboardDataEvent) => void;
+  onClipboardPaste?: (event: ClipboardDataEvent) => void;
+
+  // Column resize events
+  onColumnResize?: (event: ColumnResizeEvent) => void;
+  onColumnResizeStart?: (event: { colIndex: number }) => void;
+  onColumnResizeEnd?: (event: ColumnResizeEvent) => void;
+
+  // Row resize events
+  onRowResize?: (event: RowResizeEvent) => void;
+  onRowResizeStart?: (event: { rowIndex: number }) => void;
+  onRowResizeEnd?: (event: RowResizeEvent) => void;
+
+  // Cell status & validation
+  onCellStatusChange?: (event: CellStatusChangeEvent) => void;
+  onCellValidation?: (event: CellValidationEvent) => void;
+
+  // Autofill events
+  onAutofillStart?: (event: AutofillStartEvent) => void;
+  onAutofillPreview?: (event: AutofillPreviewEvent) => void;
+  onAutofillComplete?: (event: AutofillCompleteEvent) => void;
+
+  // Sort events
+  onSortChange?: (event: SortChangeEvent) => void;
+  onSortRejected?: (event: SortRejectedEvent) => void;
+
+  // Filter events
+  onFilterChange?: (event: FilterChangeEvent) => void;
+
+  // Row group events
+  onRowGroupToggle?: (event: RowGroupToggleEvent) => void;
+  onRowGroupChange?: (event: RowGroupChangeEvent) => void;
+
+  // Theme events
+  onThemeChange?: (event: { theme: SpreadsheetTheme }) => void;
 }
 ```
 
 | Callback | Event Type | Fires when |
 |----------|-----------|------------|
+| `onCellClick` | `CellEvent` | Cell clicked |
+| `onCellDoubleClick` | `CellEvent` | Cell double-clicked |
+| `onCellHover` | `CellEvent` | Mouse hovers over cell |
 | `onCellChange` | `CellChangeEvent` | Cell value changes |
 | `onSelectionChange` | `SelectionChangeEvent` | Selection changes |
-| `onSortChange` | `SortChangeEvent` | Sort state changes |
-| `onFilterChange` | `FilterChangeEvent` | Filter state changes |
 | `onScroll` | `ScrollEvent` | Viewport scrolls |
 | `onReady` | *(none)* | Engine initialization completes |
-
-Callbacks are stored in refs internally, so they do not cause re-subscription when the function identity changes.
+| `onDestroy` | *(none)* | Engine destroyed |
+| `onCommandExecute` | `CommandEvent` | Command executed |
+| `onCommandUndo` | `CommandEvent` | Command undone |
+| `onCommandRedo` | `CommandEvent` | Command redone |
+| `onClipboardCopy` | `ClipboardDataEvent` | Copy to clipboard |
+| `onClipboardCut` | `ClipboardDataEvent` | Cut to clipboard |
+| `onClipboardPaste` | `ClipboardDataEvent` | Paste from clipboard |
+| `onColumnResize` | `ColumnResizeEvent` | Column resized |
+| `onColumnResizeStart` | `{ colIndex }` | Column resize started |
+| `onColumnResizeEnd` | `ColumnResizeEvent` | Column resize completed |
+| `onRowResize` | `RowResizeEvent` | Row resized |
+| `onRowResizeStart` | `{ rowIndex }` | Row resize started |
+| `onRowResizeEnd` | `RowResizeEvent` | Row resize completed |
+| `onCellStatusChange` | `CellStatusChangeEvent` | Cell status changes |
+| `onCellValidation` | `CellValidationEvent` | Cell validation triggered |
+| `onAutofillStart` | `AutofillStartEvent` | Autofill drag started |
+| `onAutofillPreview` | `AutofillPreviewEvent` | Autofill preview updated |
+| `onAutofillComplete` | `AutofillCompleteEvent` | Autofill completed |
+| `onSortChange` | `SortChangeEvent` | Sort state changes |
+| `onSortRejected` | `SortRejectedEvent` | Sort rejected |
+| `onFilterChange` | `FilterChangeEvent` | Filter state changes |
+| `onRowGroupToggle` | `RowGroupToggleEvent` | Row group expanded/collapsed |
+| `onRowGroupChange` | `RowGroupChangeEvent` | Row group configuration changes |
+| `onThemeChange` | `{ theme }` | Theme changes |
 
 ---
 
@@ -323,7 +411,7 @@ The following types are re-exported from `@witqq/spreadsheet` for convenience. T
 
 **System types:** `SpreadsheetEvents`, `SpreadsheetPlugin`, `SpreadsheetTheme`
 
-**Event types:** `CellChangeEvent`, `SelectionChangeEvent`, `SortChangeEvent`, `FilterChangeEvent`, `ScrollEvent`
+**Event types:** `CellEvent`, `CellChangeEvent`, `SelectionChangeEvent`, `ScrollEvent`, `CommandEvent`, `ClipboardDataEvent`, `ColumnResizeEvent`, `RowResizeEvent`, `CellStatusChangeEvent`, `CellValidationEvent`, `AutofillStartEvent`, `AutofillPreviewEvent`, `AutofillCompleteEvent`, `SortChangeEvent`, `SortRejectedEvent`, `FilterChangeEvent`, `RowGroupToggleEvent`, `RowGroupChangeEvent`
 
 For per-cell styling (`CellStyleRef`, `BorderStyle`, `StylePool`) and cell decorators (`CellDecorator`, `CellDecoratorRegistration`), import directly from `@witqq/spreadsheet` and use via the engine instance from `ref.current?.getInstance()`.
 

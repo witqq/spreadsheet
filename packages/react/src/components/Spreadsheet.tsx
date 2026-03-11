@@ -9,24 +9,89 @@ import type {
   CellValue,
   Selection,
   SpreadsheetPlugin,
+  SpreadsheetTheme,
 } from '@witqq/spreadsheet';
 import type {
+  CellEvent,
   CellChangeEvent,
   SelectionChangeEvent,
-  SortChangeEvent,
-  FilterChangeEvent,
   ScrollEvent,
+  CommandEvent,
+  ClipboardDataEvent,
+  ColumnResizeEvent,
+  RowResizeEvent,
+  CellStatusChangeEvent,
+  CellValidationEvent,
+  AutofillStartEvent,
+  AutofillPreviewEvent,
+  AutofillCompleteEvent,
+  SortChangeEvent,
+  SortRejectedEvent,
+  FilterChangeEvent,
+  RowGroupToggleEvent,
+  RowGroupChangeEvent,
+  SpreadsheetEvents,
 } from '@witqq/spreadsheet';
 
 // ─── Callback props ──────────────────────────────────────────
 
 export interface SpreadsheetCallbacks {
+  // Cell events
+  onCellClick?: (event: CellEvent) => void;
+  onCellDoubleClick?: (event: CellEvent) => void;
+  onCellHover?: (event: CellEvent) => void;
   onCellChange?: (event: CellChangeEvent) => void;
+
+  // Selection & scroll
   onSelectionChange?: (event: SelectionChangeEvent) => void;
-  onSortChange?: (event: SortChangeEvent) => void;
-  onFilterChange?: (event: FilterChangeEvent) => void;
   onScroll?: (event: ScrollEvent) => void;
+
+  // Lifecycle
   onReady?: () => void;
+  onDestroy?: () => void;
+
+  // Command events
+  onCommandExecute?: (event: CommandEvent) => void;
+  onCommandUndo?: (event: CommandEvent) => void;
+  onCommandRedo?: (event: CommandEvent) => void;
+
+  // Clipboard events
+  onClipboardCopy?: (event: ClipboardDataEvent) => void;
+  onClipboardCut?: (event: ClipboardDataEvent) => void;
+  onClipboardPaste?: (event: ClipboardDataEvent) => void;
+
+  // Column resize events
+  onColumnResize?: (event: ColumnResizeEvent) => void;
+  onColumnResizeStart?: (event: { colIndex: number }) => void;
+  onColumnResizeEnd?: (event: ColumnResizeEvent) => void;
+
+  // Row resize events
+  onRowResize?: (event: RowResizeEvent) => void;
+  onRowResizeStart?: (event: { rowIndex: number }) => void;
+  onRowResizeEnd?: (event: RowResizeEvent) => void;
+
+  // Cell status & validation
+  onCellStatusChange?: (event: CellStatusChangeEvent) => void;
+  onCellValidation?: (event: CellValidationEvent) => void;
+
+  // Autofill events
+  onAutofillStart?: (event: AutofillStartEvent) => void;
+  onAutofillPreview?: (event: AutofillPreviewEvent) => void;
+  onAutofillComplete?: (event: AutofillCompleteEvent) => void;
+
+  // Sort events
+  onSortChange?: (event: SortChangeEvent) => void;
+  onSortRejected?: (event: SortRejectedEvent) => void;
+
+  // Filter events
+  onFilterChange?: (event: FilterChangeEvent) => void;
+
+  // Row group events
+  onRowGroupToggle?: (event: RowGroupToggleEvent) => void;
+  onRowGroupChange?: (event: RowGroupChangeEvent) => void;
+
+  // Theme events
+  onThemeChange?: (event: { theme: SpreadsheetTheme }) => void;
 }
 
 // ─── Props (generic over row type) ──────────────────────────
@@ -73,22 +138,72 @@ export interface SpreadsheetRef {
 
 type CallbackKey = keyof SpreadsheetCallbacks;
 const CALLBACK_KEYS: CallbackKey[] = [
+  'onCellClick',
+  'onCellDoubleClick',
+  'onCellHover',
   'onCellChange',
   'onSelectionChange',
-  'onSortChange',
-  'onFilterChange',
   'onScroll',
   'onReady',
+  'onDestroy',
+  'onCommandExecute',
+  'onCommandUndo',
+  'onCommandRedo',
+  'onClipboardCopy',
+  'onClipboardCut',
+  'onClipboardPaste',
+  'onColumnResize',
+  'onColumnResizeStart',
+  'onColumnResizeEnd',
+  'onRowResize',
+  'onRowResizeStart',
+  'onRowResizeEnd',
+  'onCellStatusChange',
+  'onCellValidation',
+  'onAutofillStart',
+  'onAutofillPreview',
+  'onAutofillComplete',
+  'onSortChange',
+  'onSortRejected',
+  'onFilterChange',
+  'onRowGroupToggle',
+  'onRowGroupChange',
+  'onThemeChange',
 ];
 
 // Map callback prop name → EventBus event name
-const CALLBACK_EVENT_MAP: Record<CallbackKey, string> = {
+const CALLBACK_EVENT_MAP: Record<CallbackKey, keyof SpreadsheetEvents> = {
+  onCellClick: 'cellClick',
+  onCellDoubleClick: 'cellDoubleClick',
+  onCellHover: 'cellHover',
   onCellChange: 'cellChange',
   onSelectionChange: 'selectionChange',
-  onSortChange: 'sortChange',
-  onFilterChange: 'filterChange',
   onScroll: 'scroll',
   onReady: 'ready',
+  onDestroy: 'destroy',
+  onCommandExecute: 'commandExecute',
+  onCommandUndo: 'commandUndo',
+  onCommandRedo: 'commandRedo',
+  onClipboardCopy: 'clipboardCopy',
+  onClipboardCut: 'clipboardCut',
+  onClipboardPaste: 'clipboardPaste',
+  onColumnResize: 'columnResize',
+  onColumnResizeStart: 'columnResizeStart',
+  onColumnResizeEnd: 'columnResizeEnd',
+  onRowResize: 'rowResize',
+  onRowResizeStart: 'rowResizeStart',
+  onRowResizeEnd: 'rowResizeEnd',
+  onCellStatusChange: 'cellStatusChange',
+  onCellValidation: 'cellValidation',
+  onAutofillStart: 'autofillStart',
+  onAutofillPreview: 'autofillPreview',
+  onAutofillComplete: 'autofillComplete',
+  onSortChange: 'sortChange',
+  onSortRejected: 'sortRejected',
+  onFilterChange: 'filterChange',
+  onRowGroupToggle: 'rowGroupToggle',
+  onRowGroupChange: 'rowGroupChange',
+  onThemeChange: 'themeChange',
 };
 
 // ─── Component ──────────────────────────────────────────────
@@ -158,14 +273,16 @@ function SpreadsheetInner<TRow extends Record<string, unknown> = Record<string, 
     const {
       className: _cls,
       style: _style,
-      onCellChange: _1,
-      onSelectionChange: _2,
-      onSortChange: _3,
-      onFilterChange: _4,
-      onScroll: _5,
-      onReady: _6,
-      ...config
-    } = props; // destructure callbacks to exclude from engine config
+      ...configWithCallbacks
+    } = props;
+
+    // Strip all callback props from engine config
+    const config: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(configWithCallbacks)) {
+      if (!(k in CALLBACK_EVENT_MAP)) {
+        config[k] = v;
+      }
+    }
 
     const engine = new SpreadsheetEngine(config as SpreadsheetEngineConfig);
     engine.mount(containerRef.current);

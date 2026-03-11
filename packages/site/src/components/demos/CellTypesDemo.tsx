@@ -11,8 +11,8 @@ const columns: ColumnDef[] = [
   { key: 'amount', title: 'Number', width: 100, type: 'number' },
   { key: 'active', title: 'Boolean', width: 80, type: 'boolean' },
   { key: 'created', title: 'Date', width: 110, type: 'date' },
-  { key: 'progress', title: 'Progress', width: 140, type: 'progressBar' as any },
-  { key: 'rating', title: 'Rating', width: 120, type: 'rating' as any },
+  { key: 'progress', title: 'Progress', width: 140, type: 'progressBar' },
+  { key: 'rating', title: 'Rating', width: 120, type: 'rating' },
 ];
 
 const data = [
@@ -72,7 +72,7 @@ export function CellTypesDemo() {
     if (!engine) return;
     const registry = engine.getCellTypeRegistry();
 
-    registry.register('progressBar' as any, {
+    registry.register('progressBar', {
       format: (value) => `${value}%`,
       align: 'left',
       render: (ctx, value, x, y, width, height, theme) => {
@@ -91,7 +91,7 @@ export function CellTypesDemo() {
       },
     });
 
-    registry.register('rating' as any, {
+    registry.register('rating', {
       format: (value) => '★'.repeat(Number(value) || 0),
       align: 'center',
       render: (ctx, value, x, y, width, height) => {

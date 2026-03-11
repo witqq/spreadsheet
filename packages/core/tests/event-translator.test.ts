@@ -589,7 +589,7 @@ describe('EventTranslator', () => {
     const booleanWithZones: CellTypeRenderer = {
       format: (v) => String(v),
       align: 'center',
-      getHitZones: (_value, width, height) => {
+      getHitZones: (_cellData, width, height) => {
         const size = Math.min(14, height - 6);
         const zoneX = (width - size) / 2;
         const zoneY = (height - size) / 2;

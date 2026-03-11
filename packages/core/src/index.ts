@@ -95,6 +95,9 @@ export type {
   HitRegion,
   RowGroupToggleEvent,
   RowGroupChangeEvent,
+  AutofillStartEvent,
+  AutofillPreviewEvent,
+  AutofillCompleteEvent,
 } from './events/event-types';
 
 // Plugins
@@ -230,13 +233,6 @@ export { AutofillManager } from './autofill/autofill-manager';
 export type { AutofillManagerConfig, FillDirection } from './autofill/autofill-manager';
 export { detectPattern, extendPattern } from './autofill/pattern-detector';
 export type { DetectedPattern, PatternType } from './autofill/pattern-detector';
-
-// Autofill Events
-export type {
-  AutofillStartEvent,
-  AutofillPreviewEvent,
-  AutofillCompleteEvent,
-} from './events/event-types';
 
 // Change Tracking
 export { ChangeTracker } from './tracking/change-tracker';
