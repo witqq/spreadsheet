@@ -1,6 +1,13 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Spreadsheet } from '@witqq/spreadsheet-react';
 import type { SpreadsheetRef } from '@witqq/spreadsheet-react';
+import type {
+  CellEvent,
+  CellChangeEvent,
+  SelectionChangeEvent,
+  ScrollEvent,
+  SortChangeEvent,
+} from '@witqq/spreadsheet';
 import { DemoWrapper } from './DemoWrapper';
 import { DemoButton } from './DemoButton';
 import { generateEmployees, employeeColumns } from './generate-data';
@@ -42,17 +49,19 @@ export function EventBusDemo() {
     };
 
     const unsubs = [
-      bus.on('cellClick', (e: any) => logEvent('cellClick', `row:${e.row} col:${e.col}`)),
-      bus.on('cellChange', (e: any) =>
+      bus.on('cellClick', (e: CellEvent) => logEvent('cellClick', `row:${e.row} col:${e.col}`)),
+      bus.on('cellChange', (e: CellChangeEvent) =>
         logEvent('cellChange', `[${e.row},${e.col}] "${e.oldValue}" → "${e.newValue}"`),
       ),
-      bus.on('selectionChange', (e: any) =>
+      bus.on('selectionChange', (e: SelectionChangeEvent) =>
         logEvent('selectionChange', `row:${e.selection.activeRow} col:${e.selection.activeCol}`),
       ),
-      bus.on('scroll', (e: any) =>
+      bus.on('scroll', (e: ScrollEvent) =>
         logEvent('scroll', `top:${Math.round(e.scrollTop)} left:${Math.round(e.scrollLeft)}`),
       ),
-      bus.on('sortChange', (e: any) => logEvent('sortChange', `${e.sortColumns.length} column(s)`)),
+      bus.on('sortChange', (e: SortChangeEvent) =>
+        logEvent('sortChange', `${e.sortColumns.length} column(s)`),
+      ),
     ];
 
     return () => unsubs.forEach((fn) => fn());

@@ -95,6 +95,7 @@ engine.requestRender(): void                  // Schedule re-render via animatio
 ```typescript
 engine.getCell(row: number, col: number): CellData | undefined
 engine.setCell(row: number, col: number, value: CellValue): void
+engine.bulkLoadCellData(data: (CellData | null | undefined)[][], startRow?: number): void
 engine.getCellStore(): CellStore
 engine.getRowStore(): RowStore
 engine.setRowHeight(row: number, height: number): void
@@ -273,6 +274,7 @@ store.clearMetadata(0, 0);
 store.bulkLoad(rows, columnKeys);               // Load from array of row objects
 store.bulkLoadChunk(startRow, rows, columnKeys); // Load chunk at offset
 store.bulkGenerate(startRow, count, columnKeys, generateRow); // Generate rows in-place
+store.bulkLoadCellData(data, startRow);          // Load 2D array of CellData objects
 
 // Iteration
 store.iterateRange(range);                      // Yields { row, col, data } in range
@@ -405,6 +407,7 @@ interface CellData {
   readonly style?: CellStyleRef;                // Reference to shared style in StylePool
   readonly type?: CellType;                     // Cell type for rendering/editing
   readonly metadata?: CellMetadata;             // Status, errors, links, comments
+  readonly custom?: Record<string, unknown>;    // Extensible user-defined data
 }
 
 interface CellMetadata {
@@ -631,25 +634,28 @@ import type {
 } from '@witqq/spreadsheet';
 
 interface CellTypeRenderer {
-  format(value: CellValue): string;            // Format value for text display
+  format(value: CellValue, cellData?: CellData, row?: number, col?: number): string;
   align: CellAlignment;                        // 'left' | 'center' | 'right'
-  render?: (                                   // Optional custom canvas rendering
+  render?: (                                   // Custom canvas rendering (receives full CellData)
     ctx: CanvasRenderingContext2D,
-    value: CellValue,
+    cellData: CellData,
     x: number, y: number,
     width: number, height: number,
     theme: SpreadsheetTheme,
+    row?: number, col?: number,
   ) => void;
-  measureHeight?: (                            // Optional height for auto row sizing
+  measureHeight?: (                            // Height for auto row sizing (receives full CellData)
     ctx: CanvasRenderingContext2D,
-    value: CellValue,
+    cellData: CellData,
     width: number,
     theme: SpreadsheetTheme,
+    row?: number, col?: number,
   ) => number;
-  getHitZones?: (                              // Optional sub-cell interactive zones
-    value: CellValue,
+  getHitZones?: (                              // Sub-cell interactive zones (receives full CellData)
+    cellData: CellData,
     width: number, height: number,
     theme?: SpreadsheetTheme,
+    row?: number, col?: number,
   ) => HitZone[];
 }
 
@@ -660,9 +666,9 @@ type CellDecoratorPosition = 'left' | 'right' | 'overlay' | 'underlay';
 interface CellDecorator {
   readonly id: string;
   readonly position: CellDecoratorPosition;
-  getWidth?(cellData: CellData, cellHeight: number, ctx?: CanvasRenderingContext2D, theme?: SpreadsheetTheme): number;
-  render(ctx: CanvasRenderingContext2D, cellData: CellData, x: number, y: number, width: number, height: number, theme: SpreadsheetTheme): void;
-  getHitZones?(width: number, height: number, cellData: CellData): HitZone[];
+  getWidth?(cellData: CellData, cellHeight: number, ctx?: CanvasRenderingContext2D, theme?: SpreadsheetTheme, row?: number, col?: number): number;
+  render(ctx: CanvasRenderingContext2D, cellData: CellData, x: number, y: number, width: number, height: number, theme: SpreadsheetTheme, row?: number, col?: number): void;
+  getHitZones?(width: number, height: number, cellData: CellData, row?: number, col?: number): HitZone[];
 }
 
 // Registration binding a decorator to specific cells
@@ -679,8 +685,8 @@ interface CellDecoratorRegistration {
 engine.getCellTypeRegistry().register('rating', {
   format: (value) => '★'.repeat(Number(value) || 0),
   align: 'center',
-  render: (ctx, value, x, y, w, h, theme) => {
-    const stars = Number(value) || 0;
+  render: (ctx, cellData, x, y, w, h, theme) => {
+    const stars = Number(cellData.value) || 0;
     ctx.fillStyle = theme.colors.cellText;
     ctx.fillText('★'.repeat(stars), x + 4, y + h / 2);
   },

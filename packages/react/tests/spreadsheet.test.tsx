@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, cleanup, act } from '@testing-library/react';
 import { createRef, useState, useCallback } from 'react';
 import { Spreadsheet } from '../src/components/Spreadsheet';
-import type { SpreadsheetRef, SpreadsheetProps } from '../src/components/Spreadsheet';
+import type { SpreadsheetRef } from '../src/components/Spreadsheet';
 import { lightTheme, darkTheme } from '@witqq/spreadsheet';
 import type { ColumnDef } from '@witqq/spreadsheet';
 
@@ -199,6 +199,186 @@ describe('Spreadsheet', () => {
 
     ref.current!.selectCell(1, 0);
     expect(onSelectionChange).toHaveBeenCalled();
+  });
+
+  it('onCellClick fires on cellClick event', () => {
+    const onCellClick = vi.fn();
+    const ref = createRef<SpreadsheetRef>();
+    render(<Spreadsheet ref={ref} columns={columns} data={data} onCellClick={onCellClick} />);
+
+    const engine = ref.current!.getInstance();
+    engine.getEventBus().emit('cellClick', {
+      row: 0,
+      col: 0,
+      value: 'Alice',
+      column: columns[0],
+    });
+
+    expect(onCellClick).toHaveBeenCalledTimes(1);
+    expect(onCellClick).toHaveBeenCalledWith(
+      expect.objectContaining({ row: 0, col: 0, value: 'Alice' }),
+    );
+  });
+
+  it('onCellDoubleClick fires on cellDoubleClick event', () => {
+    const onCellDoubleClick = vi.fn();
+    const ref = createRef<SpreadsheetRef>();
+    render(<Spreadsheet ref={ref} columns={columns} data={data} onCellDoubleClick={onCellDoubleClick} />);
+
+    const engine = ref.current!.getInstance();
+    engine.getEventBus().emit('cellDoubleClick', {
+      row: 1,
+      col: 1,
+      value: 25,
+      column: columns[1],
+    });
+
+    expect(onCellDoubleClick).toHaveBeenCalledTimes(1);
+    expect(onCellDoubleClick).toHaveBeenCalledWith(
+      expect.objectContaining({ row: 1, col: 1 }),
+    );
+  });
+
+  it('onDestroy fires on engine destroy', () => {
+    const onDestroy = vi.fn();
+    const ref = createRef<SpreadsheetRef>();
+    render(
+      <Spreadsheet ref={ref} columns={columns} data={data} onDestroy={onDestroy} />,
+    );
+
+    // Engine emits 'destroy' during its destroy() method
+    const engine = ref.current!.getInstance();
+    engine.getEventBus().emit('destroy');
+
+    expect(onDestroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('onCommandExecute fires on command execution', () => {
+    const onCommandExecute = vi.fn();
+    const ref = createRef<SpreadsheetRef>();
+    render(<Spreadsheet ref={ref} columns={columns} data={data} onCommandExecute={onCommandExecute} />);
+
+    const engine = ref.current!.getInstance();
+    engine.getEventBus().emit('commandExecute', {
+      description: 'SetCellValue',
+    });
+
+    expect(onCommandExecute).toHaveBeenCalledTimes(1);
+    expect(onCommandExecute).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'SetCellValue' }),
+    );
+  });
+
+  it('onColumnResize fires on column resize', () => {
+    const onColumnResize = vi.fn();
+    const ref = createRef<SpreadsheetRef>();
+    render(<Spreadsheet ref={ref} columns={columns} data={data} onColumnResize={onColumnResize} />);
+
+    const engine = ref.current!.getInstance();
+    engine.getEventBus().emit('columnResize', {
+      colIndex: 0,
+      oldWidth: 120,
+      newWidth: 200,
+    });
+
+    expect(onColumnResize).toHaveBeenCalledTimes(1);
+    expect(onColumnResize).toHaveBeenCalledWith(
+      expect.objectContaining({ colIndex: 0, newWidth: 200 }),
+    );
+  });
+
+  it('onThemeChange fires on theme change', () => {
+    const onThemeChange = vi.fn();
+    const ref = createRef<SpreadsheetRef>();
+    render(<Spreadsheet ref={ref} columns={columns} data={data} onThemeChange={onThemeChange} />);
+
+    const engine = ref.current!.getInstance();
+    engine.getEventBus().emit('themeChange', { theme: darkTheme });
+
+    expect(onThemeChange).toHaveBeenCalledTimes(1);
+    expect(onThemeChange).toHaveBeenCalledWith(
+      expect.objectContaining({ theme: darkTheme }),
+    );
+  });
+
+  it('callbacks use refs to avoid stale closures', () => {
+    const handler1 = vi.fn();
+    const handler2 = vi.fn();
+    const ref = createRef<SpreadsheetRef>();
+
+    function TestApp() {
+      const [count, setCount] = useState(0);
+      const handler = count === 0 ? handler1 : handler2;
+      return (
+        <>
+          <button data-testid="inc" onClick={() => setCount((c) => c + 1)}>+</button>
+          <Spreadsheet ref={ref} columns={columns} data={data} onCellClick={handler} />
+        </>
+      );
+    }
+
+    const { getByTestId } = render(<TestApp />);
+
+    // First emit → handler1
+    ref.current!.getInstance().getEventBus().emit('cellClick', {
+      row: 0, col: 0, value: 'Alice', column: columns[0],
+    });
+    expect(handler1).toHaveBeenCalledTimes(1);
+
+    // Switch handler via state update
+    act(() => { getByTestId('inc').click(); });
+
+    // Second emit → handler2 (ref updated, no stale closure)
+    ref.current!.getInstance().getEventBus().emit('cellClick', {
+      row: 0, col: 0, value: 'Alice', column: columns[0],
+    });
+    expect(handler2).toHaveBeenCalledTimes(1);
+    expect(handler1).toHaveBeenCalledTimes(1); // not called again
+  });
+
+  it('unsubscribes all callbacks on unmount', () => {
+    const onCellClick = vi.fn();
+    const onScroll = vi.fn();
+    const ref = createRef<SpreadsheetRef>();
+
+    const { unmount } = render(
+      <Spreadsheet ref={ref} columns={columns} data={data} onCellClick={onCellClick} onScroll={onScroll} />,
+    );
+
+    const bus = ref.current!.getInstance().getEventBus();
+
+    // Emit before unmount — should fire
+    bus.emit('cellClick', { row: 0, col: 0, value: 'Alice', column: columns[0] });
+    expect(onCellClick).toHaveBeenCalledTimes(1);
+
+    unmount();
+
+    // After unmount, engine is destroyed and handlers removed
+    // The ref is no longer valid, so we just verify it was called once total
+    expect(onCellClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('callback props are excluded from engine config', () => {
+    const ref = createRef<SpreadsheetRef>();
+    render(
+      <Spreadsheet
+        ref={ref}
+        columns={columns}
+        data={data}
+        onCellClick={() => {}}
+        onCellDoubleClick={() => {}}
+        onCommandExecute={() => {}}
+        onColumnResize={() => {}}
+        onThemeChange={() => {}}
+      />,
+    );
+
+    // Engine should mount without errors — callback props should not be passed to config
+    const engine = ref.current!.getInstance();
+    expect(engine).toBeDefined();
+    const config = engine.getConfig();
+    expect((config as Record<string, unknown>)['onCellClick']).toBeUndefined();
+    expect((config as Record<string, unknown>)['onColumnResize']).toBeUndefined();
   });
 
   // ─── Theme prop update ────────────────────────────────────

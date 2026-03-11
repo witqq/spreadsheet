@@ -1274,6 +1274,31 @@ export class SpreadsheetEngine {
     return this.cellStore;
   }
 
+  /**
+   * Bulk load complete CellData objects from a 2D array.
+   * Position `[i][j]` maps to row `(startRow + i)`, column `j`.
+   * Stores value, type, style, metadata, and custom fields in one pass.
+   * Null/undefined entries are skipped (sparse data supported).
+   *
+   * @param data - 2D array of CellData objects (rows × columns)
+   * @param startRow - Row offset for the first row of data (default: 0)
+   */
+  bulkLoadCellData(
+    data: ReadonlyArray<ReadonlyArray<CellData | null | undefined>>,
+    startRow = 0,
+  ): void {
+    this.cellStore.bulkLoadCellData(data, startRow);
+    if (this.dirtyTracker) this.dirtyTracker.markDirty('full');
+    if (this.autoRowSizeManager) {
+      const rows: number[] = [];
+      for (let i = 0; i < data.length; i++) {
+        rows.push(startRow + i);
+      }
+      this.autoRowSizeManager.markDirtyRows(rows);
+    }
+    if (this.renderScheduler) this.renderScheduler.requestRender();
+  }
+
   getRowStore(): RowStore {
     return this.rowStore;
   }

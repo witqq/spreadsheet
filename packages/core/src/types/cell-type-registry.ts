@@ -45,6 +45,8 @@ export interface CellDecorator {
     cellHeight: number,
     ctx?: CanvasRenderingContext2D,
     theme?: SpreadsheetTheme,
+    row?: number,
+    col?: number,
   ): number;
   /** Render the decorator in its allocated area. */
   render(
@@ -55,9 +57,17 @@ export interface CellDecorator {
     width: number,
     height: number,
     theme: SpreadsheetTheme,
+    row?: number,
+    col?: number,
   ): void;
   /** Optional hit zones relative to the decorator's allocated area. */
-  getHitZones?(width: number, height: number, cellData: CellData): HitZone[];
+  getHitZones?(
+    width: number,
+    height: number,
+    cellData: CellData,
+    row?: number,
+    col?: number,
+  ): HitZone[];
 }
 
 /**
@@ -89,34 +99,38 @@ export interface HitZone {
 
 export interface CellTypeRenderer {
   /** Format a cell value for text display. */
-  format(value: CellValue): string;
+  format(value: CellValue, cellData?: CellData, row?: number, col?: number): string;
   /** Text alignment for this cell type. */
   align: CellAlignment;
   /**
    * Optional custom canvas rendering. When provided, CellTextLayer
-   * calls this instead of fillText. The renderer receives the cell
-   * area coordinates (already adjusted for scroll offset).
+   * calls this instead of fillText. The renderer receives the complete
+   * CellData and cell area coordinates (already adjusted for scroll offset).
    */
   render?: (
     ctx: CanvasRenderingContext2D,
-    value: CellValue,
+    cellData: CellData,
     x: number,
     y: number,
     width: number,
     height: number,
     theme: SpreadsheetTheme,
+    row?: number,
+    col?: number,
   ) => void;
   /**
    * Optional height measurement for auto row sizing.
-   * Returns the desired row height in pixels for a given cell value,
+   * Returns the desired row height in pixels for a given cell,
    * considering the available column width and theme.
    * When not provided, the default row height is used.
    */
   measureHeight?: (
     ctx: CanvasRenderingContext2D,
-    value: CellValue,
+    cellData: CellData,
     width: number,
     theme: SpreadsheetTheme,
+    row?: number,
+    col?: number,
   ) => number;
   /**
    * Optional sub-cell hit zones. Returns interactive zones within a cell
@@ -124,10 +138,12 @@ export interface CellTypeRenderer {
    * to the cell origin, and an optional cursor style.
    */
   getHitZones?: (
-    value: CellValue,
+    cellData: CellData,
     width: number,
     height: number,
     theme?: SpreadsheetTheme,
+    row?: number,
+    col?: number,
   ) => HitZone[];
 }
 
@@ -150,7 +166,8 @@ const numberRenderer: CellTypeRenderer = {
 const booleanRenderer: CellTypeRenderer = {
   format: (value) => (value != null ? String(value) : ''),
   align: 'center',
-  render: (ctx, value, x, y, width, height, theme) => {
+  render: (ctx, cellData, x, y, width, height, theme) => {
+    const value = cellData.value;
     const size = Math.min(14, height - 6);
     const cx = x + width / 2;
     const cy = y + height / 2;

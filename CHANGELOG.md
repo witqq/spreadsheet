@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `CellData.custom` field: extensible `Record<string, unknown>` for user-defined data, preserved through `setValue()` and `setMetadata()`
+- `CellDecorator` methods now receive optional `row` and `col` parameters: `render()`, `getWidth()`, `getHitZones()`
+- `CellStore.bulkLoadCellData()`: bulk load complete `CellData` objects from a 2D array, storing value, type, style, metadata, and custom fields in one pass
+- `SpreadsheetEngine.bulkLoadCellData()`: public API for bulk loading complete cell data with dirty tracking and render scheduling
+- `@witqq/spreadsheet-react`: all public engine events exposed as React callback props (`onCellClick`, `onCellDoubleClick`, `onCellHover`, `onDestroy`, `onCommandExecute`, `onCommandUndo`, `onCommandRedo`, `onClipboardCopy`, `onClipboardCut`, `onClipboardPaste`, `onColumnResize`, `onColumnResizeStart`, `onColumnResizeEnd`, `onRowResize`, `onRowResizeStart`, `onRowResizeEnd`, `onCellStatusChange`, `onCellValidation`, `onAutofillStart`, `onAutofillPreview`, `onAutofillComplete`, `onSortRejected`, `onRowGroupToggle`, `onRowGroupChange`, `onThemeChange`)
+- `@witqq/spreadsheet-react`: re-exports all event types (`CellEvent`, `CommandEvent`, `ClipboardDataEvent`, `ColumnResizeEvent`, `RowResizeEvent`, `CellStatusChangeEvent`, `CellValidationEvent`, `AutofillStartEvent`, `AutofillPreviewEvent`, `AutofillCompleteEvent`, `SortRejectedEvent`, `RowGroupToggleEvent`, `RowGroupChangeEvent`)
+- `@witqq/spreadsheet`: exports `AutofillStartEvent`, `AutofillPreviewEvent`, `AutofillCompleteEvent` from package index
+
+### Changed
+- **BREAKING:** `CellTypeRenderer.render()` second parameter changed from `CellValue` to `CellData` (full cell data object); optional `row` and `col` trailing parameters added
+- **BREAKING:** `CellTypeRenderer.measureHeight()` second parameter changed from `CellValue` to `CellData`; optional `row` and `col` trailing parameters added
+- **BREAKING:** `CellTypeRenderer.getHitZones()` first parameter changed from `CellValue` to `CellData`; optional `row` and `col` trailing parameters added
+- `CellTypeRenderer.format()` now accepts optional trailing `cellData`, `row`, `col` parameters (backward compatible)
+
 ## [0.3.0] — 2026-03-11
 
 ### Added

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CellTypeRegistry } from '../src/types/cell-type-registry';
 import type { CellTypeRenderer } from '../src/types/cell-type-registry';
+import type { CellData } from '../src/types/interfaces';
 import { lightTheme } from '../src/themes/built-in-themes';
 
 describe('CellTypeRegistry', () => {
@@ -150,7 +151,7 @@ describe('CellTypeRegistry', () => {
         stroke: vi.fn(),
       } as unknown as CanvasRenderingContext2D;
 
-      renderer.render!(ctx, true, 10, 10, 60, 28, lightTheme);
+      renderer.render!(ctx, { value: true }, 10, 10, 60, 28, lightTheme);
 
       expect(ctx.strokeRect).toHaveBeenCalled();
       expect(ctx.stroke).toHaveBeenCalled(); // checkmark drawn
@@ -169,7 +170,7 @@ describe('CellTypeRegistry', () => {
         stroke: vi.fn(),
       } as unknown as CanvasRenderingContext2D;
 
-      renderer.render!(ctx, false, 10, 10, 60, 28, lightTheme);
+      renderer.render!(ctx, { value: false }, 10, 10, 60, 28, lightTheme);
 
       expect(ctx.strokeRect).toHaveBeenCalled();
       expect(ctx.stroke).not.toHaveBeenCalled(); // no checkmark
@@ -271,7 +272,7 @@ describe('CellTypeRegistry', () => {
       const customRenderer: CellTypeRenderer = {
         format: (v) => String(v),
         align: 'left',
-        measureHeight: (_ctx, _value, width, _theme) => {
+        measureHeight: (_ctx, _cellData, width, _theme) => {
           // Example: simulate height based on text that fills width
           return width > 100 ? 28 : 56;
         },
@@ -282,8 +283,8 @@ describe('CellTypeRegistry', () => {
 
       const ctx = {} as CanvasRenderingContext2D;
       const theme = lightTheme;
-      expect(renderer.measureHeight!(ctx, 'test', 200, theme)).toBe(28);
-      expect(renderer.measureHeight!(ctx, 'test', 50, theme)).toBe(56);
+      expect(renderer.measureHeight!(ctx, { value: 'test' }, 200, theme)).toBe(28);
+      expect(renderer.measureHeight!(ctx, { value: 'test' }, 50, theme)).toBe(56);
     });
 
     it('built-in renderers do not have measureHeight', () => {
@@ -354,6 +355,114 @@ describe('CellTypeRegistry', () => {
       registry.setFormatLocale('ja-JP');
       expect(registry.get('string').format('test')).toBe(strBefore);
       expect(registry.get('boolean').format(true)).toBe(boolBefore);
+    });
+  });
+
+  describe('CellTypeRenderer receives CellData and row/col', () => {
+    it('format() receives optional cellData, row, col', () => {
+      const registry = new CellTypeRegistry();
+      const received: { cellData?: CellData; row?: number; col?: number } = {};
+      const custom: CellTypeRenderer = {
+        format: (v, cellData, row, col) => {
+          received.cellData = cellData;
+          received.row = row;
+          received.col = col;
+          return String(v);
+        },
+        align: 'left',
+      };
+      registry.register('custom', custom);
+      const data: CellData = { value: 'hello', custom: { tag: 'a' } };
+      registry.get('custom').format(data.value, data, 5, 3);
+      expect(received.cellData).toBe(data);
+      expect(received.row).toBe(5);
+      expect(received.col).toBe(3);
+    });
+
+    it('render() receives CellData instead of CellValue', () => {
+      const registry = new CellTypeRegistry();
+      const received: { cellData?: CellData; row?: number; col?: number } = {};
+      const custom: CellTypeRenderer = {
+        format: (v) => String(v),
+        align: 'left',
+        render: (_ctx, cellData, _x, _y, _w, _h, _theme, row, col) => {
+          received.cellData = cellData;
+          received.row = row;
+          received.col = col;
+        },
+      };
+      registry.register('custom', custom);
+      const ctx = {} as CanvasRenderingContext2D;
+      const data: CellData = { value: 42, custom: { flag: true } };
+      registry.get('custom').render!(ctx, data, 0, 0, 100, 28, lightTheme, 10, 2);
+      expect(received.cellData).toBe(data);
+      expect(received.cellData!.custom).toEqual({ flag: true });
+      expect(received.row).toBe(10);
+      expect(received.col).toBe(2);
+    });
+
+    it('measureHeight() receives CellData instead of CellValue', () => {
+      const registry = new CellTypeRegistry();
+      const received: { cellData?: CellData; row?: number; col?: number } = {};
+      const custom: CellTypeRenderer = {
+        format: (v) => String(v),
+        align: 'left',
+        measureHeight: (_ctx, cellData, _w, _theme, row, col) => {
+          received.cellData = cellData;
+          received.row = row;
+          received.col = col;
+          return 40;
+        },
+      };
+      registry.register('custom', custom);
+      const ctx = {} as CanvasRenderingContext2D;
+      const data: CellData = { value: 'text' };
+      const h = registry.get('custom').measureHeight!(ctx, data, 100, lightTheme, 7, 1);
+      expect(h).toBe(40);
+      expect(received.cellData).toBe(data);
+      expect(received.row).toBe(7);
+      expect(received.col).toBe(1);
+    });
+
+    it('getHitZones() receives CellData instead of CellValue', () => {
+      const registry = new CellTypeRegistry();
+      const received: { cellData?: CellData; row?: number; col?: number } = {};
+      const custom: CellTypeRenderer = {
+        format: (v) => String(v),
+        align: 'center',
+        getHitZones: (cellData, _w, _h, _theme, row, col) => {
+          received.cellData = cellData;
+          received.row = row;
+          received.col = col;
+          return [{ id: 'zone1', x: 0, y: 0, width: 10, height: 10 }];
+        },
+      };
+      registry.register('custom', custom);
+      const data: CellData = { value: true, custom: { extra: 1 } };
+      const zones = registry.get('custom').getHitZones!(data, 80, 28, lightTheme, 3, 5);
+      expect(zones).toHaveLength(1);
+      expect(zones[0].id).toBe('zone1');
+      expect(received.cellData).toBe(data);
+      expect(received.row).toBe(3);
+      expect(received.col).toBe(5);
+    });
+
+    it('boolean renderer render() works with CellData', () => {
+      const registry = new CellTypeRegistry();
+      const renderer = registry.get('boolean');
+      const ctx = {
+        strokeStyle: '',
+        lineWidth: 0,
+        strokeRect: vi.fn(),
+        beginPath: vi.fn(),
+        moveTo: vi.fn(),
+        lineTo: vi.fn(),
+        stroke: vi.fn(),
+      } as unknown as CanvasRenderingContext2D;
+
+      renderer.render!(ctx, { value: true }, 10, 10, 60, 28, lightTheme, 0, 0);
+      expect(ctx.strokeRect).toHaveBeenCalled();
+      expect(ctx.stroke).toHaveBeenCalled();
     });
   });
 });

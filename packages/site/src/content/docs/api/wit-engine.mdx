@@ -35,6 +35,7 @@ engine.mount(document.getElementById('grid')!);
 |---|---|---|
 | `getCell` | `(row, col) => CellData \| undefined` | Get cell data at logical row/col |
 | `setCell` | `(row, col, value) => void` | Set cell value at logical row/col |
+| `bulkLoadCellData` | `(data, startRow?) => void` | Bulk load 2D array of CellData objects |
 | `getCellStore` | `() => CellStore` | Access the underlying CellStore |
 
 ## Cell Styling

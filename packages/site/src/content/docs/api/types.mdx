@@ -29,6 +29,7 @@ interface CellData {
   readonly style?: CellStyleRef;     // Reference to shared style
   readonly type?: CellType;          // Cell type for rendering
   readonly metadata?: CellMetadata;  // Status, links, comments
+  readonly custom?: Record<string, unknown>;  // Extensible user data
 }
 ```
 
@@ -747,17 +748,17 @@ Where a cell decorator renders relative to cell content. `left`/`right` reserve 
 interface CellDecorator {
   readonly id: string;
   readonly position: CellDecoratorPosition;
-  getWidth?(cellData: CellData, cellHeight: number, ctx?: CanvasRenderingContext2D, theme?: SpreadsheetTheme): number;
-  render(ctx: CanvasRenderingContext2D, cellData: CellData, x: number, y: number, width: number, height: number, theme: SpreadsheetTheme): void;
-  getHitZones?(width: number, height: number, cellData: CellData): HitZone[];
+  getWidth?(cellData: CellData, cellHeight: number, ctx?: CanvasRenderingContext2D, theme?: SpreadsheetTheme, row?: number, col?: number): number;
+  render(ctx: CanvasRenderingContext2D, cellData: CellData, x: number, y: number, width: number, height: number, theme: SpreadsheetTheme, row?: number, col?: number): void;
+  getHitZones?(width: number, height: number, cellData: CellData, row?: number, col?: number): HitZone[];
 }
 ```
 
 Composable rendering addon for cells. Decorators augment the default text rendering pipeline without replacing it. Register via `CellTypeRegistry.addDecorator()`.
 
-- `getWidth` — compute reserved width for left/right decorators. Ignored for overlay/underlay.
-- `render` — draw the decorator in its allocated area.
-- `getHitZones` — optional interactive zones within the decorator's area.
+- `getWidth` — compute reserved width for left/right decorators. Ignored for overlay/underlay. Optional `row`/`col` identify the cell being rendered.
+- `render` — draw the decorator in its allocated area. Optional `row`/`col` identify the cell being rendered.
+- `getHitZones` — optional interactive zones within the decorator's area. Optional `row`/`col` identify the cell being hit-tested.
 
 ### CellDecoratorRegistration
 

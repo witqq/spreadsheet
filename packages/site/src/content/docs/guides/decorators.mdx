@@ -28,14 +28,18 @@ interface CellDecorator {
     cellHeight: number,
     ctx?: CanvasRenderingContext2D,
     theme?: SpreadsheetTheme,
+    row?: number,
+    col?: number,
   ): number;
   render(
     ctx: CanvasRenderingContext2D,
     cellData: CellData,
     x: number, y: number, width: number, height: number,
     theme: SpreadsheetTheme,
+    row?: number,
+    col?: number,
   ): void;
-  getHitZones?(width: number, height: number, cellData: CellData): HitZone[];
+  getHitZones?(width: number, height: number, cellData: CellData, row?: number, col?: number): HitZone[];
 }
 
 interface CellDecoratorRegistration {
@@ -44,9 +48,9 @@ interface CellDecoratorRegistration {
 }
 ```
 
-- `getWidth` returns the reserved width in pixels for `left`/`right` decorators. Ignored for `overlay`/`underlay`. The `ctx` parameter is optional — during hit testing no canvas context is available; decorators with fixed widths can ignore it.
-- `render` draws into the allocated area. Coordinates `(x, y, width, height)` reflect the decorator's region after layout.
-- `getHitZones` returns interactive sub-cell zones. Coordinates are relative to the decorator's allocated area.
+- `getWidth` returns the reserved width in pixels for `left`/`right` decorators. Ignored for `overlay`/`underlay`. The `ctx` parameter is optional — during hit testing no canvas context is available; decorators with fixed widths can ignore it. Optional `row`/`col` identify the cell being rendered.
+- `render` draws into the allocated area. Coordinates `(x, y, width, height)` reflect the decorator's region after layout. Optional `row`/`col` identify the cell being rendered.
+- `getHitZones` returns interactive sub-cell zones. Coordinates are relative to the decorator's allocated area. Optional `row`/`col` identify the cell being hit-tested.
 
 ## Registration
 
