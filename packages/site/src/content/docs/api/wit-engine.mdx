@@ -37,6 +37,33 @@ engine.mount(document.getElementById('grid')!);
 | `setCell` | `(row, col, value) => void` | Set cell value at logical row/col |
 | `getCellStore` | `() => CellStore` | Access the underlying CellStore |
 
+## Cell Styling
+
+Cell styles are applied through the `CellStore` and a standalone `StylePool` instance:
+
+```ts
+import { StylePool } from '@witqq/spreadsheet';
+
+const cellStore = engine.getCellStore();
+const stylePool = new StylePool();
+
+const ref = stylePool.intern({
+  fontWeight: 'bold',
+  bgColor: '#fef3cd',
+  borderBottom: { width: 1, color: '#856404', style: 'solid' },
+});
+const style = stylePool.resolve(ref)!;
+
+cellStore.set(row, col, {
+  value: 'Warning',
+  style: { ref, style },
+});
+```
+
+`StylePool` is not part of `SpreadsheetEngine` — create and manage it alongside the engine. The `CellData.style` field holds a `CellStyleRef` with the dedup key and resolved style.
+
+See [Per-Cell Styling](/guides/styling/) for `CellStyle` properties, borders, alignment, and number formatting.
+
 ## Cell Status (Change Tracking)
 
 | Method | Signature | Description |

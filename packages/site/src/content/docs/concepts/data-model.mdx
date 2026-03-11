@@ -138,13 +138,49 @@ The `getRowAtY` and `getColAtX` methods are used by `EventTranslator` for hit-te
 
 ## StylePool
 
-The `StylePool` deduplicates cell styles. When multiple cells share the same style (font, color, alignment, etc.), they reference the same style object in memory instead of each holding a copy.
+The `StylePool` deduplicates cell styles using content-based hashing. When multiple cells share the same style (font, color, alignment, borders, etc.), they reference the same frozen style object in memory instead of each holding a copy.
 
 ```ts
-// Two cells with identical styles share one object
-const styleId = stylePool.intern({ fontWeight: 'bold', textColor: '#333' });
-cellA.style = stylePool.resolve(styleId);
-cellB.style = stylePool.resolve(styleId); // Same reference as cellA.style
+const stylePool = new StylePool();
+
+// Intern returns a ref key — identical styles produce the same key
+const ref = stylePool.intern({
+  fontWeight: 'bold',
+  textColor: '#333',
+  borderBottom: { width: 1, color: '#ccc', style: 'solid' },
+});
+
+// Resolve the ref to get the frozen CellStyle object
+const style = stylePool.resolve(ref)!;
+
+// Attach to cell data as a CellStyleRef
+cellStore.set(0, 0, {
+  value: 'Styled cell',
+  style: { ref, style },
+});
 ```
 
-This reduces memory usage significantly in tables where many cells share common formatting.
+### API
+
+| Method | Signature | Description |
+|---|---|---|
+| `intern` | `(style: CellStyle) => string` | Deduplicate and store a style, returns ref key |
+| `resolve` | `(ref: string) => CellStyle \| undefined` | Look up a style by its ref key |
+| `has` | `(ref: string) => boolean` | Check if a ref exists in the pool |
+| `clear` | `() => void` | Remove all styles from the pool |
+| `size` | `number` (getter) | Number of unique styles stored |
+
+### CellStyleRef
+
+The `CellData.style` field holds a `CellStyleRef` which carries both the dedup key and the resolved style:
+
+```ts
+interface CellStyleRef {
+  readonly ref: string;       // StylePool dedup key
+  readonly style: CellStyle;  // Resolved style object
+}
+```
+
+The renderer reads `style.style` directly — it never calls `StylePool.resolve()` at render time.
+
+See [Per-Cell Styling](/guides/styling/) for usage patterns including borders, alignment, and number formatting.

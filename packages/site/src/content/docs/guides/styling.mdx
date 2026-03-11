@@ -1,0 +1,149 @@
+---
+title: "Per-Cell Styling"
+description: "Apply font, color, alignment, borders, and number formatting to individual cells using CellStyle and StylePool."
+---
+
+# Per-Cell Styling
+
+Cells can carry individual styles for font, color, alignment, borders, number formatting, text wrapping, and indentation. Styles are set through `CellData.style` and deduplicated by the `StylePool`.
+
+## CellStyle Properties
+
+```ts
+interface CellStyle {
+  readonly bgColor?: string;            // Background color (CSS color string)
+  readonly textColor?: string;          // Text color (CSS color string)
+  readonly fontFamily?: string;         // Font family name
+  readonly fontSize?: number;           // Font size in pixels
+  readonly fontWeight?: 'normal' | 'bold';
+  readonly fontStyle?: 'normal' | 'italic';
+  readonly textAlign?: 'left' | 'center' | 'right';
+  readonly verticalAlign?: 'top' | 'middle' | 'bottom';
+  readonly borderTop?: BorderStyle;
+  readonly borderRight?: BorderStyle;
+  readonly borderBottom?: BorderStyle;
+  readonly borderLeft?: BorderStyle;
+  readonly numberFormat?: string;       // e.g. "#,##0.00"
+  readonly textWrap?: boolean;          // Enable text wrapping within cell
+  readonly indent?: number;             // Text indentation level
+}
+```
+
+All properties are optional. Unset properties inherit from the theme or column defaults.
+
+## Setting Cell Styles
+
+Styles flow through the `StylePool` for deduplication, then attach to cell data via `CellStyleRef`:
+
+```ts
+import { StylePool, CellStore } from '@witqq/spreadsheet';
+
+const stylePool = new StylePool();
+const cellStore = new CellStore();
+
+// 1. Intern the style (returns a dedup key)
+const ref = stylePool.intern({
+  fontWeight: 'bold',
+  textColor: '#1a73e8',
+  bgColor: '#e8f0fe',
+});
+const style = stylePool.resolve(ref)!;
+
+// 2. Set cell data with the style reference
+cellStore.set(0, 0, {
+  value: 'Header',
+  style: { ref, style },
+});
+```
+
+Multiple cells with identical styles share the same pooled object:
+
+```ts
+const ref = stylePool.intern({ fontWeight: 'bold' });
+const style = stylePool.resolve(ref)!;
+
+// Both cells reference the same style — no duplication
+cellStore.set(0, 0, { value: 'A', style: { ref, style } });
+cellStore.set(0, 1, { value: 'B', style: { ref, style } });
+```
+
+## Borders
+
+Each cell edge has an independent `BorderStyle`:
+
+```ts
+interface BorderStyle {
+  readonly width: number;         // Border width in pixels
+  readonly color: string;         // CSS color string
+  readonly style: 'solid' | 'dashed' | 'dotted';
+}
+```
+
+Apply borders to individual cells:
+
+```ts
+const ref = stylePool.intern({
+  borderBottom: { width: 2, color: '#333', style: 'solid' },
+  borderRight: { width: 1, color: '#ccc', style: 'dashed' },
+});
+const style = stylePool.resolve(ref)!;
+
+cellStore.set(0, 0, {
+  value: 'Bordered',
+  style: { ref, style },
+});
+```
+
+For a visible border between two cells, set `borderRight` on the left cell or `borderLeft` on the right cell — the renderer draws whichever is defined.
+
+## Alignment and Indentation
+
+Horizontal alignment (`textAlign`) and vertical alignment (`verticalAlign`) control text positioning within the cell. `indent` shifts the text inward by the specified indentation level:
+
+```ts
+const ref = stylePool.intern({
+  textAlign: 'right',
+  verticalAlign: 'bottom',
+  indent: 2,
+});
+```
+
+## Number Formatting
+
+The `numberFormat` property controls how numeric values are displayed. The format string follows spreadsheet convention:
+
+```ts
+const ref = stylePool.intern({
+  numberFormat: '#,##0.00',
+});
+```
+
+The `displayValue` field on `CellData` stores the formatted output. Number formatting is applied by the cell type renderer, not by `StylePool`.
+
+## Text Wrapping
+
+Per-cell text wrapping is controlled by `CellStyle.textWrap`. This takes priority over `ColumnDef.wrapText`:
+
+```ts
+const ref = stylePool.intern({ textWrap: true });
+```
+
+Resolution order: `CellStyle.textWrap` → `ColumnDef.wrapText` → `false`.
+
+See [Text Wrapping](/guides/text-wrapping/) for wrapping behavior, auto row height integration, and performance details.
+
+## StylePool API
+
+| Method | Signature | Description |
+|---|---|---|
+| `intern` | `(style: CellStyle) => string` | Deduplicate and store a style, returns ref key |
+| `resolve` | `(ref: string) => CellStyle \| undefined` | Look up a style by its ref key |
+| `has` | `(ref: string) => boolean` | Check if a ref exists in the pool |
+| `clear` | `() => void` | Remove all styles from the pool |
+| `size` | `number` (getter) | Number of unique styles stored |
+
+## See Also
+
+- [Data Model](/concepts/data-model/) — `CellData`, `CellStore`, and `StylePool` internals
+- [Text Wrapping](/guides/text-wrapping/) — wrapping behavior and auto row height
+- [Types Reference](/api/types/) — `CellStyle`, `BorderStyle`, `CellStyleRef` definitions

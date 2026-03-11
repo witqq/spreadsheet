@@ -234,6 +234,8 @@ function addRow() {
 
 **Event types:** `CellChangeEvent`, `SelectionChangeEvent`, `SortChangeEvent`, `FilterChangeEvent`, `ScrollEvent`
 
+For per-cell styling (`CellStyleRef`, `BorderStyle`, `StylePool`) and cell decorators (`CellDecorator`, `CellDecoratorRegistration`), import directly from `@witqq/spreadsheet` and use via the engine instance from template ref `getInstance()`.
+
 ---
 
 ## Component Lifecycle

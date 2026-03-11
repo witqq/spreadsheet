@@ -55,6 +55,8 @@ export default defineConfig({
             { label: 'Column & Row Resize', slug: 'guides/resize' },
             { label: 'Auto Row Height', slug: 'guides/auto-row-height' },
             { label: 'Text Wrapping', slug: 'guides/text-wrapping' },
+            { label: 'Per-Cell Styling', slug: 'guides/styling' },
+            { label: 'Cell Decorators', slug: 'guides/decorators' },
             { label: 'Column Stretch', slug: 'guides/column-stretch' },
             { label: 'Autofill', slug: 'guides/autofill' },
             { label: 'Change Tracking', slug: 'guides/change-tracking' },

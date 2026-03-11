@@ -622,7 +622,13 @@ Maps `CellType` identifiers to render and format functions. Built-in types: `str
 
 ```typescript
 import { CellTypeRegistry } from '@witqq/spreadsheet';
-import type { CellTypeRenderer, CellAlignment } from '@witqq/spreadsheet';
+import type {
+  CellTypeRenderer,
+  CellAlignment,
+  CellDecorator,
+  CellDecoratorPosition,
+  CellDecoratorRegistration,
+} from '@witqq/spreadsheet';
 
 interface CellTypeRenderer {
   format(value: CellValue): string;            // Format value for text display
@@ -645,6 +651,24 @@ interface CellTypeRenderer {
     width: number, height: number,
     theme?: SpreadsheetTheme,
   ) => HitZone[];
+}
+
+// Decorator position relative to cell content
+type CellDecoratorPosition = 'left' | 'right' | 'overlay' | 'underlay';
+
+// Composable rendering addon for cells
+interface CellDecorator {
+  readonly id: string;
+  readonly position: CellDecoratorPosition;
+  getWidth?(cellData: CellData, cellHeight: number, ctx?: CanvasRenderingContext2D, theme?: SpreadsheetTheme): number;
+  render(ctx: CanvasRenderingContext2D, cellData: CellData, x: number, y: number, width: number, height: number, theme: SpreadsheetTheme): void;
+  getHitZones?(width: number, height: number, cellData: CellData): HitZone[];
+}
+
+// Registration binding a decorator to specific cells
+interface CellDecoratorRegistration {
+  decorator: CellDecorator;
+  appliesTo: (row: number, col: number, cellData: CellData) => boolean;
 }
 ```
 

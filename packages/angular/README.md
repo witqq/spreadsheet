@@ -210,6 +210,10 @@ export class AppComponent {
 
 **System types:** `SpreadsheetEvents`, `SpreadsheetPlugin`, `SpreadsheetTheme`
 
+Event payload types are not re-exported. Import them from `@witqq/spreadsheet`.
+
+For per-cell styling (`CellStyleRef`, `BorderStyle`, `StylePool`) and cell decorators (`CellDecorator`, `CellDecoratorRegistration`), import directly from `@witqq/spreadsheet` and use via the engine instance from `@ViewChild` `getInstance()`.
+
 ---
 
 ## Component Lifecycle

@@ -1,0 +1,157 @@
+---
+title: "Cell Decorators"
+description: "Register, render, and interact with cell decorators — composable rendering addons for cells."
+---
+
+Cell decorators augment the default text rendering pipeline without replacing it.
+A decorator occupies one of four positions relative to cell content:
+
+| Position | Behavior |
+|---|---|
+| `left` | Reserves horizontal space to the left of text |
+| `right` | Reserves horizontal space to the right of text |
+| `overlay` | Renders on top of text |
+| `underlay` | Renders behind text |
+
+Render order: underlay → left → right → text/custom → overlay.
+
+## Interfaces
+
+```ts
+type CellDecoratorPosition = 'left' | 'right' | 'overlay' | 'underlay';
+
+interface CellDecorator {
+  readonly id: string;
+  readonly position: CellDecoratorPosition;
+  getWidth?(
+    cellData: CellData,
+    cellHeight: number,
+    ctx?: CanvasRenderingContext2D,
+    theme?: SpreadsheetTheme,
+  ): number;
+  render(
+    ctx: CanvasRenderingContext2D,
+    cellData: CellData,
+    x: number, y: number, width: number, height: number,
+    theme: SpreadsheetTheme,
+  ): void;
+  getHitZones?(width: number, height: number, cellData: CellData): HitZone[];
+}
+
+interface CellDecoratorRegistration {
+  decorator: CellDecorator;
+  appliesTo: (row: number, col: number, cellData: CellData) => boolean;
+}
+```
+
+- `getWidth` returns the reserved width in pixels for `left`/`right` decorators. Ignored for `overlay`/`underlay`. The `ctx` parameter is optional — during hit testing no canvas context is available; decorators with fixed widths can ignore it.
+- `render` draws into the allocated area. Coordinates `(x, y, width, height)` reflect the decorator's region after layout.
+- `getHitZones` returns interactive sub-cell zones. Coordinates are relative to the decorator's allocated area.
+
+## Registration
+
+Decorators are managed through `CellTypeRegistry`:
+
+```ts
+const registry = engine.getCellTypeRegistry();
+
+registry.addDecorator({
+  decorator: {
+    id: 'status-icon',
+    position: 'left',
+    getWidth: () => 24,
+    render(ctx, cellData, x, y, width, height, theme) {
+      const icon = cellData.value === 'done' ? '✓' : '○';
+      ctx.fillStyle = cellData.value === 'done' ? '#16a34a' : '#94a3b8';
+      ctx.font = `${height * 0.6}px sans-serif`;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(icon, x + 4, y + height / 2);
+    },
+  },
+  appliesTo: (row, col) => col === 0,
+});
+```
+
+`addDecorator` replaces an existing decorator with the same `id` (dedup by `decorator.id`).
+
+## Removal
+
+```ts
+registry.removeDecorator('status-icon');
+```
+
+No-op if the decorator is not registered.
+
+## Hit Zones
+
+Decorators can define interactive areas via `getHitZones`. Each zone has a unique `id`, pixel coordinates relative to the decorator area, and an optional CSS `cursor`.
+
+```ts
+interface HitZone {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly cursor?: string;
+}
+```
+
+Example — a clickable delete button on the right side of a cell:
+
+```ts
+registry.addDecorator({
+  decorator: {
+    id: 'delete-btn',
+    position: 'right',
+    getWidth: () => 28,
+    render(ctx, cellData, x, y, width, height) {
+      ctx.fillStyle = '#ef4444';
+      ctx.font = `${height * 0.5}px sans-serif`;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+      ctx.fillText('×', x + width / 2, y + height / 2);
+    },
+    getHitZones(width, height) {
+      return [{ id: 'delete', x: 0, y: 0, width, height, cursor: 'pointer' }];
+    },
+  },
+  appliesTo: () => true,
+});
+```
+
+## Responding to Hit Zone Clicks
+
+The `cellClick` event carries the `hitZone` property when a decorator zone is clicked:
+
+```ts
+engine.on('cellClick', (e) => {
+  if (e.hitZone === 'delete') {
+    engine.setCell(e.row, e.col, { value: '' });
+  }
+});
+```
+
+The `cellHover` event also carries `hitZone` for hover effects. The cursor is set
+automatically from `HitZone.cursor`.
+
+## Hit Test Resolution Order
+
+When the engine resolves a click or hover within a cell, sub-cell zones are tested in this order:
+
+1. Cell type renderer zones (`CellTypeRenderer.getHitZones`)
+2. Left decorator zones (left to right)
+3. Right decorator zones (right to left)
+4. Overlay and underlay decorator zones
+
+The first matching zone wins.
+
+## Multiple Decorators
+
+A cell can have multiple decorators. `getDecorators(row, col, cellData)` returns all
+decorators whose `appliesTo` predicate returns `true`, in registration order.
+
+Left decorators stack from left to right; right decorators stack from right to left. Each shifts the text content area inward by its `getWidth()` value.
+
+See [API Types](/api/types/) for `CellDecorator`, `CellDecoratorRegistration`, `HitZone`, and `HitTestResult` definitions.
+See [SpreadsheetEngine API](/api/wit-engine/) for `addDecorator` and `removeDecorator` method signatures.
