@@ -1,6 +1,6 @@
 {
   "name": "@witqq/spreadsheet-plugins",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Official plugins for witqq spreadsheet",
   "type": "module",
   "main": "./dist/index.cjs",
