@@ -12,6 +12,9 @@ playwright-report/
 .env.remote
 docs/api/
 
+# Generated npm docs (built at publish time)
+packages/*/docs/
+
 # Private deployment configs
 docker-compose.remote.yml
 .deploy-config.json

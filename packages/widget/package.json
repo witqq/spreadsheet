@@ -1,7 +1,7 @@
 {
   "name": "@witqq/spreadsheet-widget",
-  "version": "0.4.0",
-  "description": "Embeddable spreadsheet widget \u2014 single-file IIFE/UMD bundle",
+  "version": "0.4.1",
+  "description": "Embeddable spreadsheet widget — single-file IIFE/UMD bundle",
   "keywords": [
     "spreadsheet",
     "datagrid",
@@ -29,12 +29,15 @@
   },
   "files": [
     "dist",
+    "docs",
     "LICENSE",
     "README.md"
   ],
   "scripts": {
     "build": "vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:npm": "tsx ../../scripts/generate-npm-docs.ts --package widget",
+    "prepublishOnly": "npm run build && npm run docs:npm"
   },
   "dependencies": {
     "@witqq/spreadsheet": "^0.4.0"

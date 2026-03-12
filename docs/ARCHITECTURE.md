@@ -712,9 +712,9 @@ Defaults are applied inline using nullish coalescing (`??`) in the constructor a
 ## Documentation Site
 
 - **Stack**: Astro + Starlight
-- **Content**: `packages/site/src/content/docs/` (47 MDX files)
+- **Content**: `packages/site/src/content/docs/` (55 MDX files)
 - **API reference**: TypeDoc → `docs/api/` (auto-generated HTML)
-- **In-package docs**: Each `packages/*/README.md` contains comprehensive API reference for npm consumers
+- **In-package docs**: `scripts/generate-npm-docs.ts` converts site MDX → clean MD, included in npm packages under `docs/`. Each package gets a compact navigator README and relevant doc subset. Generated via `npm run docs:npm` or automatically during `prepublishOnly`.
 
 ## Development
 
@@ -724,4 +724,5 @@ npm test               # Vitest unit tests
 npm run test:e2e       # Playwright E2E tests
 npm run dev            # Docker demo on :3150
 npm run lint           # ESLint
+npm run docs:npm       # Generate npm package docs from site MDX
 ```
