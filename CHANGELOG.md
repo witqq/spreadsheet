@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- npm packages now include structured `docs/` directory with clean markdown documentation converted from site MDX sources
+- Per-package documentation filtering: core gets all docs, framework wrappers get getting-started + framework-specific docs, plugins get getting-started + plugin docs
+- Compact navigator README generated for each package with badges, install instructions, peer dependencies, and table of contents
+- `npm run docs:npm` script for generating package documentation
 - `CellData.custom` field: extensible `Record<string, unknown>` for user-defined data, preserved through `setValue()` and `setMetadata()`
 - `CellDecorator` methods now receive optional `row` and `col` parameters: `render()`, `getWidth()`, `getHitZones()`
 - `CellStore.bulkLoadCellData()`: bulk load complete `CellData` objects from a 2D array, storing value, type, style, metadata, and custom fields in one pass

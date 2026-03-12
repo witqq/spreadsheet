@@ -27,13 +27,16 @@
   },
   "files": [
     "dist",
+    "docs",
     "src",
     "LICENSE",
     "README.md"
   ],
   "scripts": {
     "build": "vite build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "docs:npm": "tsx ../../scripts/generate-npm-docs.ts --package angular",
+    "prepublishOnly": "npm run build && npm run docs:npm"
   },
   "dependencies": {
     "@witqq/spreadsheet": "^0.4.0"

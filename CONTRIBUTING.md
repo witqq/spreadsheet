@@ -19,6 +19,7 @@ npm run lint         # ESLint
 npm run test         # Unit tests (vitest)
 npm run test:e2e     # E2E tests (playwright)
 npm run benchmark    # Performance benchmarks (6 metrics × 3 datasets)
+npm run docs:npm     # Generate npm package docs from site MDX
 ```
 
 ## Project Structure

@@ -15,6 +15,7 @@
   },
   "files": [
     "dist",
+    "docs",
     "LICENSE",
     "README.md"
   ],
@@ -22,7 +23,8 @@
     "build": "vite build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "docs:npm": "tsx ../../scripts/generate-npm-docs.ts --package plugins",
+    "prepublishOnly": "npm run build && npm run docs:npm"
   },
   "dependencies": {
     "@witqq/spreadsheet": "^0.4.0"

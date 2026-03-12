@@ -29,12 +29,15 @@
   },
   "files": [
     "dist",
+    "docs",
     "LICENSE",
     "README.md"
   ],
   "scripts": {
     "build": "vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:npm": "tsx ../../scripts/generate-npm-docs.ts --package widget",
+    "prepublishOnly": "npm run build && npm run docs:npm"
   },
   "dependencies": {
     "@witqq/spreadsheet": "^0.4.0"

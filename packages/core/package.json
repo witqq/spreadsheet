@@ -15,6 +15,7 @@
   },
   "files": [
     "dist",
+    "docs",
     "LICENSE",
     "README.md"
   ],
@@ -24,7 +25,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "docs:npm": "tsx ../../scripts/generate-npm-docs.ts --package core",
+    "prepublishOnly": "npm run build && npm run docs:npm"
   },
   "devDependencies": {
     "vite": "^6.0.0",
