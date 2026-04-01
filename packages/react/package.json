@@ -1,6 +1,6 @@
 {
   "name": "@witqq/spreadsheet-react",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "React wrapper for witqq Canvas spreadsheet engine",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -28,7 +28,7 @@
     "prepublishOnly": "npm run build && npm run docs:npm"
   },
   "dependencies": {
-    "@witqq/spreadsheet": "^0.4.0"
+    "@witqq/spreadsheet": "^0.5.0"
   },
   "peerDependencies": {
     "react": "^17.0.0 || ^18.0.0 || ^19.0.0",

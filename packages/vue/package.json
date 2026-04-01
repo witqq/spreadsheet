@@ -1,6 +1,6 @@
 {
   "name": "@witqq/spreadsheet-vue",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Vue 3 wrapper for witqq Canvas spreadsheet engine",
   "keywords": [
     "spreadsheet",
@@ -41,7 +41,7 @@
     "prepublishOnly": "npm run build && npm run docs:npm"
   },
   "dependencies": {
-    "@witqq/spreadsheet": "^0.4.0"
+    "@witqq/spreadsheet": "^0.5.0"
   },
   "peerDependencies": {
     "vue": "^3.3.0"

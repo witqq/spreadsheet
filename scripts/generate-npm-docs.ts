@@ -631,7 +631,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(__filename
   // Mode 2: --package <name> (generate for specific package)
   else if (packageIdx !== -1) {
     const pkgName = args[packageIdx + 1] as PackageName;
-    if (!pkgName || !PACKAGE_DOC_FILTERS[pkgName]) {
+    if (!pkgName || !(pkgName in PACKAGE_DOC_FILTERS)) {
       console.error(`Unknown package: ${pkgName ?? '(missing)'}`);
       console.error(`Available: ${Object.keys(PACKAGE_DOC_FILTERS).join(', ')}`);
       process.exit(1);

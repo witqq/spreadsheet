@@ -1,6 +1,6 @@
 {
   "name": "@witqq/spreadsheet-widget",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Embeddable spreadsheet widget — single-file IIFE/UMD bundle",
   "keywords": [
     "spreadsheet",
@@ -40,7 +40,7 @@
     "prepublishOnly": "npm run build && npm run docs:npm"
   },
   "dependencies": {
-    "@witqq/spreadsheet": "^0.4.0"
+    "@witqq/spreadsheet": "^0.5.0"
   },
   "devDependencies": {
     "typescript": "^5.8.0",
