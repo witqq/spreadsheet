@@ -37,13 +37,23 @@
 
 *Source: `render-scheduler.ts`*
 
-Classic RAF coalescing with a boolean dirty flag. When `requestRender()` is called:
+Supports two modes:
+
+**Pull-based (default):** Classic RAF coalescing with a boolean dirty flag. When `requestRender()` is called:
 
 1. If `dirty` is already `true`, return immediately (coalescing — any number of calls per frame collapse to one)
 2. Set `dirty = true`, schedule a single `requestAnimationFrame`
-3. Inside the RAF callback: reset `dirty = false`, invoke `renderCallback()`
+3. Inside the RAF callback: reset `dirty = false`, invoke `renderCallback(timestamp)`
 
 The coalescing is O(1) — the first `requestRender()` in a frame wins the RAF slot, all subsequent calls are no-ops. No queue, no debounce timer, no priority system.
+
+**Continuous animation mode:** Activated via `setAnimationLoop(true)` when animated decorators are present. Maintains a persistent rAF loop, calling `renderCallback(timestamp)` every frame. `requestRender()` is a no-op during animation. `setAnimationLoop(false)` reverts to pull-based mode.
+
+### ImageManager
+
+*Source: `image-manager.ts`*
+
+Async `HTMLImageElement` loader with LRU cache. `getImage(url)` returns the cached image synchronously (or `null` and triggers a background load). When an image finishes loading, calls `onLoad` (wired to `requestRender()`) so the grid refreshes. `preload(urls)` warms the cache in batch. Configurable `maxSize` (default 100). Accessed via `SpreadsheetEngine.getImageManager()`.
 
 ### RenderPipeline
 
@@ -97,7 +107,7 @@ Cache invalidation occurs on theme change, data change, or structural change (co
 6. Applies per-cell `verticalAlign` (`top`/`middle`/`bottom`) by computing text Y position within the cell
 7. Applies per-cell `textWrap` from `CellStyle` with bidirectional override: `cellStyle?.textWrap ?? col.wrapText ?? false` — per-cell can enable or disable wrapping regardless of column setting
 8. Applies per-cell `indent` — shifts text position and reduces available width by `indent * padding` pixels
-9. Collects applicable `CellDecorator` instances from `CellTypeRegistry.getDecorators()` and renders in order: underlay → left → right → text/custom → overlay. Left/right decorators reserve horizontal space, shifting text inward.
+9. Collects applicable `CellDecorator` instances from `CellTypeRegistry.getDecorators()` and renders in order: underlay → left → right → text/custom → overlay. Left/right decorators reserve horizontal space, shifting text inward. Animated decorators (with `animated: true` on their registration) receive a `DOMHighResTimeStamp` via the `timestamp` parameter for frame-based animation.
 10. Custom renderer path: delegates to `renderer.render()` if the cell type provides one
 11. Wrap text path: uses `TextMeasureCache.getWrappedLines()` for word breaking, draws each line with proper alignment and vertical alignment
 12. Single-line path: uses `TextMeasureCache.truncateText()` with ellipsis, draws via `ctx.fillText()`
@@ -308,11 +318,17 @@ Maps cell types to editor factories. Entries are sorted by priority (highest fir
 
 ### Overlay Editors
 
-**DatePickerOverlay** (`editing/date-picker-overlay.ts`) — calendar popup positioned below the cell (or above if no room below) at `z-index: 50`. Pure DOM calendar grid with month navigation, keyboard support (arrows, Enter, Escape), and a "Today" footer button.
+**BaseOverlayEditor** (`editing/base-overlay-editor.ts`) — abstract base class implementing `CellEditor`. Provides shared overlay lifecycle (open/close), positioning relative to the cell (below or above if no room), scroll-close for non-frozen cells, click-outside detection, keyboard delegation, and theme/locale propagation. Subclasses implement 6 abstract methods: `overlayWidth`, `overlayHeight`, `getAriaLabel`, `initializeFromValue`, `renderContent`, `onKeyDown`.
 
-**DatePickerEditor** (`editing/date-picker-editor.ts`) — adapter implementing `CellEditor` that wraps DatePickerOverlay. Registered for column type `'date'`.
+**BaseCalendarOverlayEditor** (`editing/base-calendar-overlay-editor.ts`) — intermediate class extending `BaseOverlayEditor` for calendar-based editors. Adds calendar state (view year/month, selected date, focused day), calendar grid rendering, month navigation, and day focus movement. Subclasses implement `parseValue` and `initializeState` for date parsing.
 
-**DateTimeEditor** (`editing/date-time-editor.ts`) — directly implements `CellEditor`. Adds hour/minute spin controls below the calendar. Has a `FocusSection` state machine (`'calendar' | 'hour' | 'minute'`) for Tab cycling between sections. Commits ISO datetime strings. Registered for column type `'datetime'`.
+**DatePickerOverlay** (`editing/date-picker-overlay.ts`) — legacy calendar popup class. Kept for backward compatibility as a public API export. Uses shared utilities from `calendar-utils.ts`.
+
+**DatePickerEditor** (`editing/date-picker-editor.ts`) — extends `BaseCalendarOverlayEditor`. Renders a calendar grid with "Today" footer button. Commits `YYYY-MM-DD` on day click or Enter. Registered for column type `'date'`.
+
+**DateTimeEditor** (`editing/date-time-editor.ts`) — extends `BaseCalendarOverlayEditor`. Adds hour/minute spin controls below the calendar. Has a `FocusSection` state machine (`'calendar' | 'hour' | 'minute'`) for Tab cycling between sections. Commits ISO datetime strings via "OK" button. Registered for column type `'datetime'`.
+
+**SelectEditor** (`editing/select-editor.ts`) — extends `BaseOverlayEditor`. Renders a dropdown overlay with search input and filterable options list from `ColumnDef.selectOptions`. Supports keyboard navigation (ArrowUp/Down with wrapping, Enter/Tab to commit, Escape to close), type-ahead filtering, mouse hover highlight, and ARIA roles (listbox/option). Registered for column type `'select'`.
 
 ### Command Integration
 
@@ -460,6 +476,10 @@ Each plugin receives a `PluginAPI` instance with:
 - `install()`: register menu items via `engine.registerContextMenuItem()`, store IDs in plugin state
 - `destroy()`: iterate stored IDs and unregister each
 
+**Decorator plugin** (e.g. DecoratorsPlugin):
+- `install()`: register `CellDecoratorRegistration` objects via `registry.addDecorator()`, subscribe to `cellClick` for hit zone events, emit custom events (`treeToggle`, `sortRequest`, `linkClick`) via EventBus
+- `destroy()`: call `registry.removeDecorator()` for each ID, unsubscribe click handler
+
 ## Features
 
 | Feature | Module | Description |
@@ -497,6 +517,7 @@ Each plugin receives a `PluginAPI` instance with:
 | ExcelPlugin | .xlsx import/export |
 | ProgressiveLoaderPlugin | Lazy data loading |
 | CollaborationPlugin | Real-time collaboration via OT |
+| DecoratorsPlugin | Built-in cell decorators (tree expander, sort icon, progress bar, link, image thumbnail, spinner) |
 
 ## Cell Type System
 
@@ -598,7 +619,7 @@ The package exports runtime classes/functions and type-only definitions, grouped
 - Types: `RenderLayer`, `RenderContext`, `PaneRegion`, `RenderMode`, `ViewportRange`, `FrozenViewportRanges`, dirty tracking types
 
 ### Editing
-- **`InlineEditor`**, **`DatePickerOverlay`**, **`DatePickerEditor`**, **`DateTimeEditor`**, **`CellEditorRegistry`**
+- **`InlineEditor`**, **`BaseOverlayEditor`**, **`DatePickerOverlay`**, **`DatePickerEditor`**, **`DateTimeEditor`**, **`CellEditorRegistry`**
 - Types: `CellEditor`, `CellEditorContext`, `CellEditorCommit`, `CellEditorClose`, `CellEditorMatcher`
 
 ### Commands

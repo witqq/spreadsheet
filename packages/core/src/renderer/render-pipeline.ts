@@ -109,6 +109,7 @@ export class RenderPipeline {
     scrollY: number,
     renderMode: RenderMode = 'full',
     frozenConfig?: FrozenPaneConfig,
+    timestamp?: number,
   ): void {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
@@ -129,6 +130,7 @@ export class RenderPipeline {
           renderMode,
           paneRegion: 'full',
           mergeManager: this.mergeManager,
+          timestamp,
         };
 
         layer.render(rc);
@@ -230,6 +232,7 @@ export class RenderPipeline {
           renderMode,
           paneRegion: spec.region,
           mergeManager: this.mergeManager,
+          timestamp,
         };
 
         layer.render(rc);
@@ -304,6 +307,7 @@ export class RenderPipeline {
             renderMode,
             paneRegion: 'corner',
             mergeManager: this.mergeManager,
+            timestamp,
           };
 
           layer.render(rc);
@@ -337,6 +341,7 @@ export class RenderPipeline {
           renderMode,
           paneRegion: 'frozenRow',
           mergeManager: this.mergeManager,
+          timestamp,
         };
 
         layer.render(rc);
@@ -365,6 +370,7 @@ export class RenderPipeline {
             renderMode,
             paneRegion: 'corner',
             mergeManager: this.mergeManager,
+            timestamp,
           };
 
           layer.render(rc);
@@ -398,6 +404,7 @@ export class RenderPipeline {
           renderMode,
           paneRegion: 'frozenCol',
           mergeManager: this.mergeManager,
+          timestamp,
         };
 
         layer.render(rc);
@@ -426,6 +433,7 @@ export class RenderPipeline {
     dirtyRects: DirtyRect[],
     renderMode: RenderMode = 'full',
     frozenConfig?: FrozenPaneConfig,
+    timestamp?: number,
   ): void {
     if (frozenConfig && (frozenConfig.frozenRows > 0 || frozenConfig.frozenColumns > 0)) {
       this.render(
@@ -437,6 +445,7 @@ export class RenderPipeline {
         scrollY,
         renderMode,
         frozenConfig,
+        timestamp,
       );
       return;
     }
@@ -466,6 +475,7 @@ export class RenderPipeline {
         renderMode,
         paneRegion: 'full',
         mergeManager: this.mergeManager,
+        timestamp,
       };
       layer.render(rc);
     }

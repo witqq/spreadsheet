@@ -270,11 +270,7 @@ function SpreadsheetInner<TRow extends Record<string, unknown> = Record<string, 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const {
-      className: _cls,
-      style: _style,
-      ...configWithCallbacks
-    } = props;
+    const { className: _cls, style: _style, ...configWithCallbacks } = props;
 
     // Strip all callback props from engine config
     const config: Record<string, unknown> = {};
@@ -321,18 +317,14 @@ function SpreadsheetInner<TRow extends Record<string, unknown> = Record<string, 
     }
   }, [props.theme]);
 
-  // Prop update: data (clear + reload)
+  // Prop update: data (atomic replacement via setData)
   useEffect(() => {
     const engine = engineRef.current;
     if (!engine) return;
     const data = props.data;
     if (data === undefined) return;
 
-    const columnKeys = props.columns.map((c) => c.key);
-    engine.getCellStore().clear();
-    engine.getCellStore().bulkLoad(data, columnKeys);
-    engine.setRowCount(data.length);
-    engine.requestRender();
+    engine.setData(data);
   }, [props.data]);
 
   return (

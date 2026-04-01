@@ -89,7 +89,7 @@ export class CellTextLayer implements RenderLayer {
         // Default: use text measure cache for wrapped text height
         if (renderer.render) continue; // Custom-rendered cells without measureHeight — skip
 
-        const text = renderer.format(cellData.value, cellData, physRow, c);
+        const text = renderer.format(cellData.value, cellData, physRow, c, col);
         if (text === '') continue;
 
         const cr = colRects[c];
@@ -158,6 +158,7 @@ export class CellTextLayer implements RenderLayer {
       canvasWidth,
       canvasHeight,
       mergeManager,
+      timestamp,
     } = rc;
     const colRects = geometry.computeColumnRects();
     const visibleCols = geometry.getVisibleColumns();
@@ -296,7 +297,7 @@ export class CellTextLayer implements RenderLayer {
         for (const dec of underlayDecorators) {
           ctx.save();
           try {
-            dec.render(ctx, cellData, cellX, y, cellWidth, cellHeight, theme, physRow, c);
+            dec.render(ctx, cellData, cellX, y, cellWidth, cellHeight, theme, physRow, c, timestamp);
           } catch {
             /* skip broken decorator */
           }
@@ -312,7 +313,7 @@ export class CellTextLayer implements RenderLayer {
           if (w > 0) {
             ctx.save();
             try {
-              dec.render(ctx, cellData, lx, y, w, cellHeight, theme, physRow, c);
+              dec.render(ctx, cellData, lx, y, w, cellHeight, theme, physRow, c, timestamp);
             } catch {
               /* skip broken decorator */
             }
@@ -331,7 +332,7 @@ export class CellTextLayer implements RenderLayer {
           if (w > 0) {
             ctx.save();
             try {
-              dec.render(ctx, cellData, rx, y, w, cellHeight, theme, physRow, c);
+              dec.render(ctx, cellData, rx, y, w, cellHeight, theme, physRow, c, timestamp);
             } catch {
               /* skip broken decorator */
             }
@@ -359,7 +360,7 @@ export class CellTextLayer implements RenderLayer {
           for (const dec of overlayDecorators) {
             ctx.save();
             try {
-              dec.render(ctx, cellData, cellX, y, cellWidth, cellHeight, theme, physRow, c);
+              dec.render(ctx, cellData, cellX, y, cellWidth, cellHeight, theme, physRow, c, timestamp);
             } catch {
               /* skip broken decorator */
             }
@@ -396,7 +397,7 @@ export class CellTextLayer implements RenderLayer {
 
       ctx.fillStyle = cellStyle?.textColor ?? theme.colors.cellText;
 
-      const text = renderer.format(rawValue, cellData, physRow, c);
+      const text = renderer.format(rawValue, cellData, physRow, c, col);
       if (text === '') continue;
 
       // Per-cell alignment, wrapping, and indent
@@ -451,7 +452,7 @@ export class CellTextLayer implements RenderLayer {
           for (const dec of overlayDecorators) {
             ctx.save();
             try {
-              dec.render(ctx, cellData, cellX, y, cellWidth, cellHeight, theme, physRow, c);
+              dec.render(ctx, cellData, cellX, y, cellWidth, cellHeight, theme, physRow, c, timestamp);
             } catch {
               /* skip broken decorator */
             }
@@ -493,7 +494,7 @@ export class CellTextLayer implements RenderLayer {
         for (const dec of overlayDecorators) {
           ctx.save();
           try {
-            dec.render(ctx, cellData, cellX, y, cellWidth, cellHeight, theme, physRow, c);
+            dec.render(ctx, cellData, cellX, y, cellWidth, cellHeight, theme, physRow, c, timestamp);
           } catch {
             /* skip broken decorator */
           }

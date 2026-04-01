@@ -38,6 +38,8 @@ function App() {
 
 Select a range, press Ctrl+C to copy, click a destination cell, and press Ctrl+V to paste.
 
+Read-only cells (via `CellData.readOnly` or `ColumnDef.editable: false`) are automatically skipped during paste and cut operations. Copy always works regardless of editability.
+
 ## Listening to Clipboard Events
 
 Subscribe to clipboard events via the engine's EventBus:

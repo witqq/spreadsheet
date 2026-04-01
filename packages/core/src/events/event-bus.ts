@@ -40,7 +40,10 @@ export class EventBus {
   emit<K extends keyof SpreadsheetEvents>(
     event: K,
     ...args: Parameters<SpreadsheetEvents[K]>
-  ): void {
+  ): void;
+  /** Dispatch a dynamic event (plugin-defined custom events). */
+  emit(event: string, ...args: unknown[]): void;
+  emit(event: string, ...args: unknown[]): void {
     const set = this.listeners.get(event);
     if (!set) return;
     for (const handler of set) {

@@ -43,7 +43,9 @@ export interface GridRenderConfig {
   rowCount: number;
   theme: SpreadsheetTheme;
   showRowNumbers: boolean;
+  showColumnHeaders?: boolean;
   showGridLines: boolean;
+  clipGridLinesToData?: boolean;
   selectionManager?: SelectionManager;
   cellTypeRegistry?: CellTypeRegistry;
   /** Cumulative row positions from LayoutEngine (shared reference). */
@@ -57,7 +59,7 @@ export class GridRenderer {
   private readonly pipeline: RenderPipeline;
   private readonly rowCount: number;
   private readonly textMeasureCache: TextMeasureCache;
-  private readonly headerLayer: HeaderLayer;
+  private readonly headerLayer: HeaderLayer | null;
   private readonly emptyStateLayer: EmptyStateLayer;
   private frozenConfig: FrozenPaneConfig | undefined;
   private gridLinesLayer: GridLinesLayer | undefined;
@@ -71,6 +73,7 @@ export class GridRenderer {
       columns: config.columns,
       theme: config.theme,
       showRowNumbers: config.showRowNumbers,
+      showColumnHeaders: config.showColumnHeaders,
       rowPositions: config.rowPositions,
       rowHeights: config.rowHeights,
     });
@@ -90,12 +93,20 @@ export class GridRenderer {
     this.pipeline.addLayer(this.emptyStateLayer);
     // GridLines renders after cell content so it's always on top of plugin fills
     if (config.showGridLines) {
-      this.gridLinesLayer = new GridLinesLayer(config.cellStore, config.dataView);
+      this.gridLinesLayer = new GridLinesLayer(
+        config.cellStore,
+        config.dataView,
+        config.clipGridLinesToData,
+      );
       this.pipeline.addLayer(this.gridLinesLayer);
     }
     // Headers render after grid lines so header backgrounds cover grid lines cleanly
-    this.headerLayer = new HeaderLayer();
-    this.pipeline.addLayer(this.headerLayer);
+    if (config.showColumnHeaders ?? true) {
+      this.headerLayer = new HeaderLayer();
+      this.pipeline.addLayer(this.headerLayer);
+    } else {
+      this.headerLayer = null;
+    }
     if (config.showRowNumbers) {
       this.pipeline.addLayer(new RowNumberLayer());
     }
@@ -164,12 +175,12 @@ export class GridRenderer {
 
   /** Update sort state for header indicators. */
   setSortState(state: HeaderSortState): void {
-    this.headerLayer.setSortState(state);
+    this.headerLayer?.setSortState(state);
   }
 
   /** Update filter state for header indicators. */
   setFilterState(state: HeaderFilterState): void {
-    this.headerLayer.setFilterState(state);
+    this.headerLayer?.setFilterState(state);
   }
 
   /** Set frozen pane configuration for 4-region rendering. */
@@ -207,6 +218,7 @@ export class GridRenderer {
     scrollX: number,
     scrollY: number,
     renderMode: RenderMode = 'full',
+    timestamp?: number,
   ): void {
     this.pipeline.render(
       ctx,
@@ -217,6 +229,7 @@ export class GridRenderer {
       scrollY,
       renderMode,
       this.frozenConfig,
+      timestamp,
     );
   }
 
@@ -230,6 +243,7 @@ export class GridRenderer {
     scrollY: number,
     dirtyRects: DirtyRect[],
     renderMode: RenderMode = 'full',
+    timestamp?: number,
   ): void {
     this.pipeline.renderPartial(
       ctx,
@@ -241,6 +255,7 @@ export class GridRenderer {
       dirtyRects,
       renderMode,
       this.frozenConfig,
+      timestamp,
     );
   }
 }

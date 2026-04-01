@@ -2,97 +2,105 @@
 // Copyright (c) 2025 witqq contributors
 
 /**
- * DatePickerEditor — CellEditor adapter wrapping DatePickerOverlay.
+ * DatePickerEditor — CellEditor for 'date' columns.
  *
- * Registered in CellEditorRegistry for columns with `type: 'date'`.
- * Delegates rendering to DatePickerOverlay with the new CellEditor lifecycle.
+ * Renders a calendar overlay below the target cell. Clicking a day or
+ * pressing Enter commits the date and closes. Extends BaseOverlayEditor
+ * for shared overlay lifecycle and calendar rendering.
  */
 
-import type { SpreadsheetTheme } from '../themes/theme-types';
-import type { ResolvedLocale } from '../locale/resolve-locale';
-import type { EditorCloseReason } from './inline-editor';
-import type {
-  CellEditor,
-  CellEditorContext,
-  CellEditorCommit,
-  CellEditorClose,
-} from './cell-editor';
-import { DatePickerOverlay } from './date-picker-overlay';
+import type { CellValue } from '../types/interfaces';
+import { BaseCalendarOverlayEditor } from './base-calendar-overlay-editor';
+import { formatDate, toDate } from '../utils/date-format';
 
-export class DatePickerEditor implements CellEditor {
+export class DatePickerEditor extends BaseCalendarOverlayEditor {
   readonly id = 'date-picker';
 
-  private overlay: DatePickerOverlay | null = null;
-  private _isOpen = false;
-  private _editingRow = -1;
-  private _editingCol = -1;
-  private closeFn: CellEditorClose | null = null;
-
-  get isOpen(): boolean {
-    return this._isOpen;
+  protected get overlayWidth(): number {
+    return 224;
   }
 
-  get editingRow(): number {
-    return this._editingRow;
+  protected get overlayHeight(): number {
+    return 260;
   }
 
-  get editingCol(): number {
-    return this._editingCol;
+  protected parseValue(value: CellValue): Date | null {
+    return toDate(value, this.column?.dateFormat);
   }
 
-  open(context: CellEditorContext, commitFn: CellEditorCommit, closeFn: CellEditorClose): void {
-    if (this._isOpen) {
-      this.close('programmatic');
-    }
+  protected getAriaLabel(): string {
+    return this.locale?.datePicker?.ariaLabel ?? 'Date picker';
+  }
 
-    this.closeFn = closeFn;
-    this._editingRow = context.row;
-    this._editingCol = context.col;
+  protected initializeState(): void {
+    // No additional state for date-only picker
+  }
 
-    // Create a fresh DatePickerOverlay for each open
-    this.overlay = new DatePickerOverlay({
-      container: context.container,
-      scrollContainer: context.scrollContainer,
-      layoutEngine: context.layoutEngine,
-      scrollManager: context.scrollManager,
-      theme: context.theme,
-      frozenRows: context.frozenRows,
-      frozenColumns: context.frozenColumns,
-      onCommit: commitFn,
-      onClose: (reason: EditorCloseReason) => {
-        this._isOpen = false;
-        this.overlay = null;
-        this.closeFn?.(reason);
+  protected renderContent(): void {
+    this.renderCalendarGrid((day) => this.selectDate(day));
+
+    if (!this.overlay || !this.theme) return;
+
+    // Footer with Today button
+    const footer = document.createElement('div');
+    footer.style.padding = '4px 8px 8px';
+    footer.style.borderTop = `1px solid ${this.theme.colors.gridLine}`;
+    footer.style.textAlign = 'center';
+
+    const todayBtn = this.createFooterButton(
+      this.locale?.datePicker?.today ?? 'Today',
+      () => {
+        const t = new Date();
+        this.viewYear = t.getFullYear();
+        this.viewMonth = t.getMonth();
+        this.selectDate(t.getDate());
       },
-    });
+    );
+    footer.appendChild(todayBtn);
+    this.overlay.appendChild(footer);
+  }
 
-    if (context.locale) {
-      this.overlay.setLocale(context.locale);
+  protected onKeyDown(e: KeyboardEvent): void {
+    e.stopPropagation();
+
+    switch (e.key) {
+      case 'Escape':
+        e.preventDefault();
+        this.close('escape');
+        break;
+      case 'Enter':
+        e.preventDefault();
+        this.selectDate(this.focusedDay);
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        this.moveFocus(-1);
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        this.moveFocus(1);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        this.moveFocus(-7);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        this.moveFocus(7);
+        break;
+      case 'Tab':
+        e.preventDefault();
+        this.selectDate(this.focusedDay);
+        break;
     }
-
-    this.overlay.open(context.row, context.col, context.value);
-    this._isOpen = true;
   }
 
-  close(reason: EditorCloseReason): void {
-    if (!this._isOpen || !this.overlay) return;
-    this.overlay.close(reason);
-    // The onClose callback sets _isOpen = false and clears overlay
-  }
-
-  setTheme(theme: SpreadsheetTheme): void {
-    this.overlay?.setTheme(theme);
-  }
-
-  setLocale(locale: ResolvedLocale): void {
-    this.overlay?.setLocale(locale);
-  }
-
-  destroy(): void {
-    if (this._isOpen) {
-      this.close('programmatic');
-    }
-    this.overlay = null;
-    this.closeFn = null;
+  private selectDate(day: number): void {
+    const date = new Date(this.viewYear, this.viewMonth, day);
+    const commitStr = this.column?.dateFormat
+      ? formatDate(date, this.column.dateFormat)
+      : `${this.viewYear}-${String(this.viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    this.commitFn?.(this._editingRow, this._editingCol, this.originalValue, commitStr);
+    this.close('enter');
   }
 }

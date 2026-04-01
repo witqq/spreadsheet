@@ -36,6 +36,7 @@ function createTestSetup() {
     commandManager,
     eventBus,
     isEditing,
+    isCellEditable: () => true,
     onDataChange,
   });
   clipboardManager.attach(container);
@@ -302,7 +303,12 @@ describe('ClipboardManager', () => {
       setup.container.dispatchEvent(
         createClipboardEvent('paste', { 'text/plain': 'A\tB\nC\tD' }),
       );
-      expect(handler).toHaveBeenCalledWith({ rowCount: 2, colCount: 2 });
+      expect(handler).toHaveBeenCalledWith({
+        rowCount: 2,
+        colCount: 2,
+        startRow: 3,
+        startCol: 0,
+      });
     });
 
     it('does not intercept when editing', () => {

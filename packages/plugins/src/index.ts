@@ -50,3 +50,22 @@ export {
   PROGRESSIVE_LOADER_PLUGIN_NAME,
 } from '../progressive-loader/src/index';
 export type { ProgressiveLoaderConfig } from '../progressive-loader/src/index';
+export {
+  DecoratorsPlugin,
+  DECORATORS_PLUGIN_NAME,
+  TreeExpanderDecorator,
+  TREE_TOGGLE_HIT_ZONE,
+  SortIconDecorator,
+  SORT_HIT_ZONE,
+  ProgressBarDecorator,
+  LinkDecorator,
+  LINK_HIT_ZONE,
+  ImageDecorator,
+  SpinnerDecorator,
+} from '../decorators/src/index';
+export type {
+  DecoratorsPluginConfig,
+  SortDirection,
+  ProgressBarOptions,
+  ImageDecoratorOptions,
+} from '../decorators/src/index';

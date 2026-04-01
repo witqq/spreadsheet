@@ -297,6 +297,80 @@ ref.current?.print();
 | Bundle size | ~800KB min | &lt;300KB gzipped |
 | Dependencies | 0 (but large core) | 0 (core) |
 
+## Context Menu
+
+### Handsontable
+
+```js
+new Handsontable(el, {
+  contextMenu: {
+    items: {
+      'row_above': { name: 'Insert row above' },
+      'row_below': { name: 'Insert row below' },
+      'separator': Handsontable.plugins.ContextMenu.SEPARATOR,
+      'remove_row': { name: 'Remove row' },
+      'custom_action': {
+        name: 'Custom action',
+        callback: function(key, selection) {
+          console.log(selection[0].start.row);
+        },
+        disabled: function() {
+          return this.getSelectedLast()[0] === 0;
+        },
+      },
+    },
+  },
+});
+```
+
+### @witqq/spreadsheet
+
+```ts
+const cm = engine.getContextMenuManager();
+
+cm.registerItem({
+  id: 'insert-row-above',
+  label: 'Insert Row Above',
+  shortcut: 'Ctrl+Shift+I',
+  contexts: ['cell', 'row-number'],
+  action: (ctx) => {
+    // ctx.row, ctx.col, ctx.region, ctx.engine
+    console.log('Insert row above', ctx.row);
+  },
+});
+
+cm.registerItem({
+  id: 'remove-row',
+  label: 'Remove Row',
+  contexts: ['cell', 'row-number'],
+  action: (ctx) => console.log('Remove row', ctx.row),
+  isDisabled: (ctx) => ctx.row === 0,
+});
+
+cm.registerItem({
+  id: 'custom-action',
+  label: 'Custom Action',
+  contexts: ['cell'],
+  action: (ctx) => console.log(ctx.row, ctx.col),
+});
+```
+
+**Key differences:**
+
+| Handsontable | @witqq/spreadsheet |
+|---|---|
+| Configure in constructor `contextMenu.items` | Register via `cm.registerItem()` at any time |
+| `callback(key, selection)` | `action(ctx: MenuActionContext)` |
+| `disabled()` returns boolean | `isDisabled(ctx)` returns boolean |
+| `SEPARATOR` constant | `separator: true` property |
+| Single context (right-click area) | `contexts` array: `'cell'`, `'header'`, `'row-number'`, `'corner'` |
+| No submenu by default | `submenu` array for nested menus |
+| No visibility control | `isVisible(ctx)` to conditionally show/hide |
+
+The `MenuActionContext` provides `row`, `col`, `region`, and `engine` — the engine reference enables full spreadsheet manipulation from within any menu action.
+
+For plugin-based usage: `createContextMenuPlugin` from `@witqq/spreadsheet-plugins`. See [Context Menu guide](/guides/context-menu/).
+
 ## License
 
 - Handsontable: Proprietary (paid) for commercial use

@@ -102,6 +102,14 @@ export interface ClipboardDataEvent {
   colCount: number;
 }
 
+/** Extended paste event with target position. */
+export interface ClipboardPasteEvent extends ClipboardDataEvent {
+  /** Row index where the paste begins (the active cell row at paste time). */
+  startRow: number;
+  /** Column index where the paste begins (the active cell column at paste time). */
+  startCol: number;
+}
+
 // --- Column Resize Events ---
 
 export interface ColumnResizeEvent {
@@ -220,7 +228,7 @@ export interface SpreadsheetEvents {
   // Clipboard events
   clipboardCopy: (event: ClipboardDataEvent) => void;
   clipboardCut: (event: ClipboardDataEvent) => void;
-  clipboardPaste: (event: ClipboardDataEvent) => void;
+  clipboardPaste: (event: ClipboardPasteEvent) => void;
 
   // Column resize events
   columnResize: (event: ColumnResizeEvent) => void;

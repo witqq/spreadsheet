@@ -13,8 +13,9 @@
  * the default text rendering path in CellTextLayer.
  */
 
-import type { CellType, CellValue, CellData } from './interfaces';
+import type { CellType, CellValue, CellData, ColumnDef } from './interfaces';
 import type { SpreadsheetTheme } from '../themes/theme-types';
+import { formatDate, toDate } from '../utils/date-format';
 
 export type CellAlignment = 'left' | 'center' | 'right';
 
@@ -48,7 +49,10 @@ export interface CellDecorator {
     row?: number,
     col?: number,
   ): number;
-  /** Render the decorator in its allocated area. */
+  /**
+   * Render the decorator in its allocated area.
+   * For animated decorators, `timestamp` is the DOMHighResTimeStamp from rAF.
+   */
   render(
     ctx: CanvasRenderingContext2D,
     cellData: CellData,
@@ -59,6 +63,7 @@ export interface CellDecorator {
     theme: SpreadsheetTheme,
     row?: number,
     col?: number,
+    timestamp?: number,
   ): void;
   /** Optional hit zones relative to the decorator's allocated area. */
   getHitZones?(
@@ -79,7 +84,21 @@ export interface CellDecoratorRegistration {
   decorator: CellDecorator;
   /** Returns true if this decorator should apply to the given cell. */
   appliesTo: (row: number, col: number, cellData: CellData) => boolean;
+  /**
+   * When true, signals that this decorator performs frame-based animation.
+   * The RenderScheduler will maintain a continuous rAF loop while any
+   * animated decorator is registered.
+   */
+  animated?: boolean;
 }
+
+/**
+ * Padding specification for expanding the interactive area of a hit zone
+ * beyond its visual bounds. Accepts a uniform number or per-side values.
+ */
+export type HitZonePadding =
+  | number
+  | { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number };
 
 /** A rectangular interactive area within a cell for sub-cell hit testing. */
 export interface HitZone {
@@ -95,11 +114,22 @@ export interface HitZone {
   readonly height: number;
   /** Optional CSS cursor style when hovering this zone. */
   readonly cursor?: string;
+  /**
+   * Optional padding that expands the interactive (hit-test) area beyond the
+   * visual bounds. Rendering is unaffected — only click/hover detection grows.
+   */
+  readonly padding?: HitZonePadding;
 }
 
 export interface CellTypeRenderer {
   /** Format a cell value for text display. */
-  format(value: CellValue, cellData?: CellData, row?: number, col?: number): string;
+  format(
+    value: CellValue,
+    cellData?: CellData,
+    row?: number,
+    col?: number,
+    columnDef?: ColumnDef,
+  ): string;
   /** Text alignment for this cell type. */
   align: CellAlignment;
   /**
@@ -192,8 +222,13 @@ const booleanRenderer: CellTypeRenderer = {
 };
 
 const dateRenderer: CellTypeRenderer = {
-  format: (value) => {
+  format: (value, _cellData?, _row?, _col?, columnDef?) => {
     if (value == null) return '';
+    if (columnDef?.dateFormat) {
+      const date = toDate(value, columnDef.dateFormat);
+      if (date) return formatDate(date, columnDef.dateFormat);
+      return String(value);
+    }
     if (value instanceof Date) {
       return value.toLocaleDateString('en-US');
     }
@@ -213,6 +248,8 @@ export class CellTypeRegistry {
   private readonly renderers = new Map<CellType, CellTypeRenderer>();
   private readonly decoratorRegistrations: CellDecoratorRegistration[] = [];
   private formatLocale: string = 'en-US';
+  private animatedCount = 0;
+  private onAnimatedChange: ((hasAnimated: boolean) => void) | null = null;
 
   constructor() {
     // Register built-in types
@@ -245,8 +282,13 @@ export class CellTypeRegistry {
       align: 'right',
     });
     this.renderers.set('date', {
-      format: (value) => {
+      format: (value, _cellData?, _row?, _col?, columnDef?) => {
         if (value == null) return '';
+        if (columnDef?.dateFormat) {
+          const date = toDate(value, columnDef.dateFormat);
+          if (date) return formatDate(date, columnDef.dateFormat);
+          return String(value);
+        }
         if (value instanceof Date) return value.toLocaleDateString(loc);
         if (typeof value === 'string') {
           const parsed = new Date(value);
@@ -274,22 +316,41 @@ export class CellTypeRegistry {
     return 'string';
   }
 
+  /** Set callback for when animated decorator presence changes. */
+  setAnimatedChangeCallback(callback: ((hasAnimated: boolean) => void) | null): void {
+    this.onAnimatedChange = callback;
+  }
+
+  /** Whether any registered decorator is animated. */
+  hasAnimatedDecorators(): boolean {
+    return this.animatedCount > 0;
+  }
+
   /** Add a cell decorator with an applicability predicate. Replaces existing decorator with same ID. */
   addDecorator(registration: CellDecoratorRegistration): void {
     const existingIdx = this.decoratorRegistrations.findIndex(
       (r) => r.decorator.id === registration.decorator.id,
     );
     if (existingIdx >= 0) {
+      const old = this.decoratorRegistrations[existingIdx];
+      if (old.animated && !registration.animated) this.animatedCount--;
+      if (!old.animated && registration.animated) this.animatedCount++;
       this.decoratorRegistrations[existingIdx] = registration;
     } else {
+      if (registration.animated) this.animatedCount++;
       this.decoratorRegistrations.push(registration);
     }
+    this.onAnimatedChange?.(this.animatedCount > 0);
   }
 
   /** Remove a decorator by its ID. */
   removeDecorator(id: string): void {
     const idx = this.decoratorRegistrations.findIndex((r) => r.decorator.id === id);
-    if (idx >= 0) this.decoratorRegistrations.splice(idx, 1);
+    if (idx >= 0) {
+      if (this.decoratorRegistrations[idx].animated) this.animatedCount--;
+      this.decoratorRegistrations.splice(idx, 1);
+      this.onAnimatedChange?.(this.animatedCount > 0);
+    }
   }
 
   /** Get decorators applicable to a specific cell. */

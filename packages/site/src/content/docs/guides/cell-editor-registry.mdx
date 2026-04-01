@@ -63,7 +63,7 @@ interface CellEditor {
   readonly editingRow: number;
   readonly editingCol: number;
 
-  open(context: CellEditorContext, commitFn: CellEditorCommit, closeFn): void;
+  open(context: CellEditorContext, commitFn: CellEditorCommit, closeFn: CellEditorClose): void;
   close(reason: EditorCloseReason): void;
   setTheme(theme: SpreadsheetTheme): void;
   setLocale(locale: ResolvedLocale): void;
@@ -115,6 +115,124 @@ The `reason` parameter in `close()` tells the engine how to handle focus after c
 ## Theme and Locale Propagation
 
 When `engine.setTheme()` or `engine.setLocale()` is called, the registry propagates the change to all registered editors via `setTheme()` / `setLocale()`.
+
+## Priority-Based Override Patterns
+
+Priority determines which editor wins when multiple matchers match the same cell. Higher numbers are checked first.
+
+### Override by Column Key
+
+```ts
+const registry = engine.getCellEditorRegistry();
+
+// Default select editor for all 'select' columns (priority 0)
+registry.registerForType(selectEditor, 'select', 0);
+
+// Special select editor for the 'country' column (priority 10 — wins)
+registry.register(
+  countrySelectEditor,
+  (column) => column.key === 'country',
+  10,
+);
+```
+
+### Override by Cell Value
+
+```ts
+// Currency editor for number columns that have currency data
+registry.register(
+  currencyEditor,
+  (column, value) => column.type === 'number' && column.key?.startsWith('price'),
+  5,
+);
+```
+
+### Override by Metadata
+
+```ts
+// Color picker for cells with a 'color' metadata flag
+registry.register(
+  colorPickerEditor,
+  (column, value) => column.metadata?.editorType === 'color',
+  15,
+);
+```
+
+## Creating Custom Overlay Editors
+
+Extend `BaseOverlayEditor` for editors that render as a positioned overlay panel below the cell. `BaseOverlayEditor` provides:
+
+- Overlay positioning relative to the cell (flips above if not enough space below)
+- Auto-close on outside click
+- Auto-close on scroll for non-frozen cells
+- Theme and locale propagation
+- Focus management and z-index (50)
+
+### Abstract Methods to Implement
+
+| Method | Description |
+|---|---|
+| `get overlayWidth(): number` | Width of the overlay panel in pixels |
+| `get overlayHeight(): number` | Height of the overlay panel in pixels |
+| `getAriaLabel(): string` | Accessibility label for the overlay dialog |
+| `initializeFromValue(value: CellValue): void` | Set initial state from cell value |
+| `renderContent(): void` | Build DOM content inside `this.overlay` |
+| `onKeyDown(e: KeyboardEvent): void` | Handle keyboard events |
+
+### Example: Color Picker Overlay
+
+```ts
+import { BaseOverlayEditor, CellValue } from '@witqq/spreadsheet';
+
+class ColorPickerEditor extends BaseOverlayEditor {
+  readonly id = 'color-picker';
+  private selectedColor = '#000000';
+
+  get overlayWidth() { return 200; }
+  get overlayHeight() { return 150; }
+  getAriaLabel() { return 'Color picker'; }
+
+  initializeFromValue(value: CellValue): void {
+    this.selectedColor = String(value || '#000000');
+  }
+
+  renderContent(): void {
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.value = this.selectedColor;
+    input.style.width = '100%';
+    input.style.height = '100px';
+    input.addEventListener('input', () => {
+      this.selectedColor = input.value;
+    });
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = 'Apply';
+    confirmBtn.style.width = '100%';
+    confirmBtn.addEventListener('click', () => {
+      this.commitFn?.(this.editingRow, this.editingCol, null, this.selectedColor);
+      this.closeFn?.('enter');
+    });
+
+    this.overlay!.appendChild(input);
+    this.overlay!.appendChild(confirmBtn);
+  }
+
+  onKeyDown(e: KeyboardEvent): void {
+    if (e.key === 'Enter') {
+      this.commitFn?.(this.editingRow, this.editingCol, null, this.selectedColor);
+      this.closeFn?.('enter');
+    } else if (e.key === 'Escape') {
+      this.closeFn?.('escape');
+    }
+  }
+}
+
+// Register for columns with type 'color'
+engine.getCellEditorRegistry().registerForType(new ColorPickerEditor(), 'color', 0);
+```
+
+`commitFn` and `closeFn` are protected fields set by `BaseOverlayEditor` during `open()` — use them to commit values and close the editor.
 
 ## See Also
 

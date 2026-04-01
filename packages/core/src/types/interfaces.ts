@@ -29,6 +29,13 @@ export interface CellData {
    * Preserved through all get/set/merge operations. Not used by the engine.
    */
   readonly custom?: Record<string, unknown>;
+  /**
+   * When true, this cell cannot be edited regardless of column or global settings.
+   * When false, this cell can be edited regardless of column settings.
+   * When undefined, editability is determined by column and global config.
+   * Priority chain: CellData.readOnly > ColumnDef.editable > config.editable.
+   */
+  readonly readOnly?: boolean;
 }
 
 /** Optional metadata attached to a cell. */
@@ -41,9 +48,31 @@ export interface CellMetadata {
   readonly link?: { url: string; label?: string };
   /** Comment text shown on hover. */
   readonly comment?: string;
+  /** Tree nesting level for hierarchical data (0-based). */
+  readonly treeLevel?: number;
+  /** Whether the tree node is expanded. */
+  readonly treeExpanded?: boolean;
+  /** Sort direction indicator for header cells. */
+  readonly sortDirection?: 'asc' | 'desc' | 'none';
+  /** Progress value (0–1 fraction or 0–100 percent). */
+  readonly progress?: number;
+  /** Image URL for thumbnail display. */
+  readonly imageUrl?: string;
+  /** Whether the cell is in a loading state (shows spinner). */
+  readonly loading?: boolean;
+  /** Allow plugin-defined metadata fields. */
+  readonly [key: string]: unknown;
 }
 
 /** Built-in and custom cell type identifiers. */
+/** Option for select/dynamicSelect columns. */
+export interface SelectOption {
+  /** Value stored in cell data when this option is selected. */
+  readonly value: string;
+  /** Display label shown in the dropdown. Defaults to value if omitted. */
+  readonly label?: string;
+}
+
 export type CellType =
   | 'string'
   | 'number'
@@ -165,6 +194,10 @@ export interface ColumnDef {
   readonly hidden?: boolean;
   /** Enable text wrapping for cells in this column. */
   readonly wrapText?: boolean;
+  /** Date format pattern for date columns (e.g., 'DD.MM.YYYY', 'MM/DD/YYYY'). */
+  readonly dateFormat?: string;
+  /** Options for select/dynamicSelect columns. */
+  readonly selectOptions?: SelectOption[];
   /** Validation rules applied to all cells in this column. */
   readonly validation?: import('../validation/validation-engine').SpreadsheetValidationRule[];
 }

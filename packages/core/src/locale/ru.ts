@@ -48,6 +48,12 @@ export const ruLocale: Required<SpreadsheetLocale> = {
     ariaLabel: 'Выбор даты и времени',
   },
 
+  select: {
+    ariaLabel: 'Выберите значение',
+    searchPlaceholder: 'Поиск...',
+    noResults: 'Нет результатов',
+  },
+
   filter: {
     equals: 'Равно',
     notEquals: 'Не равно',

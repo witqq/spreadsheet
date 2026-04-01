@@ -53,6 +53,7 @@ export type {
   CellRect,
   CellMetadata,
   ColumnDef,
+  SelectOption,
   Selection,
   MergedRegion,
   ValidationRule,
@@ -83,6 +84,7 @@ export type {
   CellChangeEvent,
   CommandEvent,
   ClipboardDataEvent,
+  ClipboardPasteEvent,
   ColumnResizeEvent,
   RowResizeEvent,
   CellStatusChangeEvent,
@@ -119,6 +121,8 @@ export type {
   FrozenViewportRanges,
 } from './renderer/viewport-manager';
 export { RenderScheduler } from './renderer/render-scheduler';
+export { ImageManager } from './renderer/image-manager';
+export type { ImageManagerOptions } from './renderer/image-manager';
 export { DirtyTracker } from './renderer/dirty-tracker';
 export type { DirtyRegion, DirtyCell, DirtyRect } from './renderer/dirty-tracker';
 export { ScrollManager } from './renderer/scroll-manager';
@@ -179,6 +183,9 @@ export { DatePickerOverlay } from './editing/date-picker-overlay';
 export type { DatePickerConfig } from './editing/date-picker-overlay';
 export { DatePickerEditor } from './editing/date-picker-editor';
 export { DateTimeEditor } from './editing/date-time-editor';
+export { BaseOverlayEditor } from './editing/base-overlay-editor';
+export { BaseCalendarOverlayEditor } from './editing/base-calendar-overlay-editor';
+export { SelectEditor } from './editing/select-editor';
 export { CellEditorRegistry } from './editing/cell-editor-registry';
 export type {
   CellEditor,
@@ -201,6 +208,7 @@ export type {
   CellTypeRenderer,
   CellAlignment,
   HitZone,
+  HitZonePadding,
   CellDecorator,
   CellDecoratorPosition,
   CellDecoratorRegistration,
@@ -251,9 +259,10 @@ export type {
 
 // Merge
 export { MergeManager } from './merge/merge-manager';
+export type { MergeValidationError, SetRegionsResult } from './merge/merge-manager';
 
 // Context Menu
-export { ContextMenuManager } from './context-menu/context-menu-manager';
+export { ContextMenuManager, DEFAULT_MENU_ITEM_IDS } from './context-menu/context-menu-manager';
 export type {
   ContextMenuItem,
   MenuContext,
@@ -261,6 +270,9 @@ export type {
   ContextMenuManagerConfig,
 } from './context-menu/context-menu-manager';
 export { createDefaultMenuItems } from './context-menu/default-items';
+
+// Date Format Utilities
+export { formatDate, parseDateString, toDate } from './utils/date-format';
 
 // ARIA Accessibility
 export { AriaManager } from './aria/aria-manager';

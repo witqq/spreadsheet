@@ -3,6 +3,18 @@
 
 import type { MergedRegion } from '../types/interfaces';
 
+/** Result of a single region that failed validation in setRegions(). */
+export interface MergeValidationError {
+  readonly region: MergedRegion;
+  readonly error: string;
+}
+
+/** Result returned by setRegions(). */
+export interface SetRegionsResult {
+  readonly accepted: ReadonlyArray<MergedRegion>;
+  readonly rejected: ReadonlyArray<MergeValidationError>;
+}
+
 function cellKey(row: number, col: number): string {
   return `${row}:${col}`;
 }
@@ -87,6 +99,37 @@ export class MergeManager {
   clearAll(): void {
     this.spatialIndex.clear();
     this.regions.length = 0;
+  }
+
+  /**
+   * Atomically replace all merge regions.
+   *
+   * Clears existing regions, validates each new region (size, overlap within
+   * the new set, frozen pane boundaries), and adds valid ones. Returns which
+   * regions were accepted and which were rejected with reasons.
+   */
+  setRegions(
+    regions: ReadonlyArray<MergedRegion>,
+    frozenRows = 0,
+    frozenCols = 0,
+  ): SetRegionsResult {
+    this.clearAll();
+
+    const accepted: MergedRegion[] = [];
+    const rejected: MergeValidationError[] = [];
+
+    for (const region of regions) {
+      const error = this.validateMerge(region, frozenRows, frozenCols);
+      if (error) {
+        rejected.push({ region, error });
+      } else {
+        this.regions.push(region);
+        this.indexRegion(region);
+        accepted.push(region);
+      }
+    }
+
+    return { accepted, rejected };
   }
 
   /**

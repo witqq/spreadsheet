@@ -27,9 +27,13 @@ export class BackgroundLayer implements RenderLayer {
       mergeManager,
     } = rc;
 
-    // Canvas-wide theme fill
-    ctx.fillStyle = theme.colors.background;
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    // Canvas-wide theme fill (use clearRect for transparent backgrounds)
+    if (theme.colors.background === 'transparent') {
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    } else {
+      ctx.fillStyle = theme.colors.background;
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    }
 
     // Per-cell bgColor fills
     const colRects = geometry.computeColumnRects();

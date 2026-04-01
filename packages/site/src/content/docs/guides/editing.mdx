@@ -40,9 +40,28 @@ function App() {
 }
 ```
 
-## Per-Column Editability
+## Editability Priority Chain
 
-Control which columns are editable through `ColumnDef.editable`:
+Editability resolves through a three-level priority chain: **cell → column → global**. A more specific level always overrides a less specific one.
+
+```
+CellData.readOnly  >  ColumnDef.editable  >  config.editable
+  (cell level)         (column level)         (global level)
+```
+
+### Global Level
+
+Set `editable` on the engine config or React component to control the default for all cells:
+
+```tsx
+<Spreadsheet columns={columns} data={data} editable={true} />
+```
+
+Default: `false` (read-only).
+
+### Column Level
+
+Override the global default per column via `ColumnDef.editable`:
 
 ```tsx
 const columns: ColumnDef[] = [
@@ -52,6 +71,43 @@ const columns: ColumnDef[] = [
   { key: 'role', title: 'Role', editable: false },
 ];
 ```
+
+When `ColumnDef.editable` is `undefined`, the column inherits the global `editable` setting.
+
+### Cell Level
+
+Override everything per cell via `CellData.readOnly`:
+
+```ts
+// Make a specific cell read-only regardless of column/global settings
+engine.getCellStore().set(row, col, { value: 'locked', readOnly: true });
+
+// Make a specific cell editable even if column is read-only
+engine.getCellStore().set(row, col, { value: 'editable', readOnly: false });
+```
+
+When `CellData.readOnly` is `undefined`, editability falls through to the column level.
+
+### Priority Truth Table
+
+| `config.editable` | `ColumnDef.editable` | `CellData.readOnly` | Result |
+|---|---|---|---|
+| `false` | `undefined` | `undefined` | **Not editable** |
+| `true` | `undefined` | `undefined` | **Editable** |
+| `false` | `true` | `undefined` | **Editable** |
+| `true` | `false` | `undefined` | **Not editable** |
+| any | any | `true` | **Not editable** |
+| any | any | `false` | **Editable** |
+
+### Checking Editability
+
+Use `isCellEditable` to query the resolved editability for any cell:
+
+```ts
+const canEdit = engine.isCellEditable(row, col); // resolves full chain
+```
+
+This method is used internally by the editor, clipboard (paste/cut skip non-editable cells), autofill, and keyboard handler.
 
 ## Editor Close Reasons
 

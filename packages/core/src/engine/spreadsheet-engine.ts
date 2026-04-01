@@ -75,10 +75,12 @@ import { ColumnStretchManager } from '../resize/column-stretch-manager';
 import { CellEditorRegistry } from '../editing/cell-editor-registry';
 import { DatePickerEditor } from '../editing/date-picker-editor';
 import { DateTimeEditor } from '../editing/date-time-editor';
+import { SelectEditor } from '../editing/select-editor';
 import type { CellEditor, CellEditorContext } from '../editing/cell-editor';
 import type { SpreadsheetLocale } from '../locale/locale-types';
 import { resolveLocale } from '../locale/resolve-locale';
 import type { ResolvedLocale } from '../locale/resolve-locale';
+import { ImageManager } from '../renderer/image-manager';
 
 // Plugin API implementation for per-plugin state isolation
 class SpreadsheetPluginAPI implements PluginAPI {
@@ -146,6 +148,10 @@ export interface SpreadsheetEngineConfig {
   showGridLines?: boolean;
   /** Show row number column at left edge (default: true). */
   showRowNumbers?: boolean;
+  /** Show column header row at top edge (default: true). */
+  showColumnHeaders?: boolean;
+  /** Clip grid lines to the last data row/column boundary instead of extending to canvas edges (default: false). */
+  clipGridLinesToData?: boolean;
   /** Visual theme (default: lightTheme). */
   theme?: SpreadsheetTheme;
   /** Enable automatic row height based on cell content (default: false). */
@@ -163,6 +169,7 @@ export class SpreadsheetEngine {
   private layoutEngine: LayoutEngine | null = null;
   private viewportManager: ViewportManager | null = null;
   private renderScheduler: RenderScheduler | null = null;
+  private imageManager: ImageManager;
   private dirtyTracker: DirtyTracker | null = null;
   private scrollManager: ScrollManager | null = null;
 
@@ -213,6 +220,13 @@ export class SpreadsheetEngine {
     this.rowStore = new RowStore();
     this.eventBus = new EventBus();
     this.cellTypeRegistry = new CellTypeRegistry();
+
+    // Create ImageManager for async image loading
+    this.imageManager = new ImageManager({
+      onLoad: () => {
+        if (this.renderScheduler) this.renderScheduler.requestRender();
+      },
+    });
 
     // Create DataView for logical↔physical row mapping
     const rowCount = config.rowCount ?? config.data?.length ?? 0;
@@ -295,6 +309,7 @@ export class SpreadsheetEngine {
     const theme = this.config.theme ?? lightTheme;
     const data = this.config.data ?? [];
     const showRowNumbers = this.config.showRowNumbers ?? true;
+    const showColumnHeaders = this.config.showColumnHeaders ?? true;
     const rowCount = this.config.rowCount ?? data.length;
 
     // Populate CellStore from data array
@@ -323,7 +338,7 @@ export class SpreadsheetEngine {
       columns: this.config.columns,
       rowCount,
       rowHeight: theme.dimensions.rowHeight,
-      headerHeight: theme.dimensions.headerHeight,
+      headerHeight: showColumnHeaders ? theme.dimensions.headerHeight : 0,
       rowNumberWidth: showRowNumbers ? theme.dimensions.rowNumberWidth : 0,
       rowStore: this.rowStore,
     });
@@ -342,7 +357,14 @@ export class SpreadsheetEngine {
 
     // Create render scheduler and dirty tracker
     this.dirtyTracker = new DirtyTracker();
-    this.renderScheduler = new RenderScheduler(() => this.executeRender());
+    this.renderScheduler = new RenderScheduler((ts?: number) => this.executeRender(ts));
+
+    // Wire animation loop to animated decorator presence
+    this.cellTypeRegistry.setAnimatedChangeCallback((hasAnimated) => {
+      if (this.renderScheduler) {
+        this.renderScheduler.setAnimationLoop(hasAnimated);
+      }
+    });
 
     this.gridRenderer = new GridRenderer({
       columns: this.config.columns,
@@ -351,7 +373,9 @@ export class SpreadsheetEngine {
       rowCount,
       theme,
       showRowNumbers,
+      showColumnHeaders,
       showGridLines: this.config.showGridLines ?? true,
+      clipGridLinesToData: this.config.clipGridLinesToData ?? false,
       selectionManager: this.selectionManager,
       cellTypeRegistry: this.cellTypeRegistry,
       rowPositions: this.layoutEngine.getRowPositions(),
@@ -488,6 +512,8 @@ export class SpreadsheetEngine {
     this.cellEditorRegistry.registerForType(datePickerEditor, 'date', 0);
     const dateTimeEditor = new DateTimeEditor();
     this.cellEditorRegistry.registerForType(dateTimeEditor, 'datetime', 0);
+    const selectEditor = new SelectEditor();
+    this.cellEditorRegistry.registerForType(selectEditor, 'select', 0);
     this.cellEditorRegistry.setLocale(this.resolvedLocale);
 
     // Wire merge manager into selection, keyboard navigator, and inline editor
@@ -529,6 +555,7 @@ export class SpreadsheetEngine {
       eventBus: this.eventBus,
       isEditing: () =>
         (this.inlineEditor?.isEditing ?? false) || (this.activeOverlayEditor?.isOpen ?? false),
+      isCellEditable: (row: number, col: number) => this.isCellEditable(row, col),
       onDataChange: () => {
         if (this.dirtyTracker) this.dirtyTracker.markDirty('cell-update');
         if (this.renderScheduler) this.renderScheduler.requestRender();
@@ -640,6 +667,7 @@ export class SpreadsheetEngine {
       rowCount,
       colCount: visibleCols.length,
       mergeManager: this.mergeManager,
+      isCellEditable: (row: number, col: number) => this.isCellEditable(row, col),
     });
     this.autofillManager.attach(this.scrollManager.getElement());
 
@@ -865,8 +893,9 @@ export class SpreadsheetEngine {
     // Type-to-edit: printable character (not Ctrl+key) opens editor with that character
     // Overlay editors (date picker, etc.) use structured input, not free-text
     if (!event.ctrlKey && event.key.length === 1 && this.inlineEditor) {
-      event.originalEvent.preventDefault();
       const { row, col } = this.selectionManager.getSelection().activeCell;
+      if (!this.isCellEditable(row, col)) return;
+      event.originalEvent.preventDefault();
       const visibleCols = this.config.columns.filter((c) => !c.hidden);
       const column = visibleCols[col];
       const physRow = this.dataView.getPhysicalRow(row);
@@ -938,9 +967,31 @@ export class SpreadsheetEngine {
   }
 
   /**
+   * Determine whether a cell is editable based on the priority chain:
+   * CellData.readOnly > ColumnDef.editable > config.editable.
+   */
+  isCellEditable(row: number, col: number): boolean {
+    const globalEditable = this.config.editable ?? false;
+    const visibleCols = this.config.columns.filter((c) => !c.hidden);
+    const column = visibleCols[col];
+    const columnEditable = column?.editable ?? globalEditable;
+
+    const physRow = this.dataView.getPhysicalRow(row);
+    const cellData = this.cellStore.get(physRow, col);
+    if (cellData?.readOnly !== undefined) {
+      return !cellData.readOnly;
+    }
+
+    return columnEditable;
+  }
+
+  /**
    * Open the appropriate editor for a cell — overlay editor from registry, or InlineEditor fallback.
    */
   private openCellEditor(row: number, col: number): void {
+    // Check editability before opening any editor
+    if (!this.isCellEditable(row, col)) return;
+
     // Close any active editor first
     if (this.inlineEditor?.isEditing) {
       this.inlineEditor.commitAndClose('programmatic');
@@ -1242,6 +1293,13 @@ export class SpreadsheetEngine {
       this.canvasManager.destroy();
       this.canvasManager = null;
     }
+
+    // Clean up image manager cache
+    this.imageManager.clear();
+
+    // Disconnect animated decorator callback to avoid stale references
+    this.cellTypeRegistry.setAnimatedChangeCallback(null);
+
     this.gridRenderer = null;
     this.layoutEngine = null;
     this.viewportManager = null;
@@ -1530,7 +1588,7 @@ export class SpreadsheetEngine {
   /**
    * Execute the actual render. Called by RenderScheduler or directly.
    */
-  private executeRender(): void {
+  private executeRender(timestamp?: number): void {
     if (!this.mounted || !this.canvasManager || !this.gridRenderer || !this.viewportManager) return;
 
     // Flush dirty cells before flushing regions (flushCells reads region state)
@@ -1595,12 +1653,13 @@ export class SpreadsheetEngine {
           scrollY,
           dirtyRects,
           renderMode,
+          timestamp,
         );
         return;
       }
     }
 
-    this.gridRenderer.render(ctx, viewport, width, height, scrollX, scrollY, renderMode);
+    this.gridRenderer.render(ctx, viewport, width, height, scrollX, scrollY, renderMode, timestamp);
 
     // Post-render: measure visible rows for auto row height
     this.autoMeasureViewport(ctx, viewport, width, height, scrollX, scrollY);
@@ -1718,6 +1777,14 @@ export class SpreadsheetEngine {
 
   getScrollManager(): ScrollManager | null {
     return this.scrollManager;
+  }
+
+  /**
+   * Convenience method that returns the scroll container DOM element directly.
+   * Equivalent to `getScrollManager()?.getElement() ?? null`.
+   */
+  getScrollContainer(): HTMLDivElement | null {
+    return this.scrollManager?.getElement() ?? null;
   }
 
   getInlineEditor(): InlineEditor | null {
@@ -2063,6 +2130,11 @@ export class SpreadsheetEngine {
     return this.cellTypeRegistry;
   }
 
+  /** Get the ImageManager for async image loading. */
+  getImageManager(): ImageManager {
+    return this.imageManager;
+  }
+
   /** Handle row group toggle by logical row (from hit-test). */
   private handleRowGroupToggle(logicalRow: number, physRow?: number): void {
     const phys = physRow ?? this.dataView.getPhysicalRow(logicalRow);
@@ -2289,6 +2361,114 @@ export class SpreadsheetEngine {
   /** Get current total row count. */
   getRowCount(): number {
     return this.dataView.totalRowCount;
+  }
+
+  /**
+   * Replace all data atomically using row objects.
+   * Clears existing data, loads new rows, updates row count, and schedules a single render.
+   * No intermediate states are visible to event handlers.
+   *
+   * @param data - Array of row objects keyed by column key
+   * @param columnKeys - Column keys to extract from each row. If omitted, derived from current columns config.
+   */
+  setData(data: ReadonlyArray<Record<string, unknown>>, columnKeys?: ReadonlyArray<string>): void {
+    const keys = columnKeys ?? this.config.columns.map((col) => col.key);
+    this.cellStore.clear();
+    this.cellStore.bulkLoadChunk(0, data, keys);
+    this.setRowCount(data.length);
+    if (this.dirtyTracker) this.dirtyTracker.markDirty('full');
+    if (this.autoRowSizeManager) {
+      const rows: number[] = [];
+      for (let i = 0; i < data.length; i++) rows.push(i);
+      this.autoRowSizeManager.markDirtyRows(rows);
+    }
+    if (this.renderScheduler) this.renderScheduler.requestRender();
+  }
+
+  /**
+   * Replace all data atomically using 2D CellData arrays.
+   * Preserves styles, metadata, custom fields, and readOnly flags.
+   * Clears existing data, loads new CellData, updates row count, and schedules a single render.
+   *
+   * @param data - 2D array of CellData objects (rows × columns)
+   * @param startRow - Row offset for the first row of data (default: 0)
+   */
+  setDataCellData(
+    data: ReadonlyArray<ReadonlyArray<CellData | null | undefined>>,
+    startRow = 0,
+  ): void {
+    this.cellStore.clear();
+    this.cellStore.bulkLoadCellData(data, startRow);
+    const totalRows = startRow + data.length;
+    this.setRowCount(totalRows);
+    if (this.dirtyTracker) this.dirtyTracker.markDirty('full');
+    if (this.autoRowSizeManager) {
+      const rows: number[] = [];
+      for (let i = 0; i < data.length; i++) rows.push(startRow + i);
+      this.autoRowSizeManager.markDirtyRows(rows);
+    }
+    if (this.renderScheduler) this.renderScheduler.requestRender();
+  }
+
+  /**
+   * Append rows to existing data without clearing.
+   * Adds new rows after the current last row, updates row count, and schedules a single render.
+   *
+   * @param data - Array of row objects to append
+   * @param columnKeys - Column keys to extract. If omitted, derived from current columns config.
+   */
+  appendRows(
+    data: ReadonlyArray<Record<string, unknown>>,
+    columnKeys?: ReadonlyArray<string>,
+  ): void {
+    if (data.length === 0) return;
+    const keys = columnKeys ?? this.config.columns.map((col) => col.key);
+    const startRow = this.getRowCount();
+    this.cellStore.bulkLoadChunk(startRow, data, keys);
+    this.setRowCount(startRow + data.length);
+    if (this.dirtyTracker) this.dirtyTracker.markDirty('full');
+    if (this.autoRowSizeManager) {
+      const rows: number[] = [];
+      for (let i = 0; i < data.length; i++) rows.push(startRow + i);
+      this.autoRowSizeManager.markDirtyRows(rows);
+    }
+    if (this.renderScheduler) this.renderScheduler.requestRender();
+  }
+
+  /**
+   * Replace a range of rows starting at a specific offset.
+   * Overwrites cells in the target range without clearing other data.
+   * Updates row count if the replacement extends beyond current bounds.
+   *
+   * @param startRow - Row index where replacement begins
+   * @param data - Array of row objects to write at the offset
+   * @param columnKeys - Column keys to extract. If omitted, derived from current columns config.
+   */
+  replaceRows(
+    startRow: number,
+    data: ReadonlyArray<Record<string, unknown>>,
+    columnKeys?: ReadonlyArray<string>,
+  ): void {
+    if (data.length === 0) return;
+    const keys = columnKeys ?? this.config.columns.map((col) => col.key);
+    const colCount = this.config.columns.length;
+    for (let r = startRow; r < startRow + data.length; r++) {
+      for (let c = 0; c < colCount; c++) {
+        this.cellStore.delete(r, c);
+      }
+    }
+    this.cellStore.bulkLoadChunk(startRow, data, keys);
+    const newEnd = startRow + data.length;
+    if (newEnd > this.getRowCount()) {
+      this.setRowCount(newEnd);
+    }
+    if (this.dirtyTracker) this.dirtyTracker.markDirty('full');
+    if (this.autoRowSizeManager) {
+      const rows: number[] = [];
+      for (let i = 0; i < data.length; i++) rows.push(startRow + i);
+      this.autoRowSizeManager.markDirtyRows(rows);
+    }
+    if (this.renderScheduler) this.renderScheduler.requestRender();
   }
 
   /** Update row count across all subsystems. */

@@ -19,6 +19,7 @@ export function resolveLocale(locale?: SpreadsheetLocale): ResolvedLocale {
     contextMenu: { ...enLocale.contextMenu, ...locale.contextMenu },
     datePicker: { ...enLocale.datePicker, ...locale.datePicker },
     dateTimePicker: { ...enLocale.dateTimePicker, ...locale.dateTimePicker },
+    select: { ...enLocale.select, ...locale.select },
     filter: { ...enLocale.filter, ...locale.filter },
     grouping: { ...enLocale.grouping, ...locale.grouping },
     emptyState: { ...enLocale.emptyState, ...locale.emptyState },

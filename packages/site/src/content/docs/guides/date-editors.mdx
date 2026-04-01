@@ -22,7 +22,7 @@ No additional configuration is needed — the editor is registered automatically
 
 ## Date Editor
 
-The `DatePickerEditor` renders a calendar grid inside a `<div role="dialog">`.
+The `DatePickerEditor` extends `BaseOverlayEditor` and renders a calendar grid inside a `<div role="dialog">`.
 
 - **Trigger**: Double-click or Enter on a date cell
 - **Positioning**: Below the cell; flips above if no room below; clamped horizontally to container bounds
@@ -37,7 +37,7 @@ Accepts `Date` objects, ISO strings (`YYYY-MM-DD`), and numeric timestamps.
 
 ## DateTime Editor
 
-The `DateTimeEditor` extends the calendar with hour and minute spin groups.
+The `DateTimeEditor` extends `BaseOverlayEditor` and adds hour and minute spin groups to the calendar.
 
 - **Day click**: Sets the selected date but stays open for time editing
 - **Time inputs**: Two spin groups (hour 0–23, minute 0–59) with ▲/▼ buttons and editable text inputs

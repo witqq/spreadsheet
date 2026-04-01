@@ -24,12 +24,12 @@ type CellValue = string | number | boolean | Date | null;
 ```typescript
 interface CellData {
   readonly value: CellValue;
-  readonly displayValue?: string;    // Override default formatting
-  readonly formula?: string;         // Formula expression (e.g. "=SUM(A1:A10)")
-  readonly style?: CellStyleRef;     // Reference to shared style
-  readonly type?: CellType;          // Cell type for rendering
-  readonly metadata?: CellMetadata;  // Status, links, comments
-  readonly custom?: Record<string, unknown>;  // Extensible user data
+  readonly displayValue?: string; // Override default formatting
+  readonly formula?: string; // Formula expression (e.g. "=SUM(A1:A10)")
+  readonly style?: CellStyleRef; // Reference to shared style
+  readonly type?: CellType; // Cell type for rendering
+  readonly metadata?: CellMetadata; // Status, links, comments
+  readonly custom?: Record<string, unknown>; // Extensible user data
 }
 ```
 
@@ -48,9 +48,19 @@ interface CellMetadata {
 
 ```typescript
 type CellType =
-  | 'string' | 'number' | 'boolean' | 'date' | 'datetime'
-  | 'select' | 'dynamicSelect' | 'formula'
-  | 'link' | 'image' | 'progressBar' | 'rating' | 'badge'
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'datetime'
+  | 'select'
+  | 'dynamicSelect'
+  | 'formula'
+  | 'link'
+  | 'image'
+  | 'progressBar'
+  | 'rating'
+  | 'badge'
   | 'custom';
 ```
 
@@ -92,8 +102,8 @@ interface BorderStyle {
 
 ```typescript
 interface CellStyleRef {
-  readonly ref: string;       // Unique key in StylePool
-  readonly style: CellStyle;  // Resolved style object
+  readonly ref: string; // Unique key in StylePool
+  readonly style: CellStyle; // Resolved style object
 }
 ```
 
@@ -138,22 +148,27 @@ interface CellRect {
 
 ```typescript
 interface ColumnDef {
-  readonly key: string;          // Data binding key
-  readonly title: string;        // Header display text
-  readonly width: number;        // Width in pixels
-  readonly minWidth?: number;    // Minimum resize width
-  readonly maxWidth?: number;    // Maximum resize width
-  readonly type?: CellType;      // Cell type for rendering
-  readonly frozen?: boolean;     // Pin to frozen pane
-  readonly sortable?: boolean;   // Enable header click sorting
+  readonly key: string; // Data binding key
+  readonly title: string; // Header display text
+  readonly width: number; // Width in pixels
+  readonly minWidth?: number; // Minimum resize width
+  readonly maxWidth?: number; // Maximum resize width
+  readonly type?: CellType; // Cell type for rendering
+  readonly frozen?: boolean; // Pin to frozen pane
+  readonly sortable?: boolean; // Enable header click sorting
   readonly filterable?: boolean; // Enable filter panel
-  readonly editable?: boolean;   // Allow inline editing
-  readonly resizable?: boolean;  // Allow drag-to-resize
-  readonly hidden?: boolean;     // Hide from display and print
-  readonly wrapText?: boolean;   // Enable text wrapping
+  readonly editable?: boolean; // Allow inline editing
+  readonly resizable?: boolean; // Allow drag-to-resize
+  readonly hidden?: boolean; // Hide from display and print
+  readonly wrapText?: boolean; // Enable text wrapping
+  readonly dateFormat?: string; // Date format pattern (e.g. 'DD.MM.YYYY')
   readonly validation?: SpreadsheetValidationRule[]; // Cell validation rules
 }
 ```
+
+`dateFormat` applies to columns with `type: 'date'` or `'datetime'`. Supported tokens: `YYYY` (4-digit year), `MM` (2-digit month), `DD` (2-digit day). When set, overrides locale-based date formatting for display and editor commit values. When not set, falls back to `toLocaleDateString()` with the current format locale.
+
+Supported patterns: `'YYYY-MM-DD'`, `'DD.MM.YYYY'`, `'MM/DD/YYYY'`, `'DD/MM/YYYY'`.
 
 ## Selection Types
 
@@ -178,8 +193,30 @@ type SelectionType = 'cell' | 'range' | 'row' | 'column' | 'all';
 interface MergedRegion {
   readonly startRow: number;
   readonly startCol: number;
-  readonly endRow: number;    // inclusive
-  readonly endCol: number;    // inclusive
+  readonly endRow: number; // inclusive
+  readonly endCol: number; // inclusive
+}
+```
+
+### MergeValidationError
+
+Result of a single region that failed validation in `setRegions()`.
+
+```typescript
+interface MergeValidationError {
+  readonly region: MergedRegion;
+  readonly error: string;
+}
+```
+
+### SetRegionsResult
+
+Result returned by `MergeManager.setRegions()`.
+
+```typescript
+interface SetRegionsResult {
+  readonly accepted: ReadonlyArray<MergedRegion>;
+  readonly rejected: ReadonlyArray<MergeValidationError>;
 }
 ```
 
@@ -375,8 +412,8 @@ Column definitions and dimension constants for cumulative position arrays.
 
 ```typescript
 interface ViewportConfig {
-  rowBuffer?: number;   // Default: 10
-  colBuffer?: number;   // Default: 5
+  rowBuffer?: number; // Default: 10
+  colBuffer?: number; // Default: 5
 }
 ```
 
@@ -499,7 +536,7 @@ interface PrintManagerConfig {
   columns: ColumnDef[];
   rowStore: RowStore;
   theme: SpreadsheetTheme;
-  maxPrintRows?: number;  // Default: 10000
+  maxPrintRows?: number; // Default: 10000
 }
 ```
 
@@ -510,7 +547,7 @@ Data sources and row cap for `@media print` DOM table generation.
 ```typescript
 interface CanvasManagerConfig {
   container: HTMLElement;
-  dpr?: number;  // Defaults to window.devicePixelRatio
+  dpr?: number; // Defaults to window.devicePixelRatio
 }
 ```
 
@@ -523,6 +560,7 @@ interface GridGeometryConfig {
   columns: ColumnDef[];
   theme: SpreadsheetTheme;
   showRowNumbers: boolean;
+  showColumnHeaders?: boolean;
   rowPositions?: Float64Array;
   rowHeights?: Float64Array;
 }
@@ -561,6 +599,8 @@ interface GridRenderConfig {
   rowCount: number;
   theme: SpreadsheetTheme;
   showRowNumbers: boolean;
+  showColumnHeaders?: boolean;
+  clipGridLinesToData?: boolean;
   showGridLines: boolean;
   selectionManager?: SelectionManager;
   cellTypeRegistry?: CellTypeRegistry;
@@ -663,10 +703,14 @@ Horizontal text alignment within a cell, used by `CellTypeRenderer`.
 
 ```typescript
 type ComparisonOperator =
-  | 'greaterThan' | 'lessThan'
-  | 'greaterThanOrEqual' | 'lessThanOrEqual'
-  | 'equal' | 'notEqual'
-  | 'between' | 'notBetween';
+  | 'greaterThan'
+  | 'lessThan'
+  | 'greaterThanOrEqual'
+  | 'lessThanOrEqual'
+  | 'equal'
+  | 'notEqual'
+  | 'between'
+  | 'notBetween';
 ```
 
 Comparison operators for conditional formatting value conditions.
@@ -675,8 +719,14 @@ Comparison operators for conditional formatting value conditions.
 
 ```typescript
 type EditorCloseReason =
-  | 'enter' | 'shift-enter' | 'tab' | 'shift-tab'
-  | 'escape' | 'blur' | 'scroll' | 'programmatic';
+  | 'enter'
+  | 'shift-enter'
+  | 'tab'
+  | 'shift-tab'
+  | 'escape'
+  | 'blur'
+  | 'scroll'
+  | 'programmatic';
 ```
 
 Reason the inline editor was closed, determines next-cell navigation direction.
@@ -713,8 +763,14 @@ Result of autofill pattern detection with step increment and source values.
 
 ```typescript
 type HitRegion =
-  | 'cell' | 'header' | 'header-sort-icon' | 'header-filter-icon'
-  | 'row-number' | 'row-group-toggle' | 'corner' | 'outside';
+  | 'cell'
+  | 'header'
+  | 'header-sort-icon'
+  | 'header-filter-icon'
+  | 'row-number'
+  | 'row-group-toggle'
+  | 'corner'
+  | 'outside';
 ```
 
 Region of the grid where a mouse event occurred.
@@ -722,6 +778,10 @@ Region of the grid where a mouse event occurred.
 ### HitZone
 
 ```typescript
+type HitZonePadding =
+  | number
+  | { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number };
+
 interface HitZone {
   readonly id: string;
   readonly x: number;
@@ -729,10 +789,13 @@ interface HitZone {
   readonly width: number;
   readonly height: number;
   readonly cursor?: string;
+  readonly padding?: HitZonePadding;
 }
 ```
 
 Declares a rectangular interactive zone within a cell for sub-cell hit testing. Coordinates are relative to the cell content area. Returned by `CellTypeRenderer.getHitZones()`.
+
+The optional `padding` expands the interactive (hit-test) area beyond the visual bounds. Rendering is unaffected — only click/hover detection grows. Accepts a uniform `number` (all sides) or an object with `{ top, right, bottom, left }`.
 
 ### CellDecoratorPosition
 
@@ -748,9 +811,32 @@ Where a cell decorator renders relative to cell content. `left`/`right` reserve 
 interface CellDecorator {
   readonly id: string;
   readonly position: CellDecoratorPosition;
-  getWidth?(cellData: CellData, cellHeight: number, ctx?: CanvasRenderingContext2D, theme?: SpreadsheetTheme, row?: number, col?: number): number;
-  render(ctx: CanvasRenderingContext2D, cellData: CellData, x: number, y: number, width: number, height: number, theme: SpreadsheetTheme, row?: number, col?: number): void;
-  getHitZones?(width: number, height: number, cellData: CellData, row?: number, col?: number): HitZone[];
+  getWidth?(
+    cellData: CellData,
+    cellHeight: number,
+    ctx?: CanvasRenderingContext2D,
+    theme?: SpreadsheetTheme,
+    row?: number,
+    col?: number,
+  ): number;
+  render(
+    ctx: CanvasRenderingContext2D,
+    cellData: CellData,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    theme: SpreadsheetTheme,
+    row?: number,
+    col?: number,
+  ): void;
+  getHitZones?(
+    width: number,
+    height: number,
+    cellData: CellData,
+    row?: number,
+    col?: number,
+  ): HitZone[];
 }
 ```
 
@@ -784,8 +870,7 @@ const statusDecorator: CellDecoratorRegistration = {
     getWidth: () => 16,
     render: (ctx, cellData, x, y, width, height) => {
       const val = String(cellData.value ?? '');
-      const color = val === 'Active' ? '#63be7b'
-        : val === 'Remote' ? '#5b9bd5' : '#f8696b';
+      const color = val === 'Active' ? '#63be7b' : val === 'Remote' ? '#5b9bd5' : '#f8696b';
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(x + width / 2, y + height / 2, 4, 0, Math.PI * 2);
@@ -808,9 +893,9 @@ Render order: underlay → left → right → text/custom → overlay. Left/righ
 ```typescript
 interface HitTestResult {
   readonly region: HitRegion;
-  readonly row: number;   // -1 if not applicable
-  readonly col: number;   // -1 if not applicable
-  readonly hitZone?: string;       // Hit zone ID if point is inside a declared zone
+  readonly row: number; // -1 if not applicable
+  readonly col: number; // -1 if not applicable
+  readonly hitZone?: string; // Hit zone ID if point is inside a declared zone
   readonly hitZoneCursor?: string; // Cursor style from the matched hit zone
 }
 ```
@@ -1211,7 +1296,7 @@ interface SpreadsheetEvents {
   commandRedo: (event: CommandEvent) => void;
   clipboardCopy: (event: ClipboardDataEvent) => void;
   clipboardCut: (event: ClipboardDataEvent) => void;
-  clipboardPaste: (event: ClipboardDataEvent) => void;
+  clipboardPaste: (event: ClipboardPasteEvent) => void;
   columnResize: (event: ColumnResizeEvent) => void;
   columnResizeStart: (event: { colIndex: number }) => void;
   columnResizeEnd: (event: ColumnResizeEvent) => void;
@@ -1233,6 +1318,17 @@ interface SpreadsheetEvents {
 ```
 
 Map of all public events emitted by `SpreadsheetEngine`. Use `engine.on(eventName, handler)` to subscribe.
+
+### ClipboardPasteEvent
+
+```typescript
+interface ClipboardPasteEvent extends ClipboardDataEvent {
+  startRow: number;
+  startCol: number;
+}
+```
+
+Extended paste event that includes the active cell position at paste time. `startRow`/`startCol` indicate where pasted data begins. Extends `ClipboardDataEvent` which provides `rowCount` and `colCount`.
 
 ## Benchmark Types
 
