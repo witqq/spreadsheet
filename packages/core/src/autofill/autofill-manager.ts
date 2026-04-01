@@ -31,6 +31,8 @@ export interface AutofillManagerConfig {
   rowCount: number;
   colCount: number;
   mergeManager?: MergeManager;
+  /** Returns true when the cell at (visual row, col) is editable. */
+  isCellEditable?: (row: number, col: number) => boolean;
 }
 
 /** Pixel size of the fill handle square. */
@@ -57,6 +59,7 @@ export class AutofillManager {
   private readonly rowCount: number;
   private readonly colCount: number;
   private readonly mergeManager?: MergeManager;
+  private readonly isCellEditable?: (row: number, col: number) => boolean;
 
   private scrollContainer: HTMLElement | null = null;
 
@@ -78,6 +81,7 @@ export class AutofillManager {
     this.rowCount = config.rowCount;
     this.colCount = config.colCount;
     this.mergeManager = config.mergeManager;
+    this.isCellEditable = config.isCellEditable;
   }
 
   attach(scrollContainer: HTMLElement): void {
@@ -355,6 +359,7 @@ export class AutofillManager {
           const physR = this.dataView.getPhysicalRow(r);
           // Skip hidden cells in merged regions in target area
           if (this.mergeManager?.isHiddenCell(physR, c)) continue;
+          if (this.isCellEditable && !this.isCellEditable(r, c)) continue;
           const oldValue = this.cellStore.get(physR, c)?.value ?? null;
           edits.push({ row: physR, col: c, oldValue, newValue: extended[i] });
         }
@@ -380,6 +385,7 @@ export class AutofillManager {
           const physR = this.dataView.getPhysicalRow(r);
           // Skip hidden cells in merged regions in target area
           if (this.mergeManager?.isHiddenCell(physR, c)) continue;
+          if (this.isCellEditable && !this.isCellEditable(r, c)) continue;
           const oldValue = this.cellStore.get(physR, c)?.value ?? null;
           edits.push({ row: physR, col: c, oldValue, newValue: extended[i] });
         }

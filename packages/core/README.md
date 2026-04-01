@@ -73,6 +73,7 @@ Full documentation is available at [spreadsheet.witqq.dev](https://spreadsheet.w
 - [Locale System](docs/guides/locale.md)
 - [Cell Merging](docs/guides/merging.md)
 - [Migration from Handsontable](docs/guides/migration-from-handsontable.md)
+- [Migration Notes](docs/guides/migration-notes.md)
 - [Pivot Tables](docs/guides/pivot.md)
 - [Print Support](docs/guides/print.md)
 - [Column & Row Resize](docs/guides/resize.md)

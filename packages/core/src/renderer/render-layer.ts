@@ -35,6 +35,8 @@ export interface RenderContext {
   paneRegion: PaneRegion;
   /** MergeManager for merged cell lookup during rendering. */
   mergeManager?: MergeManager;
+  /** DOMHighResTimeStamp for animated decorators. Undefined in non-animation renders. */
+  timestamp?: number;
 }
 
 export interface RenderLayer {

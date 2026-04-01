@@ -1,0 +1,189 @@
+---
+title: "Migration Notes"
+description: "Already-solved issues and API usage patterns for consumers migrating from other spreadsheet libraries."
+---
+
+# Migration Notes
+
+This document covers common integration concerns that are already solved in `@witqq/spreadsheet`. Each section shows the correct API usage for features that consumers frequently ask about.
+
+## Custom Per-Cell Data (CellData.custom)
+
+Every cell has an optional `custom` slot for consumer-defined data. The engine never reads or modifies this field — it is preserved through all get/set/merge operations.
+
+```ts
+// Set custom data on a cell
+engine.getCellStore().set(row, col, {
+  value: 'Order #1234',
+  custom: { orderId: 1234, priority: 'high', tags: ['urgent'] },
+});
+
+// Read custom data
+const cell = engine.getCell(row, col);
+const orderId = cell?.custom?.orderId; // 1234
+
+// Custom data survives bulk operations
+engine.getCellStore().bulkLoadCellData([
+  [
+    { value: 'A', custom: { source: 'import' } },
+    { value: 'B', custom: { source: 'manual' } },
+  ],
+]);
+```
+
+**Interface:**
+
+```ts
+interface CellData {
+  readonly value: CellValue;
+  readonly custom?: Record<string, unknown>;
+  // ... other fields
+}
+```
+
+Use `custom` for application-specific metadata: row IDs, validation state, source tracking, feature flags per cell.
+
+## Clipboard Normalization
+
+`ClipboardManager` handles copy/cut/paste automatically with cross-application interop. It normalizes clipboard data between TSV (plain text) and HTML table formats for Excel and Google Sheets compatibility.
+
+```ts
+// Clipboard works automatically when engine is mounted
+// Ctrl+C / Ctrl+X / Ctrl+V are handled by ClipboardManager
+
+// Listen to clipboard events
+engine.on('clipboardCopy', (e) => console.log('Copied', e.rowCount, 'x', e.colCount));
+engine.on('clipboardPaste', (e) => console.log('Pasted', e.rowCount, 'x', e.colCount));
+```
+
+**Automatic value coercion on paste:**
+
+Values pasted from text are coerced: empty strings → `null`, numeric strings → `number`, `"true"`/`"false"` → `boolean`, everything else → `string`.
+
+**Serialization utilities** (for custom clipboard handling):
+
+```ts
+import {
+  serializeToTSV,
+  serializeToHTML,
+  parseTSV,
+  parseHTML,
+} from '@witqq/spreadsheet';
+
+// Convert 2D data to TSV or HTML
+const tsv = serializeToTSV([['A', 1], ['B', 2]]);
+const html = serializeToHTML([['A', 1], ['B', 2]]);
+
+// Parse incoming clipboard data
+const data = parseTSV(clipboardText);        // CellValue[][]
+const htmlData = parseHTML(clipboardHtml);    // CellValue[][] | null
+```
+
+Paste and cut operations respect per-cell editability (`isCellEditable`) and are fully undoable via the command manager.
+
+## Bulk Data Loading (bulkLoadCellData)
+
+`bulkLoadCellData` loads complete `CellData` objects (value, type, style, metadata, custom) from a 2D array. Use it for initial data loading, imports, and large data updates.
+
+```ts
+// Load full CellData objects
+engine.bulkLoadCellData([
+  [
+    { value: 'Alice', type: 'string' },
+    { value: 28, type: 'number' },
+    { value: true, type: 'boolean', readOnly: true },
+  ],
+  [
+    { value: 'Bob', type: 'string' },
+    { value: 35, type: 'number', custom: { department: 'Engineering' } },
+    { value: false, type: 'boolean', readOnly: true },
+  ],
+]);
+
+// Load starting from a specific row
+engine.bulkLoadCellData(newRows, 100); // starts at row 100
+```
+
+**Position mapping:** `data[i][j]` → row `(startRow + i)`, column `j`. Null/undefined entries are skipped.
+
+**Related bulk methods on CellStore:**
+
+```ts
+const store = engine.getCellStore();
+
+// Load from row objects using column keys
+store.bulkLoad(
+  [{ name: 'Alice', age: 28 }, { name: 'Bob', age: 35 }],
+  ['name', 'age'],
+);
+
+// Load a chunk at a specific offset (for progressive loading)
+store.bulkLoadChunk(startRow, rows, columnKeys);
+
+// Generate rows with a factory function (for streaming)
+store.bulkGenerate(startRow, count, columnKeys, (rowIndex) => ({
+  name: `Row ${rowIndex}`,
+  age: Math.floor(Math.random() * 100),
+}));
+```
+
+All bulk methods trigger a single version bump and render cycle regardless of data size.
+
+## Style Deduplication (StylePool)
+
+`StylePool` uses the flyweight pattern to deduplicate cell styles. Multiple cells with identical styles share a single style object in memory. Import and use it directly:
+
+```ts
+import { StylePool } from '@witqq/spreadsheet';
+
+const pool = new StylePool();
+
+// Intern a style — returns a ref string (content hash)
+const ref1 = pool.intern({ bold: true, color: '#333' });
+const ref2 = pool.intern({ bold: true, color: '#333' });
+console.log(ref1 === ref2); // true — same style, same ref
+
+// Resolve a ref back to a style object
+const style = pool.resolve(ref1); // { bold: true, color: '#333' }
+
+// Use refs in CellData
+engine.getCellStore().set(row, col, {
+  value: 'Styled cell',
+  style: { ref: ref1 },
+});
+
+// Check pool size (number of unique styles)
+console.log(pool.size); // 1
+```
+
+**API:**
+
+| Method | Description |
+|---|---|
+| `intern(style: CellStyle): string` | Deduplicate and return ref (hash) |
+| `resolve(ref: string): CellStyle \| undefined` | Look up style by ref |
+| `has(ref: string): boolean` | Check if ref exists |
+| `size` | Number of unique styles |
+| `clear()` | Remove all interned styles |
+
+Style refs are stored as `CellData.style.ref`. The pool freezes all interned style objects to prevent accidental mutation.
+
+## Scroll Container Access (getScrollContainer)
+
+`getScrollContainer()` returns the scrollable `<div>` that wraps the canvas. Use it when integrating external UI elements that need to position relative to the spreadsheet or respond to scroll events.
+
+```ts
+const scrollEl = engine.getScrollContainer();
+
+// Position a custom tooltip relative to the spreadsheet
+scrollEl?.addEventListener('scroll', () => {
+  tooltip.style.display = 'none'; // hide on scroll
+});
+
+// Use for custom overlay positioning
+const rect = scrollEl?.getBoundingClientRect();
+```
+
+Equivalent to `engine.getScrollManager()?.getElement() ?? null`.
+
+The scroll container is used internally by `ClipboardManager` (clipboard event listeners), `InlineEditor` (scroll-close behavior), and all overlay editors for positioning calculations.

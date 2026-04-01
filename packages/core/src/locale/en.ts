@@ -50,6 +50,12 @@ export const enLocale: Required<SpreadsheetLocale> = {
     ariaLabel: 'Date and time picker',
   },
 
+  select: {
+    ariaLabel: 'Select option',
+    searchPlaceholder: 'Search...',
+    noResults: 'No results',
+  },
+
   filter: {
     equals: 'Equals',
     notEquals: 'Not equals',

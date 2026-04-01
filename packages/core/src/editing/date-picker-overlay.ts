@@ -16,6 +16,15 @@ import type { SpreadsheetTheme } from '../themes/theme-types';
 import type { CellValue } from '../types/interfaces';
 import type { EditorCloseReason } from './inline-editor';
 import type { ResolvedLocale } from '../locale/resolve-locale';
+import { formatDate, toDate } from '../utils/date-format';
+import {
+  DAYS_IN_WEEK,
+  WEEK_LABELS,
+  MONTH_NAMES,
+  daysInMonth,
+  firstDayOfMonth,
+  isSameDay,
+} from './calendar-utils';
 
 export interface DatePickerConfig {
   container: HTMLElement;
@@ -27,61 +36,12 @@ export interface DatePickerConfig {
   onClose: (reason: EditorCloseReason) => void;
   frozenRows?: number;
   frozenColumns?: number;
+  dateFormat?: string;
 }
-
-const DAYS_IN_WEEK = 7;
-const WEEK_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
 
 /** Parse a cell value into a Date (local time) or null. */
-function parseDate(value: CellValue): Date | null {
-  if (value instanceof Date && !isNaN(value.getTime())) return value;
-  if (typeof value === 'string') {
-    // Parse YYYY-MM-DD as local date (avoid UTC interpretation)
-    const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (isoMatch) {
-      return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
-    }
-    const d = new Date(value);
-    if (!isNaN(d.getTime())) return d;
-  }
-  if (typeof value === 'number') {
-    const d = new Date(value);
-    if (!isNaN(d.getTime())) return d;
-  }
-  return null;
-}
-
-/** Get the number of days in a month (0-indexed month). */
-function daysInMonth(year: number, month: number): number {
-  return new Date(year, month + 1, 0).getDate();
-}
-
-/** Get day of week (0=Sun) for the first day of a month. */
-function firstDayOfMonth(year: number, month: number): number {
-  return new Date(year, month, 1).getDay();
-}
-
-/** Compare two dates ignoring time. */
-function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+function parseDate(value: CellValue, dateFormat?: string): Date | null {
+  return toDate(value, dateFormat);
 }
 
 export class DatePickerOverlay {
@@ -144,7 +104,7 @@ export class DatePickerOverlay {
     this.currentCol = col;
     this.originalValue = currentValue;
 
-    const parsed = parseDate(currentValue);
+    const parsed = parseDate(currentValue, this.config.dateFormat);
     const today = new Date();
     this.selectedDate = parsed;
     this.viewYear = parsed ? parsed.getFullYear() : today.getFullYear();
@@ -216,11 +176,11 @@ export class DatePickerOverlay {
 
   /** Select a date, commit value, and close. */
   private selectDate(day: number): void {
-    // Format as YYYY-MM-DD using local date components (avoid UTC timezone shift)
-    const mm = String(this.viewMonth + 1).padStart(2, '0');
-    const dd = String(day).padStart(2, '0');
-    const isoStr = `${this.viewYear}-${mm}-${dd}`;
-    this.config.onCommit(this.currentRow, this.currentCol, this.originalValue, isoStr);
+    const date = new Date(this.viewYear, this.viewMonth, day);
+    const commitStr = this.config.dateFormat
+      ? formatDate(date, this.config.dateFormat)
+      : `${this.viewYear}-${String(this.viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    this.config.onCommit(this.currentRow, this.currentCol, this.originalValue, commitStr);
     this.close('enter');
   }
 

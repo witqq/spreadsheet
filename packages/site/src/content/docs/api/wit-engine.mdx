@@ -125,6 +125,18 @@ See [Per-Cell Styling](/guides/styling/) for `CellStyle` properties, borders, al
 | `getMergedRegion` | `(row, col) => MergedRegion \| null` | Get merged region containing cell |
 | `getMergeManager` | `() => MergeManager` | Access MergeManager |
 
+### MergeManager Methods
+
+Access via `engine.getMergeManager()`:
+
+| Method | Signature | Description |
+|---|---|---|
+| `setRegions` | `(regions, frozenRows?, frozenCols?) => SetRegionsResult` | Atomically replace all merge regions with validation |
+| `merge` | `(region) => boolean` | Merge a single region |
+| `unmerge` | `(startRow, startCol) => boolean` | Unmerge region at anchor |
+| `clearAll` | `() => void` | Remove all regions |
+| `getAllRegions` | `() => ReadonlyArray<MergedRegion>` | Get all active regions |
+
 ## Row Groups
 
 | Method | Signature | Description |
@@ -154,6 +166,17 @@ See [Per-Cell Styling](/guides/styling/) for `CellStyle` properties, borders, al
 | `registerContextMenuItem` | `(item: ContextMenuItem) => void` | Register a menu item |
 | `unregisterContextMenuItem` | `(id: string) => void` | Remove a menu item |
 | `getContextMenuManager` | `() => ContextMenuManager \| null` | Access ContextMenuManager |
+
+### ContextMenuManager Methods
+
+Access via `engine.getContextMenuManager()`:
+
+| Method | Signature | Description |
+|---|---|---|
+| `setItems` | `(items: ContextMenuItem[]) => void` | Atomically replace all custom items, preserving defaults |
+| `registerItem` | `(item: ContextMenuItem) => void` | Register a single item |
+| `unregisterItem` | `(id: string) => void` | Remove item by id |
+| `getItems` | `() => ReadonlyMap<string, ContextMenuItem>` | Get all registered items |
 
 ## Clipboard
 
@@ -210,6 +233,7 @@ See [Event System](/concepts/events/) for a full list of events.
 | `getViewportManager` | `() => ViewportManager \| null` | Access viewport calculation |
 | `getDirtyTracker` | `() => DirtyTracker \| null` | Access dirty tracking |
 | `getScrollManager` | `() => ScrollManager \| null` | Access scroll container |
+| `getScrollContainer` | `() => HTMLDivElement \| null` | Convenience shortcut for `getScrollManager()?.getElement() ?? null` |
 | `getConfig` | `() => SpreadsheetEngineConfig` | Get engine configuration |
 | `getCanvasElement` | `() => HTMLCanvasElement \| null` | Get the canvas DOM element |
 | `getCellTypeRegistry` | `() => CellTypeRegistry` | Access cell type registry |
@@ -246,4 +270,35 @@ engine.on('cellClick', (event) => {
     console.log('Decorator clicked at row', event.row);
   }
 });
+```
+
+## Date Format Utilities
+
+Zero-dependency utilities for formatting and parsing dates with custom patterns. Exported from `@witqq/spreadsheet`.
+
+```ts
+import { formatDate, parseDateString, toDate } from '@witqq/spreadsheet';
+```
+
+| Function | Signature | Description |
+|---|---|---|
+| `formatDate` | `(date: Date, pattern: string) => string` | Format a Date into a pattern string |
+| `parseDateString` | `(value: string, pattern: string) => Date \| null` | Parse a date string using a pattern |
+| `toDate` | `(value: unknown, pattern?: string) => Date \| null` | Parse any value into a Date, trying custom pattern first |
+
+Supported tokens: `YYYY` (4-digit year), `MM` (2-digit month), `DD` (2-digit day).
+
+```ts
+formatDate(new Date(2025, 0, 15), 'DD.MM.YYYY'); // '15.01.2025'
+parseDateString('15.01.2025', 'DD.MM.YYYY');      // Date(2025, 0, 15)
+toDate('2025-01-15', 'DD.MM.YYYY');               // Date(2025, 0, 15)
+```
+
+Use `ColumnDef.dateFormat` to apply per-column date formatting:
+
+```ts
+const columns: ColumnDef[] = [
+  { key: 'created', title: 'Created', width: 120, type: 'date', dateFormat: 'DD.MM.YYYY' },
+  { key: 'updated', title: 'Updated', width: 120, type: 'date', dateFormat: 'YYYY-MM-DD' },
+];
 ```

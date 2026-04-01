@@ -54,6 +54,18 @@ interface MenuLevel {
 const SUBMENU_OPEN_DELAY = 200;
 const SUBMENU_CLOSE_DELAY = 150;
 
+/** IDs of built-in default menu items that setItems() preserves. */
+export const DEFAULT_MENU_ITEM_IDS = new Set([
+  'cut',
+  'copy',
+  'paste',
+  'sort-asc',
+  'sort-desc',
+  'insert-row-above',
+  'insert-row-below',
+  'delete-row',
+]);
+
 export class ContextMenuManager {
   private readonly container: HTMLElement;
   private readonly engine: SpreadsheetEngine;
@@ -103,20 +115,30 @@ export class ContextMenuManager {
   /** Update locale for runtime locale switching. Replaces default items with new locale strings. */
   setLocale(locale: ResolvedLocale): void {
     // Remove old default items and re-register with new locale
-    const defaultIds = new Set([
-      'cut',
-      'copy',
-      'paste',
-      'sort-asc',
-      'sort-desc',
-      'insert-row-above',
-      'insert-row-below',
-      'delete-row',
-    ]);
-    for (const id of defaultIds) {
+    for (const id of DEFAULT_MENU_ITEM_IDS) {
       this.items.delete(id);
     }
     for (const item of createDefaultMenuItems(locale)) {
+      this.items.set(item.id, item);
+    }
+  }
+
+  /**
+   * Atomically replace all user-registered (custom) menu items.
+   *
+   * Default items (cut, copy, paste, sort, row operations) are preserved
+   * and not affected. Accepts an array of custom items and replaces the
+   * entire custom items registry in one operation.
+   */
+  setItems(items: ReadonlyArray<ContextMenuItem>): void {
+    // Remove all non-default items
+    for (const id of this.items.keys()) {
+      if (!DEFAULT_MENU_ITEM_IDS.has(id)) {
+        this.items.delete(id);
+      }
+    }
+    // Register new custom items
+    for (const item of items) {
       this.items.set(item.id, item);
     }
   }

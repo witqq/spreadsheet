@@ -11,23 +11,25 @@ The core engine accepts the following configuration:
 
 ```ts
 interface SpreadsheetEngineConfig {
-  columns: ColumnDef[];           // Required. Column definitions.
+  columns: ColumnDef[]; // Required. Column definitions.
   data?: Record<string, unknown>[]; // Initial row data.
-  rowCount?: number;              // Total row count (for virtual scrolling without full data).
-  width?: number | string;        // Container width. Number (px) or CSS string.
-  height?: number | string;       // Container height. Number (px) or CSS string.
-  editable?: boolean;             // Enable cell editing. Default: false.
-  sortable?: boolean;             // Enable column sorting. Default: false.
-  frozenRows?: number;            // Number of rows to freeze at the top.
-  frozenColumns?: number;         // Number of columns to freeze on the left.
-  rowHeight?: number;             // Row height in pixels. Default from theme (28).
-  headerHeight?: number;          // Header row height in pixels. Default from theme.
-  showGridLines?: boolean;        // Show cell grid lines. Default: true.
-  showRowNumbers?: boolean;       // Show row number column. Default: true.
-  theme?: SpreadsheetTheme;       // Custom theme object. Default: lightTheme.
+  rowCount?: number; // Total row count (for virtual scrolling without full data).
+  width?: number | string; // Container width. Number (px) or CSS string.
+  height?: number | string; // Container height. Number (px) or CSS string.
+  editable?: boolean; // Enable cell editing. Default: false.
+  sortable?: boolean; // Enable column sorting. Default: false.
+  frozenRows?: number; // Number of rows to freeze at the top.
+  frozenColumns?: number; // Number of columns to freeze on the left.
+  rowHeight?: number; // Row height in pixels. Default from theme (28).
+  headerHeight?: number; // Header row height in pixels. Default from theme.
+  showGridLines?: boolean; // Show cell grid lines. Default: true.
+  showRowNumbers?: boolean; // Show row number column. Default: true.
+  showColumnHeaders?: boolean; // Show column header row. Default: true.
+  clipGridLinesToData?: boolean; // Stop grid lines at data boundary. Default: false.
+  theme?: SpreadsheetTheme; // Custom theme object. Default: lightTheme.
   autoRowHeight?: boolean | AutoRowSizeConfig; // Auto-calculate row heights from content. Default: false. See [Auto Row Height](/guides/auto-row-height/).
   stretchColumns?: 'all' | 'last'; // Stretch columns to fill container width. See [Column Stretch](/guides/column-stretch/).
-  locale?: SpreadsheetLocale;     // Locale for number/date formatting and UI labels. See [Locale System](/guides/locale/).
+  locale?: SpreadsheetLocale; // Locale for number/date formatting and UI labels. See [Locale System](/guides/locale/).
 }
 ```
 
@@ -37,19 +39,19 @@ Each column is defined with a `ColumnDef` object:
 
 ```ts
 interface ColumnDef {
-  key: string;          // Unique column identifier. Maps to data field.
-  title: string;        // Display title in column header.
-  width: number;        // Column width in pixels.
-  minWidth?: number;    // Minimum width when resizing.
-  maxWidth?: number;    // Maximum width when resizing.
-  type?: CellType;      // Cell data type. Default: 'string'.
-  frozen?: boolean;     // Freeze this column to the left.
-  sortable?: boolean;   // Allow sorting on this column. Overrides table-level setting.
+  key: string; // Unique column identifier. Maps to data field.
+  title: string; // Display title in column header.
+  width: number; // Column width in pixels.
+  minWidth?: number; // Minimum width when resizing.
+  maxWidth?: number; // Maximum width when resizing.
+  type?: CellType; // Cell data type. Default: 'string'.
+  frozen?: boolean; // Freeze this column to the left.
+  sortable?: boolean; // Allow sorting on this column. Overrides table-level setting.
   filterable?: boolean; // Show filter icon in column header.
-  editable?: boolean;   // Allow editing cells in this column. Overrides table-level setting.
-  resizable?: boolean;  // Allow column width resizing via drag.
-  hidden?: boolean;     // Hide this column from view.
-  wrapText?: boolean;   // Enable text wrapping in this column. See [Text Wrapping](/guides/text-wrapping/).
+  editable?: boolean; // Allow editing cells in this column. Overrides table-level setting.
+  resizable?: boolean; // Allow column width resizing via drag.
+  hidden?: boolean; // Hide this column from view.
+  wrapText?: boolean; // Enable text wrapping in this column. See [Text Wrapping](/guides/text-wrapping/).
   validation?: SpreadsheetValidationRule[]; // Column-level validation rules.
 }
 ```
@@ -58,35 +60,29 @@ interface ColumnDef {
 
 The `type` field accepts one of these values:
 
-| Type | Description |
-|------|-------------|
-| `'string'` | Plain text (default) |
-| `'number'` | Numeric values with right-alignment |
-| `'boolean'` | Checkbox rendering |
-| `'date'` | Date values with locale formatting. See [Date Editors](/guides/date-editors/) |
-| `'datetime'` | Date + time with calendar and time picker. See [Date Editors](/guides/date-editors/) |
-| `'select'` | Dropdown with predefined options |
-| `'dynamicSelect'` | Dropdown with runtime-resolved options |
-| `'formula'` | Computed cell (requires formula plugin) |
-| `'link'` | Clickable hyperlink |
-| `'image'` | Image thumbnail in cell |
-| `'progressBar'` | Horizontal progress bar |
-| `'rating'` | Star rating display |
-| `'badge'` | Colored badge/tag |
-| `'custom'` | Custom renderer via CellTypeRegistry |
+| Type              | Description                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| `'string'`        | Plain text (default)                                                                 |
+| `'number'`        | Numeric values with right-alignment                                                  |
+| `'boolean'`       | Checkbox rendering                                                                   |
+| `'date'`          | Date values with locale formatting. See [Date Editors](/guides/date-editors/)        |
+| `'datetime'`      | Date + time with calendar and time picker. See [Date Editors](/guides/date-editors/) |
+| `'select'`        | Dropdown with predefined options                                                     |
+| `'dynamicSelect'` | Dropdown with runtime-resolved options                                               |
+| `'formula'`       | Computed cell (requires formula plugin)                                              |
+| `'link'`          | Clickable hyperlink                                                                  |
+| `'image'`         | Image thumbnail in cell                                                              |
+| `'progressBar'`   | Horizontal progress bar                                                              |
+| `'rating'`        | Star rating display                                                                  |
+| `'badge'`         | Colored badge/tag                                                                    |
+| `'custom'`        | Custom renderer via CellTypeRegistry                                                 |
 
 ## Common Configurations
 
 ### Read-Only Table
 
 ```tsx
-<Spreadsheet
-  columns={columns}
-  data={data}
-  editable={false}
-  sortable={true}
-  height={500}
-/>
+<Spreadsheet columns={columns} data={data} editable={false} sortable={true} height={500} />
 ```
 
 ### Fully Editable Table
@@ -104,16 +100,54 @@ The `type` field accepts one of these values:
 />
 ```
 
+### Per-Cell Read-Only
+
+Individual cells can be made read-only via the `readOnly` field on `CellData`. This overrides both column-level and table-level editable settings.
+
+The editability priority chain is: `CellData.readOnly` > `ColumnDef.editable` > `config.editable`.
+
+```ts
+// Set a cell as read-only
+engine.getCellStore().set(0, 0, { value: 'Locked', readOnly: true });
+
+// Check if a specific cell is editable
+const canEdit = engine.isCellEditable(row, col);
+```
+
+When a cell is not editable, all editing entry points are blocked: double-click, F2, type-to-edit, paste, cut, and autofill. Copy always works regardless of editability.
+
+### Hiding Column Headers
+
+Set `showColumnHeaders` to `false` to hide the column header row. Data starts from the top of the grid and all header interactions (sort, filter, column resize) are disabled.
+
+```tsx
+<Spreadsheet columns={columns} data={data} showColumnHeaders={false} height={400} />
+```
+
+### Clip Grid Lines to Data
+
+Set `clipGridLinesToData` to `true` so grid lines stop at the last data column/row boundary. Phantom grid lines in empty areas are suppressed. Useful for embedding the grid without the default "infinite sheet" appearance.
+
+```tsx
+<Spreadsheet columns={columns} data={data} clipGridLinesToData={true} height={400} />
+```
+
+### Transparent Background
+
+Set `theme.colors.background` to `'transparent'` to make the canvas background transparent, allowing underlying page elements to show through. Per-cell background colors still render normally.
+
+```tsx
+const transparentTheme = {
+  ...lightTheme,
+  colors: { ...lightTheme.colors, background: 'transparent' },
+};
+<Spreadsheet columns={columns} data={data} theme={transparentTheme} height={400} />
+```
+
 ### Frozen Panes
 
 ```tsx
-<Spreadsheet
-  columns={columns}
-  data={data}
-  frozenRows={1}
-  frozenColumns={2}
-  height={600}
-/>
+<Spreadsheet columns={columns} data={data} frozenRows={1} frozenColumns={2} height={600} />
 ```
 
 Frozen panes create four rendering regions: corner (frozen row + frozen col), frozen-row strip, frozen-col strip, and scrollable main content.
@@ -149,3 +183,35 @@ The React wrapper accepts all `SpreadsheetEngineConfig` fields as props, plus ev
 ```
 
 See [Events](/concepts/events/) for the full list of available callbacks.
+
+## Data Management
+
+Use the engine's data methods to update spreadsheet data after initialization:
+
+```ts
+const engine = spreadsheet.getEngine();
+
+// Full replacement (clears existing data)
+engine.setData([
+  { name: 'Alice', age: 30 },
+  { name: 'Bob', age: 25 },
+]);
+
+// Full replacement with CellData (preserves styles, metadata, readOnly)
+engine.setDataCellData([
+  [{ value: 'Alice', style: { backgroundColor: '#eef' } }, { value: 30 }],
+  [{ value: 'Bob' }, { value: 25 }],
+]);
+
+// Append rows after existing data
+engine.appendRows([{ name: 'Charlie', age: 35 }]);
+
+// Replace specific rows (row 0 in this example)
+engine.replaceRows(0, [{ name: 'Updated', age: 99 }]);
+```
+
+All methods derive column keys from the configured columns. Pass explicit `columnKeys` to override:
+
+```ts
+engine.setData(rows, ['name', 'age']);
+```

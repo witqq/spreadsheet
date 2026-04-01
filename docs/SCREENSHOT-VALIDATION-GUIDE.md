@@ -2,6 +2,86 @@
 
 Screenshot validation captures UI state via Playwright scripts during development workflow steps. An HTML report embeds captured screenshots so the user can approve or reject changes without visiting a running instance.
 
+## When Screenshots Are Mandatory
+
+**Rule: If `has_ui_changes = "yes"`, at least one screenshot MUST be captured. Reporting `screenshots_captured: 0` with `has_ui_changes: "yes"` is a validation failure.**
+
+A step has UI changes if it introduces or modifies any of:
+- Canvas rendering (new layers, cell types, formatters)
+- Overlay editors (dropdowns, date pickers, popups)
+- Context menus, toolbars, or other DOM overlays
+- Theme or styling changes visible to the user
+- Layout changes (column/row sizing, frozen panes)
+
+### Decision Tree
+
+```
+has_ui_changes = "yes"?
+  ├─ YES → Demo page exists for this feature?
+  │   ├─ YES → Write capture script → Capture screenshots → Report
+  │   └─ NO  → Create demo scenario FIRST → Then capture
+  └─ NO  → Skip screenshot validation (screenshots_captured: 0 is OK)
+```
+
+### Creating Demo Scenarios for New Features
+
+When a new UI feature has no demo page, the agent MUST create one before reporting `screenshots_captured: 0`. Options:
+
+1. **Widget bundle standalone page** — use `setupGrid()` from this guide with config that exercises the feature. Fastest option, no Docker needed.
+2. **Add scenario to demo app** — add column/data config to `packages/demo/` that uses the new feature. Requires `npm run dev`.
+3. **Add visual regression scenario** — create a scenario in `packages/demo/src/visual-tests/scenarios/` for permanent coverage.
+
+### Bad vs Good Examples
+
+**❌ BAD: Skipping screenshots for UI component**
+```
+Step: Implement SelectEditor (dropdown overlay)
+Agent reports: has_ui_changes = "yes", screenshots_captured = 0
+Reason given: "Demo page doesn't have select columns"
+```
+This is wrong. The agent has tools (widget bundle, standalone HTML) to create a page.
+
+**✅ GOOD: Creating standalone capture for new UI component**
+```
+Step: Implement SelectEditor (dropdown overlay)
+Agent: No demo page uses select columns → create standalone capture
+  1. Write capture-step-9.ts using widget bundle
+  2. Configure grid with { type: 'select', selectOptions: [...] }
+  3. Simulate click to open dropdown, capture open state
+  4. Simulate keyboard search, capture filtered state
+  5. Report: screenshots_captured = 4, screenshot_issues_count = 0
+```
+
+**❌ BAD: Reporting 0 screenshots without justification**
+```
+screenshots_captured: 0, screenshot_issues_count: 0
+→ Workflow sees 0 issues → skips fix step → generates empty report
+→ User gets report with no visual proof
+```
+
+**✅ GOOD: Non-UI change correctly skips screenshots**
+```
+Step: Refactor LayoutEngine internals (no rendering changes)
+Agent reports: has_ui_changes = "no"
+→ Screenshot validation node skipped entirely (correct)
+```
+
+**❌ BAD: Using demo app absence as excuse**
+```
+"Demo app doesn't have a page for this feature, so I couldn't take screenshots"
+```
+The widget bundle exists specifically for standalone captures without the demo app.
+
+**✅ GOOD: Overlay/editor capture strategy**
+```
+Step: New DateTimeEditor
+Captures:
+  01-grid-datetime-column.png  — grid with datetime values displayed
+  02-editor-open.png           — click cell → editor overlay visible
+  03-editor-time-controls.png  — hour/minute controls in use
+  04-editor-commit.png         — after OK → cell shows new value
+```
+
 ## Workflow Variable
 
 The development workflow stores the path to this file in:
@@ -144,6 +224,16 @@ For each step, capture:
 - Interactive states (editing mode, date picker open, selection active)
 - Data states (cells with values, formatted numbers, dates)
 - Edge cases (empty grid, large dataset, scrolled state)
+
+### Pre-Capture Verification
+
+Before reporting screenshot results to the workflow, verify:
+
+1. **`has_ui_changes` matches reality** — if the step created/modified visual components, it must be `"yes"`
+2. **`screenshots_captured > 0`** when `has_ui_changes = "yes"` — zero captures is always wrong
+3. **All new UI elements have at least one capture** — dropdown open, popup visible, overlay positioned
+4. **Interactive states shown** — don't just capture static grid; show the feature in action
+5. **Capture script is saved** to `screenshots/capture-step-N.ts` for reproducibility
 
 ## Running Scripts
 

@@ -42,6 +42,7 @@ import { DemoExcel } from './scenarios/demo-excel';
 import { DemoEventBus } from './scenarios/demo-event-bus';
 import { DemoPluginShowcase } from './scenarios/demo-plugin-showcase';
 import { DemoHero } from './scenarios/demo-hero';
+import { DemoDecorators } from './scenarios/demo-decorators';
 
 export interface Scenario {
   id: string;
@@ -161,4 +162,9 @@ export const scenarios: Scenario[] = [
     component: DemoPluginShowcase,
   },
   { id: 'demo-hero', description: 'Demo: hero business data table', component: DemoHero },
+  {
+    id: 'demo-decorators',
+    description: 'Demo: cell decorators (tree, sort, progress, link, spinner)',
+    component: DemoDecorators,
+  },
 ];

@@ -7,10 +7,15 @@ import type { DataView } from '../../dataview/data-view';
 import type { BorderStyle } from '../../types/interfaces';
 
 export class GridLinesLayer implements RenderLayer {
+  private readonly clipToData: boolean;
+
   constructor(
     private readonly cellStore?: CellStore,
     private readonly dataView?: DataView,
-  ) {}
+    clipGridLinesToData?: boolean,
+  ) {
+    this.clipToData = clipGridLinesToData ?? false;
+  }
 
   render(rc: RenderContext): void {
     const {
@@ -25,6 +30,24 @@ export class GridLinesLayer implements RenderLayer {
       mergeManager,
     } = rc;
     const colRects = geometry.computeColumnRects();
+
+    // Compute effective line boundaries (clip to data or extend to canvas)
+    let hLineEnd = canvasWidth;
+    let vLineEnd = canvasHeight;
+    if (this.clipToData) {
+      if (colRects.length > 0 && viewport.endRow >= viewport.startRow) {
+        const lastCol = colRects[colRects.length - 1];
+        hLineEnd = lastCol.x + lastCol.width - scrollX;
+        vLineEnd =
+          geometry.headerHeight +
+          geometry.getRowY(viewport.endRow) +
+          geometry.getRowHeight(viewport.endRow) -
+          scrollY;
+      } else if (viewport.endRow < viewport.startRow) {
+        // No data rows — clip vertical lines to header height
+        vLineEnd = geometry.headerHeight;
+      }
+    }
 
     ctx.strokeStyle = theme.colors.gridLine;
     ctx.lineWidth = theme.borders.gridLineWidth;
@@ -56,14 +79,16 @@ export class GridLinesLayer implements RenderLayer {
     // Horizontal lines for visible rows only (includes line above first and below last)
     // When no visible rows (filtered to 0), draw phantom grid lines to fill viewport
     if (viewport.endRow < viewport.startRow) {
-      // No data rows — draw empty grid skeleton
-      const rowH = geometry.getRowY(1); // height of one row
-      if (rowH > 0) {
-        let y = geometry.headerHeight;
-        while (y < canvasHeight) {
-          ctx.moveTo(0, y + 0.5);
-          ctx.lineTo(canvasWidth, y + 0.5);
-          y += rowH;
+      // No data rows — draw empty grid skeleton (skip when clipping to data)
+      if (!this.clipToData) {
+        const rowH = geometry.getRowY(1); // height of one row
+        if (rowH > 0) {
+          let y = geometry.headerHeight;
+          while (y < canvasHeight) {
+            ctx.moveTo(0, y + 0.5);
+            ctx.lineTo(canvasWidth, y + 0.5);
+            y += rowH;
+          }
         }
       }
     } else {
@@ -77,7 +102,7 @@ export class GridLinesLayer implements RenderLayer {
           colRects,
           regions,
           scrollX,
-          canvasWidth,
+          hLineEnd,
           viewport.startCol,
           viewport.endCol,
         );
@@ -89,19 +114,19 @@ export class GridLinesLayer implements RenderLayer {
       const cr = colRects[c];
       const x = cr.x + cr.width - scrollX;
       // Draw line in segments, skipping merged region interiors
-      this.drawVLineWithMergeGaps(ctx, x, c, geometry, regions, scrollY, canvasHeight);
+      this.drawVLineWithMergeGaps(ctx, x, c, geometry, regions, scrollY, vLineEnd);
     }
 
     // Row number gutter right border — fixed at rnWidth (doesn't scroll horizontally)
     if (geometry.rowNumberWidth > 0) {
       const gutterX = geometry.rowNumberWidth;
       ctx.moveTo(gutterX + 0.5, 0);
-      ctx.lineTo(gutterX + 0.5, canvasHeight);
+      ctx.lineTo(gutterX + 0.5, this.clipToData ? vLineEnd : canvasHeight);
     }
 
     // Outer frame: left border in data area (header portion drawn by HeaderLayer)
     ctx.moveTo(0.5, geometry.headerHeight);
-    ctx.lineTo(0.5, canvasHeight);
+    ctx.lineTo(0.5, this.clipToData ? vLineEnd : canvasHeight);
 
     ctx.stroke();
 

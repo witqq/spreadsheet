@@ -52,6 +52,13 @@ export interface SpreadsheetLocale {
     ariaLabel?: string;
   };
 
+  // ─── Select editor ───
+  select?: {
+    ariaLabel?: string;
+    searchPlaceholder?: string;
+    noResults?: string;
+  };
+
   // ─── Filter panel ───
   filter?: {
     equals?: string;

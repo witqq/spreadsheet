@@ -14,6 +14,8 @@ export interface GridGeometryConfig {
   columns: ColumnDef[];
   theme: SpreadsheetTheme;
   showRowNumbers: boolean;
+  /** Show column header row (default: true). */
+  showColumnHeaders?: boolean;
   /** Cumulative row positions from LayoutEngine (shared reference). */
   rowPositions?: Float64Array;
   /** Per-row heights from LayoutEngine (shared reference). */
@@ -24,6 +26,7 @@ export class GridGeometry {
   private readonly columns: ColumnDef[];
   private theme: SpreadsheetTheme;
   private readonly showRowNumbers: boolean;
+  private readonly showColumnHeaders: boolean;
   private cachedColumnRects: CellRect[] | null = null;
   private cachedVisibleColumns: ColumnDef[] | null = null;
   private columnWidthOverrides: number[] | null = null;
@@ -34,6 +37,7 @@ export class GridGeometry {
     this.columns = config.columns;
     this.theme = config.theme;
     this.showRowNumbers = config.showRowNumbers;
+    this.showColumnHeaders = config.showColumnHeaders ?? true;
     this._rowPositions = config.rowPositions ?? null;
     this._rowHeights = config.rowHeights ?? null;
   }
@@ -43,7 +47,7 @@ export class GridGeometry {
   }
 
   get headerHeight(): number {
-    return this.theme.dimensions.headerHeight;
+    return this.showColumnHeaders ? this.theme.dimensions.headerHeight : 0;
   }
 
   /** Default row height from theme. Use getRowHeight(row) for per-row heights. */

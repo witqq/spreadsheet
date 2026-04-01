@@ -21,6 +21,36 @@ import type { DataView } from '../dataview/data-view';
 import type { ColumnDef, CellType, CellValue } from '../types/interfaces';
 import type { RowGroupManager } from '../grouping/row-group-manager';
 import type { CellTypeRegistry } from '../types/cell-type-registry';
+import type { HitZonePadding } from '../types/cell-type-registry';
+
+/** Resolve per-side padding from a HitZonePadding value. */
+function resolvePadding(p: HitZonePadding | undefined): {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+} {
+  if (p == null) return { top: 0, right: 0, bottom: 0, left: 0 };
+  if (typeof p === 'number') return { top: p, right: p, bottom: p, left: p };
+  return p;
+}
+
+/** Check if a point (relX, relY) falls within a zone expanded by its padding. */
+function hitTestZone(
+  relX: number,
+  relY: number,
+  zoneX: number,
+  zoneY: number,
+  zone: { width: number; height: number; padding?: HitZonePadding },
+): boolean {
+  const pad = resolvePadding(zone.padding);
+  return (
+    relX >= zoneX - pad.left &&
+    relX <= zoneX + zone.width + pad.right &&
+    relY >= zoneY - pad.top &&
+    relY <= zoneY + zone.height + pad.bottom
+  );
+}
 
 export interface EventTranslatorConfig {
   /** Scroll container element to attach listeners to. */
@@ -271,12 +301,7 @@ export class EventTranslator {
         const zones = renderer.getHitZones(safeCellData, cellW, cellH, theme, physRow, col);
         if (zones && zones.length > 0) {
           for (const zone of zones) {
-            if (
-              relX >= zone.x &&
-              relX <= zone.x + zone.width &&
-              relY >= zone.y &&
-              relY <= zone.y + zone.height
-            ) {
+            if (hitTestZone(relX, relY, zone.x, zone.y, zone)) {
               return { id: zone.id, cursor: zone.cursor };
             }
           }
@@ -300,12 +325,7 @@ export class EventTranslator {
               for (const zone of zones) {
                 const zoneX = leftOffset + zone.x;
                 const zoneY = zone.y;
-                if (
-                  relX >= zoneX &&
-                  relX <= zoneX + zone.width &&
-                  relY >= zoneY &&
-                  relY <= zoneY + zone.height
-                ) {
+                if (hitTestZone(relX, relY, zoneX, zoneY, zone)) {
                   return { id: zone.id, cursor: zone.cursor };
                 }
               }
@@ -328,12 +348,7 @@ export class EventTranslator {
               for (const zone of zones) {
                 const zoneX = cellW - rightOffset + zone.x;
                 const zoneY = zone.y;
-                if (
-                  relX >= zoneX &&
-                  relX <= zoneX + zone.width &&
-                  relY >= zoneY &&
-                  relY <= zoneY + zone.height
-                ) {
+                if (hitTestZone(relX, relY, zoneX, zoneY, zone)) {
                   return { id: zone.id, cursor: zone.cursor };
                 }
               }
@@ -350,12 +365,7 @@ export class EventTranslator {
           try {
             const zones = dec.getHitZones(cellW, cellH, safeCellData, physRow, col);
             for (const zone of zones) {
-              if (
-                relX >= zone.x &&
-                relX <= zone.x + zone.width &&
-                relY >= zone.y &&
-                relY <= zone.y + zone.height
-              ) {
+              if (hitTestZone(relX, relY, zone.x, zone.y, zone)) {
                 return { id: zone.id, cursor: zone.cursor };
               }
             }

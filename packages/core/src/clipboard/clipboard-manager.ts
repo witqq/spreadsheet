@@ -28,6 +28,8 @@ export interface ClipboardManagerConfig {
   eventBus: EventBus;
   /** Returns true when the inline editor is active (clipboard events pass through). */
   isEditing: () => boolean;
+  /** Returns true when the cell at (visual row, col) is editable. */
+  isCellEditable: (row: number, col: number) => boolean;
   /** Callback to trigger re-render after data changes. */
   onDataChange: () => void;
 }
@@ -39,6 +41,7 @@ export class ClipboardManager {
   private readonly commandManager: CommandManager;
   private readonly eventBus: EventBus;
   private readonly isEditing: () => boolean;
+  private readonly isCellEditable: (row: number, col: number) => boolean;
   private readonly onDataChange: () => void;
   private scrollContainer: HTMLElement | null = null;
 
@@ -49,6 +52,7 @@ export class ClipboardManager {
     this.commandManager = config.commandManager;
     this.eventBus = config.eventBus;
     this.isEditing = config.isEditing;
+    this.isCellEditable = config.isCellEditable;
     this.onDataChange = config.onDataChange;
   }
 
@@ -125,12 +129,13 @@ export class ClipboardManager {
     e.clipboardData?.setData('text/plain', tsv);
     e.clipboardData?.setData('text/html', html);
 
-    // Clear source cells via undoable command
+    // Clear source cells via undoable command (skip read-only cells)
     const range = sel.ranges[0];
     const edits: CellEdit[] = [];
     for (let row = range.startRow; row <= range.endRow; row++) {
       const physRow = this.dataView.getPhysicalRow(row);
       for (let col = range.startCol; col <= range.endCol; col++) {
+        if (!this.isCellEditable(row, col)) continue;
         const cell = this.cellStore.get(physRow, col);
         const oldValue = cell?.value ?? null;
         if (oldValue !== null) {
@@ -183,6 +188,7 @@ export class ClipboardManager {
       for (let c = 0; c < data[r].length; c++) {
         const targetCol = startCol + c;
         if (targetCol > maxCol) break;
+        if (!this.isCellEditable(targetRow, targetCol)) continue;
         const oldCell = this.cellStore.get(physRow, targetCol);
         const oldValue = oldCell?.value ?? null;
         const newValue = data[r][c];
@@ -200,6 +206,8 @@ export class ClipboardManager {
     this.eventBus.emit('clipboardPaste', {
       rowCount: data.length,
       colCount: data[0]?.length ?? 0,
+      startRow,
+      startCol,
     });
   };
 }

@@ -13,8 +13,8 @@ npm install @witqq/spreadsheet-react
 
 **Peer dependencies:**
 
-- `react` ^18.0.0 || ^19.0.0
-- `react-dom` ^18.0.0 || ^19.0.0
+- `react` ^17.0.0 || ^18.0.0 || ^19.0.0
+- `react-dom` ^17.0.0 || ^18.0.0 || ^19.0.0
 
 Requires [`@witqq/spreadsheet`](https://www.npmjs.com/package/@witqq/spreadsheet) (installed automatically).
 

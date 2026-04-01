@@ -55,7 +55,7 @@ Each cell type maps to a renderer:
 
 ```ts
 interface CellTypeRenderer {
-  format(value: CellValue, cellData?: CellData, row?: number, col?: number): string;
+  format(value: CellValue, cellData?: CellData, row?: number, col?: number, columnDef?: ColumnDef): string;
   align: CellAlignment; // 'left' | 'center' | 'right'
   render?: (
     ctx: CanvasRenderingContext2D,
@@ -89,7 +89,7 @@ interface CellTypeRenderer {
 
 | Method | Description |
 |---|---|
-| `format(value, cellData?, row?, col?)` | Convert a `CellValue` to display string. Optional `cellData` provides full cell context |
+| `format(value, cellData?, row?, col?, columnDef?)` | Convert a `CellValue` to display string. Optional `cellData` provides full cell context, `columnDef` provides column definition |
 | `align` | Text alignment within the cell |
 | `render` | Optional custom canvas drawing — receives `CellData` instead of raw value |
 | `measureHeight` | Optional height measurement for auto row sizing |
@@ -180,5 +180,158 @@ Use the custom type in a column:
 const columns: ColumnDef[] = [
   { key: 'progress', title: 'Progress', width: 150, type: 'progressBar' },
   { key: 'rating', title: 'Rating', width: 120, type: 'rating' },
+];
+```
+
+## Hit Zones
+
+Hit zones define interactive sub-cell regions that respond to clicks and show custom cursors. Implement `getHitZones` on a `CellTypeRenderer` to declare clickable areas within a cell.
+
+```ts
+interface HitZone {
+  readonly id: string;
+  readonly x: number;      // relative to cell left edge
+  readonly y: number;      // relative to cell top edge
+  readonly width: number;
+  readonly height: number;
+  readonly cursor?: string; // CSS cursor on hover (e.g. 'pointer')
+  readonly padding?: number | { top: number; right: number; bottom: number; left: number };
+}
+```
+
+The `padding` property expands the interactive area beyond the visual bounds — useful for small click targets.
+
+### Example: Clickable Delete Button
+
+```ts
+engine.getCellTypeRegistry().register('deletable', {
+  format: (value) => String(value),
+  align: 'left',
+  render: (ctx, cellData, x, y, width, height, theme) => {
+    // Render text
+    ctx.fillStyle = theme.colors.cellText;
+    ctx.textAlign = 'left';
+    ctx.fillText(String(cellData.value ?? ''), x + 4, y + height / 2 + 4);
+
+    // Render delete button
+    const btnX = x + width - 24;
+    const btnY = y + (height - 16) / 2;
+    ctx.fillStyle = '#dc3545';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('✕', btnX + 2, btnY + 13);
+  },
+  getHitZones: (cellData, width, height) => [
+    {
+      id: 'delete',
+      x: width - 24,
+      y: (height - 16) / 2,
+      width: 20,
+      height: 16,
+      cursor: 'pointer',
+      padding: 4,
+    },
+  ],
+});
+
+// Listen for hit zone clicks
+engine.on('cellClick', (event) => {
+  if (event.hitZone?.id === 'delete') {
+    console.log('Delete clicked at', event.row, event.col);
+  }
+});
+```
+
+## Auto Row Height with measureHeight
+
+Implement `measureHeight` to support variable row heights based on cell content:
+
+```ts
+engine.getCellTypeRegistry().register('multiline', {
+  format: (value) => String(value),
+  align: 'left',
+  render: (ctx, cellData, x, y, width, height, theme) => {
+    const text = String(cellData.value ?? '');
+    const lines = text.split('\n');
+    const lineHeight = 18;
+    ctx.fillStyle = theme.colors.cellText;
+    ctx.font = theme.fonts.cell;
+    lines.forEach((line, i) => {
+      ctx.fillText(line, x + 4, y + 16 + i * lineHeight);
+    });
+  },
+  measureHeight: (ctx, cellData, width, theme) => {
+    const text = String(cellData.value ?? '');
+    const lineCount = text.split('\n').length;
+    return Math.max(28, lineCount * 18 + 10);
+  },
+});
+```
+
+When `AutoRowSizeManager` is enabled, it calls `measureHeight` on each cell to compute the optimal row height.
+
+## Complete Custom Type Walkthrough
+
+This example creates a `badge` type that renders colored labels:
+
+```ts
+import type { CellTypeRenderer, CellValue, CellData, SpreadsheetTheme } from '@witqq/spreadsheet';
+
+const badgeColors: Record<string, string> = {
+  active: '#198754',
+  inactive: '#6c757d',
+  pending: '#ffc107',
+  error: '#dc3545',
+};
+
+const badgeRenderer: CellTypeRenderer = {
+  // 1. format() converts value to display string (used by clipboard, accessibility)
+  format: (value: CellValue) => String(value ?? ''),
+
+  // 2. align sets text alignment fallback
+  align: 'center',
+
+  // 3. render() draws on canvas — called for every visible cell of this type
+  render: (
+    ctx: CanvasRenderingContext2D,
+    cellData: CellData,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    theme: SpreadsheetTheme,
+  ) => {
+    const label = String(cellData.value ?? '');
+    const color = badgeColors[label.toLowerCase()] ?? theme.colors.cellText;
+
+    // Measure text for pill background
+    ctx.font = '11px sans-serif';
+    const textWidth = ctx.measureText(label).width;
+    const pillWidth = textWidth + 12;
+    const pillHeight = 20;
+    const pillX = x + (width - pillWidth) / 2;
+    const pillY = y + (height - pillHeight) / 2;
+
+    // Draw pill
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(pillX, pillY, pillWidth, pillHeight, 10);
+    ctx.fill();
+
+    // Draw label
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, x + width / 2, pillY + 14);
+  },
+
+  // 4. getHitZones() — optional, not needed for non-interactive types
+  // 5. measureHeight() — optional, not needed for fixed-height types
+};
+
+// Register the type
+engine.getCellTypeRegistry().register('badge', badgeRenderer);
+
+// Use in columns
+const columns: ColumnDef[] = [
+  { key: 'status', title: 'Status', width: 100, type: 'badge' },
 ];
 ```
