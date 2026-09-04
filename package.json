@@ -1,6 +1,8 @@
 {
   "name": "@witqq/spreadsheet-monorepo",
   "private": true,
+  "type": "module",
+  "packageManager": "npm@12.0.2",
   "workspaces": [
     "packages/core",
     "packages/react",
@@ -16,33 +18,44 @@
     "dev": "DOCKER_BUILDKIT=1 docker compose up --build -d && echo 'http://localhost:3150'",
     "dev:stop": "docker compose down",
     "dev:logs": "docker compose logs -f witqq spreadsheet",
-    "build": "npm run build -w packages/core && npm run build -w packages/react && npm run build -w packages/plugins",
+    "build": "npm run build --workspaces --if-present",
     "docs:npm": "tsx scripts/generate-npm-docs.ts",
     "test": "vitest run",
     "benchmark": "vitest run packages/core/tests/benchmark-suite.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:remote": "BASE_URL=http://testold:3150 playwright test",
-    "typecheck": "tsc --build",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint packages/*/src",
     "format": "prettier --write \"packages/*/src/**/*.{ts,tsx}\"",
     "docs": "typedoc",
+    "check:workflows": "node scripts/check-workflows.mjs",
+    "pack:check": "node scripts/check-release-packages.mjs",
+    "verify": "npm run docs:npm && npm run build && npm run typecheck && npm test && npm run lint && npm audit --audit-level=low && npm run check:workflows && npm run pack:check",
     "deploy": "infra-tools auto --server witqq --config .deploy-config.json"
   },
   "devDependencies": {
-    "@playwright/test": "^1.50.0",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@types/node": "^22.0.0",
-    "eslint": "^9.0.0",
-    "jsdom": "^28.1.0",
-    "prettier": "^3.0.0",
-    "tsx": "^4.21.0",
-    "typedoc": "^0.28.17",
-    "typescript": "^5.7.0",
-    "typescript-eslint": "^8.56.1",
-    "vitest": "^3.0.0"
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.62.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.4.1",
+    "@vue/compiler-dom": "^3.5.42",
+    "@vue/server-renderer": "^3.5.42",
+    "eslint": "^10.10.0",
+    "jsdom": "^30.0.1",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.13",
+    "typedoc": "^0.28.20",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.69.0",
+    "vitest": "^5.0.0",
+    "vue": "^3.5.42",
+    "yaml": "2.9.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=24.20.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }

@@ -1,11 +1,13 @@
 # Contributing to witqq spreadsheet
 
-Thank you for your interest in contributing! For full documentation, interactive demos, and API reference, visit the [project website](https://witqq.dev).
+Thank you for your interest in contributing! For full documentation, interactive demos, and API reference, visit the [project website](https://spreadsheet.witqq.dev).
 
 ## Getting Started
 
+Node.js 24.20.0 or newer and npm 12.0.2 are required for development.
+
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/wit-table.git`
+2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/spreadsheet.git`
 3. Install dependencies: `npm install`
 4. Start the development server: `npm run dev`
 
@@ -37,7 +39,7 @@ npm run docs:npm     # Generate npm package docs from site MDX
 
 1. Create a feature branch from `master`
 2. Make your changes with tests
-3. Run `npm run build && npm run test` to verify
+3. Run `npm run verify` to execute the complete release gate
 4. Submit a pull request
 
 ## Code Style

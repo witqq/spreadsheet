@@ -18,13 +18,11 @@
 import type { SpreadsheetPlugin, PluginAPI } from '@witqq/spreadsheet';
 import { ProgressOverlay } from './progress-overlay-layer';
 
-// Ambient type for scheduler.yield() (Chrome 129+, not yet in lib.dom.d.ts)
+// Extend the platform Scheduler type with scheduler.yield() (Chrome 129+).
 declare global {
   interface Scheduler {
     yield(): Promise<void>;
   }
-  // eslint-disable-next-line no-var
-  var scheduler: Scheduler | undefined;
 }
 
 export const PROGRESSIVE_LOADER_PLUGIN_NAME = 'progressive-loader';

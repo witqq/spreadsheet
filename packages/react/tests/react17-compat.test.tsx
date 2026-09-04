@@ -6,6 +6,7 @@
  * and that the build output contains no React 18/19-specific imports.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createMockResizeObserver } from '../../../tests/helpers/mock-resize-observer';
 import { render, cleanup, act } from '@testing-library/react';
 import { createRef, useState, useCallback } from 'react';
 import { Spreadsheet } from '../src/components/Spreadsheet';
@@ -58,11 +59,7 @@ describe('React 17 compatibility', () => {
   ];
 
   beforeEach(() => {
-    global.ResizeObserver = vi.fn().mockImplementation(() => ({
-      observe: vi.fn(),
-      unobserve: vi.fn(),
-      disconnect: vi.fn(),
-    })) as unknown as typeof ResizeObserver;
+    global.ResizeObserver = createMockResizeObserver();
 
     origGetContext = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue(createMockCtx()) as any;

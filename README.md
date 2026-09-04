@@ -2,6 +2,8 @@
 
 Canvas-based spreadsheet and datagrid engine for React, Vue, Angular, and vanilla JS. Zero external dependencies in the core package.
 
+[![CI](https://github.com/witqq/spreadsheet/actions/workflows/ci.yml/badge.svg)](https://github.com/witqq/spreadsheet/actions/workflows/ci.yml)
+
 ```bash
 npm install @witqq/spreadsheet @witqq/spreadsheet-react
 ```
@@ -96,6 +98,8 @@ Key areas:
 
 ## Development
 
+Node.js 24.20.0 or newer is required. Development, CI and release checks use npm 12.0.2.
+
 ```bash
 npm install          # Install dependencies
 npm run build        # Build all packages
@@ -105,6 +109,8 @@ npm run typecheck    # TypeScript strict mode
 npm run lint         # ESLint
 npm run dev          # Docker dev server on port 3150
 ```
+
+Maintainers use the coordinated immutable-asset process in [`docs/RELEASE.md`](docs/RELEASE.md) to release all six public packages together.
 
 ## License
 

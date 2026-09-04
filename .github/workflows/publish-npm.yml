@@ -1,0 +1,172 @@
+name: Publish coordinated npm release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Annotated coordinated release tag, for example v0.6.0
+        required: true
+        type: string
+      manifest_sha256:
+        description: Accepted SHA-256 of spreadsheet-release-VERSION.json
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-publish-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Verify and publish six exact assets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.20.0
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Install an OIDC-capable npm CLI
+        run: npm install --global npm@12.0.2
+
+      - name: Preflight and publish the coordinated release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+
+          tag="${INPUT_TAG}"
+          expected_manifest_sha256="${INPUT_MANIFEST_SHA256}"
+          if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "tag must match vMAJOR.MINOR.PATCH" >&2
+            exit 1
+          fi
+          if [[ ! "${expected_manifest_sha256}" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "manifest_sha256 must contain 64 lowercase hexadecimal characters" >&2
+            exit 1
+          fi
+
+          version="${tag#v}"
+          manifest_name="spreadsheet-release-${version}.json"
+          release_json="${RUNNER_TEMP}/release.json"
+          ref_json="${RUNNER_TEMP}/tag-ref.json"
+          tag_json="${RUNNER_TEMP}/annotated-tag.json"
+          compare_json="${RUNNER_TEMP}/compare.json"
+          manifest="${RUNNER_TEMP}/${manifest_name}"
+          package_rows="${RUNNER_TEMP}/packages.tsv"
+
+          gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" > "${ref_json}"
+          # shellcheck disable=SC2016
+          annotated_tag_sha="$(node -e '
+            const fs = require("node:fs");
+            const ref = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            if (ref.object?.type !== "tag" || !/^[0-9a-f]{40}$/.test(ref.object?.sha)) throw new Error("release tag must be annotated");
+            process.stdout.write(ref.object.sha);
+          ' "${ref_json}")"
+          gh api "repos/${GITHUB_REPOSITORY}/git/tags/${annotated_tag_sha}" > "${tag_json}"
+          # shellcheck disable=SC2016
+          tag_commit="$(node -e '
+            const fs = require("node:fs");
+            const [file, expectedTag] = process.argv.slice(1);
+            const tagObject = JSON.parse(fs.readFileSync(file, "utf8"));
+            if (tagObject.tag !== expectedTag || tagObject.object?.type !== "commit" || !/^[0-9a-f]{40}$/.test(tagObject.object?.sha)) throw new Error("annotated tag identity is invalid");
+            process.stdout.write(tagObject.object.sha);
+          ' "${tag_json}" "${tag}")"
+          gh api "repos/${GITHUB_REPOSITORY}/compare/${tag_commit}...${GITHUB_SHA}" > "${compare_json}"
+          # shellcheck disable=SC2016
+          node -e '
+            const fs = require("node:fs");
+            const [file, expectedBase] = process.argv.slice(1);
+            const comparison = JSON.parse(fs.readFileSync(file, "utf8"));
+            if (!["ahead", "identical"].includes(comparison.status) || comparison.merge_base_commit?.sha !== expectedBase) throw new Error("tag commit is not contained in dispatched master");
+          ' "${compare_json}" "${tag_commit}"
+
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" > "${release_json}"
+          # shellcheck disable=SC2016
+          manifest_url="$(node -e '
+            const fs = require("node:fs");
+            const [file, expectedTag, expectedName, expectedDigest] = process.argv.slice(1);
+            const release = JSON.parse(fs.readFileSync(file, "utf8"));
+            if (release.tag_name !== expectedTag || release.draft || release.prerelease || release.assets?.length !== 7) throw new Error("release state or asset count is invalid");
+            const asset = release.assets.find(candidate => candidate.name === expectedName);
+            if (!asset || asset.state !== "uploaded" || asset.digest !== `sha256:${expectedDigest}` || asset.size <= 0) throw new Error("release manifest asset is invalid");
+            process.stdout.write(asset.browser_download_url);
+          ' "${release_json}" "${tag}" "${manifest_name}" "${expected_manifest_sha256}")"
+          curl --fail --location --proto '=https' --tlsv1.2 --output "${manifest}" "${manifest_url}"
+          actual_manifest_sha256="$(shasum -a 256 "${manifest}" | cut -d ' ' -f 1)"
+          test "${actual_manifest_sha256}" = "${expected_manifest_sha256}"
+
+          # shellcheck disable=SC2016
+          node -e '
+            const fs = require("node:fs");
+            const [manifestFile, releaseFile, rowsFile, expectedTag, expectedVersion, expectedRevision] = process.argv.slice(1);
+            const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8"));
+            const release = JSON.parse(fs.readFileSync(releaseFile, "utf8"));
+            const names = ["@witqq/spreadsheet", "@witqq/spreadsheet-plugins", "@witqq/spreadsheet-react", "@witqq/spreadsheet-vue", "@witqq/spreadsheet-angular", "@witqq/spreadsheet-widget"];
+            if (manifest.schemaVersion !== 1 || manifest.tag !== expectedTag || manifest.version !== expectedVersion || manifest.sourceRevision !== expectedRevision) throw new Error("coordinated manifest identity is invalid");
+            if (JSON.stringify(manifest.publishOrder) !== JSON.stringify(names) || manifest.packages?.length !== names.length) throw new Error("publish order or package count is invalid");
+            const releaseAssets = new Map(release.assets.map(asset => [asset.name, asset]));
+            const rows = manifest.packages.map((item, index) => {
+              const expectedAsset = `${names[index].slice(1).replace("/", "-")}-${expectedVersion}.tgz`;
+              if (item.name !== names[index] || item.version !== undefined || item.asset !== expectedAsset || item.repositoryDirectory !== item.workspace || !/^packages\/(core|plugins|react|vue|angular|widget)$/.test(item.workspace) || !/^[0-9a-f]{64}$/.test(item.sha256) || !Number.isSafeInteger(item.size) || item.size <= 0) throw new Error(`manifest package ${index} is invalid`);
+              const asset = releaseAssets.get(item.asset);
+              if (!asset || asset.state !== "uploaded" || asset.digest !== `sha256:${item.sha256}` || asset.size !== item.size) throw new Error(`release asset ${item.asset} is invalid`);
+              return [index, item.name, item.workspace, item.asset, item.sha256, asset.browser_download_url].join("\t");
+            });
+            const expectedAssets = new Set([`spreadsheet-release-${expectedVersion}.json`, ...manifest.packages.map(item => item.asset)]);
+            if (releaseAssets.size !== expectedAssets.size || [...releaseAssets.keys()].some(name => !expectedAssets.has(name))) throw new Error("release contains an unexpected asset");
+            fs.writeFileSync(rowsFile, `${rows.join("\n")}\n`);
+          ' "${manifest}" "${release_json}" "${package_rows}" "${tag}" "${version}" "${tag_commit}"
+
+          while IFS=$'\t' read -r index package_name workspace asset_name expected_sha256 asset_url; do
+            tarball="${RUNNER_TEMP}/${asset_name}"
+            package_manifest="${RUNNER_TEMP}/package-${index}.json"
+            curl --fail --location --proto '=https' --tlsv1.2 --output "${tarball}" "${asset_url}"
+            actual_sha256="$(shasum -a 256 "${tarball}" | cut -d ' ' -f 1)"
+            test "${actual_sha256}" = "${expected_sha256}"
+            tar -xOf "${tarball}" package/package.json > "${package_manifest}"
+            # shellcheck disable=SC2016
+            node -e '
+              const fs = require("node:fs");
+              const [file, expectedName, expectedVersion, expectedWorkspace] = process.argv.slice(1);
+              const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
+              if (manifest.name !== expectedName || manifest.version !== expectedVersion || manifest.repository?.url !== "https://github.com/witqq/spreadsheet.git" || manifest.repository?.directory !== expectedWorkspace || manifest.engines?.node !== ">=24.20.0" || manifest.publishConfig?.access !== "public") throw new Error("package identity is invalid");
+              if (expectedName !== "@witqq/spreadsheet" && manifest.dependencies?.["@witqq/spreadsheet"] !== `^${expectedVersion}`) throw new Error("internal dependency version is invalid");
+            ' "${package_manifest}" "${package_name}" "${version}" "${workspace}"
+          done < "${package_rows}"
+
+          while IFS=$'\t' read -r index package_name workspace asset_name expected_sha256 asset_url; do
+            existing_url="$(npm view "${package_name}@${version}" dist.tarball --json 2>/dev/null || true)"
+            if [[ -n "${existing_url}" && "${existing_url}" != "null" ]]; then
+              registry_url="$(node -e 'process.stdout.write(JSON.parse(process.argv[1]))' "${existing_url}")"
+              registry_tarball="${RUNNER_TEMP}/registry-preflight-${index}.tgz"
+              curl --fail --location --proto '=https' --tlsv1.2 --output "${registry_tarball}" "${registry_url}"
+              registry_sha256="$(shasum -a 256 "${registry_tarball}" | cut -d ' ' -f 1)"
+              test "${registry_sha256}" = "${expected_sha256}"
+            fi
+          done < "${package_rows}"
+
+          while IFS=$'\t' read -r index package_name workspace asset_name expected_sha256 asset_url; do
+            if npm view "${package_name}@${version}" version --json >/dev/null 2>&1; then
+              echo "${package_name}@${version} already contains the accepted bytes; skipping"
+            else
+              npm publish --access public "${asset_url}"
+            fi
+          done < "${package_rows}"
+
+          while IFS=$'\t' read -r index package_name workspace asset_name expected_sha256 asset_url; do
+            registry_url="$(npm view "${package_name}@${version}" dist.tarball --json | node -e 'let value=""; process.stdin.on("data", chunk => value += chunk); process.stdin.on("end", () => process.stdout.write(JSON.parse(value)));')"
+            registry_tarball="${RUNNER_TEMP}/registry-final-${index}.tgz"
+            curl --fail --location --proto '=https' --tlsv1.2 --output "${registry_tarball}" "${registry_url}"
+            registry_sha256="$(shasum -a 256 "${registry_tarball}" | cut -d ' ' -f 1)"
+            test "${registry_sha256}" = "${expected_sha256}"
+          done < "${package_rows}"

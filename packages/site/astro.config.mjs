@@ -1,17 +1,17 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
-import starlightClientMermaid from '@pasqal-io/starlight-client-mermaid';
+import mermaid from 'astro-mermaid';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
   site: 'https://spreadsheet.witqq.dev',
   integrations: [
+    mermaid({ autoTheme: true, enableLog: false }),
     starlight({
       title: '@witqq/spreadsheet',
       description: 'Canvas spreadsheet engine for the web',
-      plugins: [starlightClientMermaid()],
       components: {
         Footer: './src/components/overrides/Footer.astro',
       },

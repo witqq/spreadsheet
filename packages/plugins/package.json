@@ -1,16 +1,16 @@
 {
   "name": "@witqq/spreadsheet-plugins",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Official plugins for witqq spreadsheet",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/src/index.d.ts"
     }
   },
   "files": [
@@ -27,14 +27,17 @@
     "prepublishOnly": "npm run build && npm run docs:npm"
   },
   "dependencies": {
-    "@witqq/spreadsheet": "^0.5.0"
+    "@witqq/spreadsheet": "^0.6.0"
   },
   "devDependencies": {
-    "vite": "^6.0.0",
-    "vite-plugin-dts": "^4.0.0"
+    "vite": "^8.2.2",
+    "vite-plugin-dts": "^5.1.0"
   },
   "sideEffects": false,
   "license": "BUSL-1.1",
+  "publishConfig": {
+    "access": "public"
+  },
   "author": "witqq contributors <belyiwork@mail.ru>",
   "keywords": [
     "spreadsheet",
@@ -58,6 +61,6 @@
     "url": "https://github.com/witqq/spreadsheet/issues"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=24.20.0"
   }
 }

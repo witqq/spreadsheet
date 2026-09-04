@@ -1,10 +1,14 @@
 # syntax=docker/dockerfile:1
 
-FROM node:20 AS deps
+FROM node:24.20.0-bookworm AS deps
+RUN npm install --global npm@12.0.2
 WORKDIR /app
 COPY package*.json ./
 COPY packages/core/package.json packages/core/
 COPY packages/react/package.json packages/react/
+COPY packages/vue/package.json packages/vue/
+COPY packages/angular/package.json packages/angular/
+COPY packages/widget/package.json packages/widget/
 COPY packages/plugins/package.json packages/plugins/
 COPY packages/server/package.json packages/server/
 COPY packages/demo/package.json packages/demo/
@@ -21,13 +25,16 @@ RUN --mount=type=cache,target=/root/.npm \
 FROM deps AS build
 COPY packages/core/ packages/core/
 COPY packages/react/ packages/react/
+COPY packages/vue/ packages/vue/
+COPY packages/angular/ packages/angular/
+COPY packages/widget/ packages/widget/
 COPY packages/plugins/ packages/plugins/
 COPY packages/server/ packages/server/
 COPY packages/demo/ packages/demo/
 COPY packages/site/ packages/site/
 COPY tsconfig*.json ./
 ARG BUILD_TIME=unknown
-RUN npm run build && npm run build -w packages/demo && npm run build -w packages/site
+RUN npm run build
 
 FROM nginx:alpine
 ARG BUILD_TIME=unknown

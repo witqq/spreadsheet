@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createMockResizeObserver } from '../../../tests/helpers/mock-resize-observer';
 import { SpreadsheetEngine } from '../src/engine/spreadsheet-engine';
 import { CellTypeRegistry } from '../src/types/cell-type-registry';
 import type { ColumnDef } from '../src/types/interfaces';
@@ -53,12 +54,7 @@ describe('SpreadsheetEngine', () => {
 
   beforeEach(() => {
     // Mock ResizeObserver (not available in jsdom)
-    global.ResizeObserver = vi.fn().mockImplementation((callback: ResizeObserverCallback) => ({
-      observe: vi.fn(),
-      unobserve: vi.fn(),
-      disconnect: vi.fn(),
-      _callback: callback,
-    })) as unknown as typeof ResizeObserver;
+    global.ResizeObserver = createMockResizeObserver();
 
     // Mock Canvas getContext since jsdom doesn't implement Canvas 2D
     origGetContext = HTMLCanvasElement.prototype.getContext;
