@@ -6,12 +6,12 @@ export default defineConfig({
   plugins: [
     dts({
       rollupTypes: true,
-      tsconfigPath: resolve(__dirname, 'tsconfig.json'),
+      tsconfigPath: resolve(import.meta.dirname, 'tsconfig.json'),
     }),
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: resolve(import.meta.dirname, 'src/index.ts'),
       name: 'Spreadsheet',
       formats: ['es', 'umd'],
       fileName: 'witqq-spreadsheet-widget',

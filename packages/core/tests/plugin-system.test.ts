@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createMockResizeObserver } from '../../../tests/helpers/mock-resize-observer';
 import { SpreadsheetEngine } from '../src/engine/spreadsheet-engine';
 import type { SpreadsheetPlugin } from '../src/plugins/plugin-types';
 import type { ColumnDef } from '../src/types/interfaces';
@@ -51,11 +52,7 @@ describe('Plugin System', () => {
   let origGetContext: typeof HTMLCanvasElement.prototype.getContext;
 
   beforeEach(() => {
-    global.ResizeObserver = vi.fn().mockImplementation(() => ({
-      observe: vi.fn(),
-      unobserve: vi.fn(),
-      disconnect: vi.fn(),
-    })) as unknown as typeof ResizeObserver;
+    global.ResizeObserver = createMockResizeObserver();
 
     origGetContext = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue(createMockCtx()) as any;

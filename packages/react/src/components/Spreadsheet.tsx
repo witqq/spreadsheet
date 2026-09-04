@@ -280,7 +280,7 @@ function SpreadsheetInner<TRow extends Record<string, unknown> = Record<string, 
       }
     }
 
-    const engine = new SpreadsheetEngine(config as SpreadsheetEngineConfig);
+    const engine = new SpreadsheetEngine(config as unknown as SpreadsheetEngineConfig);
     engine.mount(containerRef.current);
     engineRef.current = engine;
 

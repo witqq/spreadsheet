@@ -4,7 +4,7 @@ import path from 'path';
 export default defineConfig({
   resolve: {
     alias: {
-      '@witqq/spreadsheet': path.resolve(__dirname, 'packages/core/src/index.ts'),
+      '@witqq/spreadsheet': path.resolve(import.meta.dirname, 'packages/core/src/index.ts'),
     },
   },
   test: {

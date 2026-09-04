@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-09-04
+
+### Infrastructure
+
+- Require Node.js 24.20.0 across the monorepo and all public package contracts.
+- Update direct and transitive dependencies, add pinned CI and coordinated immutable GitHub Release asset publication for all six public packages through npm OpenID Connect trusted publishing.
+
 ### Added
 
 - `DecoratorsPlugin`: built-in plugin bundling six reusable cell decorators — TreeExpander, SortIcon, ProgressBar, Link, Image, and Spinner. Configurable via `DecoratorsPluginConfig` (enable/disable individual decorators)
@@ -76,7 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `@witqq/spreadsheet-react`: peerDependencies now include `react: ^17.0.0` and `react-dom: ^17.0.0`. The wrapper uses only React ≤16-era hooks (`useEffect`, `useRef`, `useImperativeHandle`, `forwardRef`) and the automatic JSX transform (`react-jsx`) available since React 17.0.0
+- `@witqq/spreadsheet-react`: peer dependencies support React and React DOM 17, 18, and 19. The wrapper uses only React ≤16-era hooks (`useEffect`, `useRef`, `useImperativeHandle`, `forwardRef`) and the automatic JSX transform (`react-jsx`) available since React 17.0.0
 - `DatePickerEditor`: refactored from thin adapter (delegating to `DatePickerOverlay`) to direct `BaseOverlayEditor` subclass. Public API unchanged
 - `DateTimeEditor`: refactored from monolithic 821-line class to ~300-line `BaseOverlayEditor` subclass. Public API unchanged
 - `DatePickerOverlay`: internal utility functions replaced with imports from `calendar-utils` module. Public API unchanged

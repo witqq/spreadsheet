@@ -3,22 +3,26 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=24.20.0"
+  },
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview"
   },
   "dependencies": {
-    "@astrojs/react": "^4.4.2",
-    "@astrojs/sitemap": "^3.7.0",
-    "@astrojs/starlight": "^0.37.6",
-    "@pasqal-io/starlight-client-mermaid": "^0.1.0",
+    "@astrojs/react": "^6.0.5",
+    "@astrojs/sitemap": "^3.7.4",
+    "@astrojs/starlight": "^0.42.0",
     "@witqq/spreadsheet": "*",
     "@witqq/spreadsheet-plugins": "*",
     "@witqq/spreadsheet-react": "*",
-    "astro": "^5.18.0",
-    "pagefind": "^1.4.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "astro": "^7.3.1",
+    "astro-mermaid": "^2.1.0",
+    "mermaid": "^11.17.2",
+    "pagefind": "^1.5.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   }
 }

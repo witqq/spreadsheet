@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { create, embed, SpreadsheetEngine, lightTheme, darkTheme } from '../src/index';
 import type { WidgetConfig } from '../src/index';
 import type { ColumnDef } from '@witqq/spreadsheet';
+import { createMockResizeObserver } from '../../../tests/helpers/mock-resize-observer';
 
 function createMockCtx(): CanvasRenderingContext2D {
   return {
@@ -48,11 +49,7 @@ describe('@witqq/spreadsheet-widget', () => {
   ];
 
   beforeEach(() => {
-    global.ResizeObserver = vi.fn().mockImplementation(() => ({
-      observe: vi.fn(),
-      unobserve: vi.fn(),
-      disconnect: vi.fn(),
-    })) as unknown as typeof ResizeObserver;
+    global.ResizeObserver = createMockResizeObserver();
 
     origGetContext = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = vi

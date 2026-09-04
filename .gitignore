@@ -25,11 +25,9 @@ moira-ws/
 # Claude supervisor logs
 .supervisor_logs/
 .idea/
-docker-compose.remote.yml
 CLAUDE.md
 
 # Internal files (not for public repo)
 research/
 deploy-logs/
-.github/workflows/
 tmp/

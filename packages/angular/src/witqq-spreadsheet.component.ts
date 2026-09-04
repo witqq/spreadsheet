@@ -89,23 +89,21 @@ export class SpreadsheetComponent implements OnInit, OnDestroy, OnChanges {
       height: this.height,
     };
 
-    this.engine = new SpreadsheetEngine(config);
-    this.engine.mount(this.containerRef.nativeElement);
+    const engine = new SpreadsheetEngine(config);
+    this.engine = engine;
+    engine.mount(this.containerRef.nativeElement);
 
-    const eventMap: Array<[string, EventEmitter<unknown>]> = [
-      ['cellChange', this.cellChange],
-      ['selectionChange', this.selectionChange],
-      ['sortChange', this.sortChange],
-      ['filterChange', this.filterChange],
-      ['scroll', this.scroll],
-      ['ready', this.ready],
-    ];
-
-    for (const [eventName, emitter] of eventMap) {
-      const handler = (...args: unknown[]) => emitter.emit(args[0]);
-      this.engine.on(eventName, handler);
+    const bind = <T>(eventName: string, emitter: EventEmitter<T>): void => {
+      const handler = (...args: unknown[]) => emitter.emit(args[0] as T);
+      engine.on(eventName, handler);
       this.handlers.push({ event: eventName, handler });
-    }
+    };
+    bind('cellChange', this.cellChange);
+    bind('selectionChange', this.selectionChange);
+    bind('sortChange', this.sortChange);
+    bind('filterChange', this.filterChange);
+    bind('scroll', this.scroll);
+    bind('ready', this.ready);
   }
 
   ngOnDestroy(): void {

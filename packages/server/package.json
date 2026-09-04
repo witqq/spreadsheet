@@ -1,8 +1,11 @@
 {
   "name": "@witqq/spreadsheet-server",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=24.20.0"
+  },
   "main": "src/index.ts",
   "scripts": {
     "start": "tsx src/index.ts",
@@ -10,10 +13,10 @@
   },
   "dependencies": {
     "@witqq/spreadsheet-plugins": "*",
-    "ws": "^8.18.0"
+    "ws": "^8.21.3"
   },
   "devDependencies": {
-    "@types/ws": "^8.5.13",
-    "tsx": "^4.19.0"
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.23.13"
   }
 }
