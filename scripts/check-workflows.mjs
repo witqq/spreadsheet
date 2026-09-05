@@ -46,10 +46,15 @@ for (const required of [
   'release.assets?.length !== 7',
   'manifest.publishOrder',
   'asset.digest !== `sha256:${item.sha256}`',
+  'parse_registry_url()',
+  'Array.isArray(parsed) ? parsed : [parsed]',
   'registry-preflight-${index}.tgz',
   'already contains the accepted bytes; skipping',
   'tarball="${RUNNER_TEMP}/${asset_name}"',
   'npm publish --access public "${tarball}"',
+  'for attempt in {1..24}',
+  'did not become visible in the registry',
+  'sleep 5',
   'registry-final-${index}.tgz',
 ]) assert.ok(runs.includes(required), `publication must enforce ${required}`);
 const preflight = runs.indexOf('registry-preflight-${index}.tgz');
