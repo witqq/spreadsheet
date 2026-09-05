@@ -48,14 +48,16 @@ for (const required of [
   'asset.digest !== `sha256:${item.sha256}`',
   'registry-preflight-${index}.tgz',
   'already contains the accepted bytes; skipping',
-  'npm publish --access public "${asset_url}"',
+  'tarball="${RUNNER_TEMP}/${asset_name}"',
+  'npm publish --access public "${tarball}"',
   'registry-final-${index}.tgz',
 ]) assert.ok(runs.includes(required), `publication must enforce ${required}`);
 const preflight = runs.indexOf('registry-preflight-${index}.tgz');
-const firstPublish = runs.indexOf('npm publish --access public "${asset_url}"');
+const firstPublish = runs.indexOf('npm publish --access public "${tarball}"');
 assert.ok(preflight >= 0 && preflight < firstPublish, 'all existing registry versions are checked before publication');
 assert.ok(runs.includes('if existing_url="$(npm view'), 'registry absence must be decided by npm view exit status');
 assert.ok(!runs.includes('dist.tarball --json 2>/dev/null || true'), 'registry lookup errors must not become JSON values');
+assert.ok(!runs.includes('npm publish --access public "${asset_url}"'), 'npm 12 must not publish a remote URL');
 for (const forbidden of ['actions/checkout@', 'NPM_TOKEN', 'NODE_AUTH_TOKEN', 'npm ci', 'npm run build', 'npm test', 'npm pack']) {
   assert.ok(!publishSource.includes(forbidden), `publication must exclude ${forbidden}`);
 }
