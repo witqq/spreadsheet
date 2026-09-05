@@ -54,6 +54,8 @@ for (const required of [
 const preflight = runs.indexOf('registry-preflight-${index}.tgz');
 const firstPublish = runs.indexOf('npm publish --access public "${asset_url}"');
 assert.ok(preflight >= 0 && preflight < firstPublish, 'all existing registry versions are checked before publication');
+assert.ok(runs.includes('if existing_url="$(npm view'), 'registry absence must be decided by npm view exit status');
+assert.ok(!runs.includes('dist.tarball --json 2>/dev/null || true'), 'registry lookup errors must not become JSON values');
 for (const forbidden of ['actions/checkout@', 'NPM_TOKEN', 'NODE_AUTH_TOKEN', 'npm ci', 'npm run build', 'npm test', 'npm pack']) {
   assert.ok(!publishSource.includes(forbidden), `publication must exclude ${forbidden}`);
 }

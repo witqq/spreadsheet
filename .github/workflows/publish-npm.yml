@@ -145,9 +145,12 @@ jobs:
           done < "${package_rows}"
 
           while IFS=$'\t' read -r index package_name workspace asset_name expected_sha256 asset_url; do
-            existing_url="$(npm view "${package_name}@${version}" dist.tarball --json 2>/dev/null || true)"
-            if [[ -n "${existing_url}" && "${existing_url}" != "null" ]]; then
-              registry_url="$(node -e 'process.stdout.write(JSON.parse(process.argv[1]))' "${existing_url}")"
+            if existing_url="$(npm view "${package_name}@${version}" dist.tarball --json 2>/dev/null)"; then
+              registry_url="$(node -e '
+                const value = JSON.parse(process.argv[1]);
+                if (typeof value !== "string" || !value.startsWith("https://")) throw new Error("registry tarball URL is invalid");
+                process.stdout.write(value);
+              ' "${existing_url}")"
               registry_tarball="${RUNNER_TEMP}/registry-preflight-${index}.tgz"
               curl --fail --location --proto '=https' --tlsv1.2 --output "${registry_tarball}" "${registry_url}"
               registry_sha256="$(shasum -a 256 "${registry_tarball}" | cut -d ' ' -f 1)"
