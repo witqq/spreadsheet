@@ -64,6 +64,15 @@ jobs:
           manifest="${RUNNER_TEMP}/${manifest_name}"
           package_rows="${RUNNER_TEMP}/packages.tsv"
 
+          parse_registry_url() {
+            node -e '
+              const parsed = JSON.parse(process.argv[1]);
+              const values = Array.isArray(parsed) ? parsed : [parsed];
+              if (values.length !== 1 || typeof values[0] !== "string" || !values[0].startsWith("https://")) throw new Error("registry tarball URL is invalid");
+              process.stdout.write(values[0]);
+            ' "$1"
+          }
+
           gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" > "${ref_json}"
           # shellcheck disable=SC2016
           annotated_tag_sha="$(node -e '
@@ -146,11 +155,7 @@ jobs:
 
           while IFS=$'\t' read -r index package_name workspace asset_name expected_sha256 asset_url; do
             if existing_url="$(npm view "${package_name}@${version}" dist.tarball --json 2>/dev/null)"; then
-              registry_url="$(node -e '
-                const value = JSON.parse(process.argv[1]);
-                if (typeof value !== "string" || !value.startsWith("https://")) throw new Error("registry tarball URL is invalid");
-                process.stdout.write(value);
-              ' "${existing_url}")"
+              registry_url="$(parse_registry_url "${existing_url}")"
               registry_tarball="${RUNNER_TEMP}/registry-preflight-${index}.tgz"
               curl --fail --location --proto '=https' --tlsv1.2 --output "${registry_tarball}" "${registry_url}"
               registry_sha256="$(shasum -a 256 "${registry_tarball}" | cut -d ' ' -f 1)"
@@ -168,7 +173,18 @@ jobs:
           done < "${package_rows}"
 
           while IFS=$'\t' read -r index package_name workspace asset_name expected_sha256 asset_url; do
-            registry_url="$(npm view "${package_name}@${version}" dist.tarball --json | node -e 'let value=""; process.stdin.on("data", chunk => value += chunk); process.stdin.on("end", () => process.stdout.write(JSON.parse(value)));')"
+            registry_response=""
+            for attempt in {1..24}; do
+              if registry_response="$(npm view "${package_name}@${version}" dist.tarball --json 2>/dev/null)"; then
+                break
+              fi
+              if [[ "${attempt}" = 24 ]]; then
+                echo "${package_name}@${version} did not become visible in the registry" >&2
+                exit 1
+              fi
+              sleep 5
+            done
+            registry_url="$(parse_registry_url "${registry_response}")"
             registry_tarball="${RUNNER_TEMP}/registry-final-${index}.tgz"
             curl --fail --location --proto '=https' --tlsv1.2 --output "${registry_tarball}" "${registry_url}"
             registry_sha256="$(shasum -a 256 "${registry_tarball}" | cut -d ' ' -f 1)"
