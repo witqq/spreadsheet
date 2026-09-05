@@ -162,7 +162,8 @@ jobs:
             if npm view "${package_name}@${version}" version --json >/dev/null 2>&1; then
               echo "${package_name}@${version} already contains the accepted bytes; skipping"
             else
-              npm publish --access public "${asset_url}"
+              tarball="${RUNNER_TEMP}/${asset_name}"
+              npm publish --access public "${tarball}"
             fi
           done < "${package_rows}"
 
