@@ -46,7 +46,7 @@
     "prettier": "^3.9.6",
     "tsx": "^4.23.13",
     "typedoc": "^0.28.20",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "typescript-eslint": "^8.69.0",
     "vitest": "^5.0.0",
     "vue": "^3.5.42",
